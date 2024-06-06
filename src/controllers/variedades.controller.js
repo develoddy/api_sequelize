@@ -2,19 +2,12 @@ import { Op } from 'sequelize';
 import resources from "../resources/index.js";
 import { Variedad } from "../models/Variedad.js";
 
-
-
 export const variedad_register = async (req, res) => {
     try {
-
         // { product: '1', valor: 'XL', stock: 5 }
         
-
         const data = req.body;
-        //const variedad_exits = await Variedad.findOne({ where: { valor: data.valor, product: data.product } });
         const variedad_exits = await Variedad.findOne({ where: { valor: data.valor, productId: data.product } });
-
-
         let variedad = null;
 
         if (variedad_exits) {

@@ -3,7 +3,7 @@ import resources from "../resources/index.js";
 import { User } from "../models/User.js";
 import token from "../services/token.js";
 import bcrypt from 'bcryptjs';
-
+import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
 
 export const register_admin = async( req, res ) => {
     try {
@@ -108,7 +108,6 @@ export const login_admin = async( req, res ) => {
         });
 
         if ( user ) {
-            console.log("----- Debbug: User.controller - login_admin: " + user);
             // SI ESTÁ REGISTRADO EN EL SISTEMA
             let compare = await bcrypt.compare(req.body.password, user.password);
             if (compare) {
@@ -123,6 +122,7 @@ export const login_admin = async( req, res ) => {
                         rol: user.rol,
                     }
                 }
+                await getPrintfulProducts();
                 res.status(200).json({
                     USER_FRONTED:USER_FRONTED
                 });
