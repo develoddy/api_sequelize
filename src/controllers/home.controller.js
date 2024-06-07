@@ -490,10 +490,10 @@ export const filters_products = async (req, res) => {
             });
         }
 
-        let CampaingDiscount;
+        let campaingDiscount;
         // FILTRO DE DESCUENTO
         if (is_discount == 2) {
-            CampaingDiscount = await Discount.findOne({
+            campaingDiscount = await Discount.findOne({
                 where: {
                     type_campaign: 1,
                     start_date_num: { [Op.lte]: TIME_NOW },
@@ -504,23 +504,28 @@ export const filters_products = async (req, res) => {
                     { model: DiscountCategorie }
                 ]
             });
-            if (CampaingDiscount) {
-                if (CampaingDiscount.type_segment == 1) {
-                    CampaingDiscount.products.forEach(item => {
+            
+            if (campaingDiscount) {
+                if (campaingDiscount.type_segment == 1) {
+                    campaingDiscount.discounts_products.forEach(item => {
                         products_s.push(item.id);
                     });
                 } else {
-                    CampaingDiscount.categories.forEach(item => {
+                    campaingDiscount.discounts_categories.forEach(item => {
                         categories_s.push(item.id);
                     });
                 }
             }
+
+            //console.log("___ FILTRO products_s & categories_s ", products_s, categories_s);
         }
+
+        //console.log("-----API variedad_selected: ", variedad_selected);
 
         // FILTRO DE VARIEDAD
         if (variedad_selected) {
             const VAR = await Variedad.findByPk(variedad_selected.id);
-            if (VAR) {
+            if ( VAR ) {
                 products_s.push(VAR.productId);
             }
         }
@@ -540,29 +545,27 @@ export const filters_products = async (req, res) => {
         const OurProducts = await Product.findAll({ where: filter, order: [["createdAt", "ASC"]] });
 
         const Products = [];
-        for (const Product of OurProducts) {
-            const variedades = await Variedad.findAll({ where: { productId: Product.id } });
-            const REVIEWS = await Review.findAll({ where: { productId: Product.id } });
+        for (const product of OurProducts) {
+            const variedades = await Variedad.findAll({ where: { productId: product.id } });
+            const REVIEWS = await Review.findAll({ where: { productId: product.id } });
             const AVG_REVIEW = REVIEWS.length > 0 ? Math.ceil(REVIEWS.reduce((sum, item) => sum + item.cantidad, 0) / REVIEWS.length) : 0;
             const COUNT_REVIEW = REVIEWS.length;
             let DISCOUNT_EXIST = null;
 
-            console.log("---- CampaingDiscount ---");
-            console.log(CampaingDiscount);
-            if (CampaingDiscount) {
-                if (CampaingDiscount.type_segment == 1) { // Por producto
-                    const products_a = CampaingDiscount.products.map(item => item.id);
-                    if (products_a.includes(Product.id)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+            if (campaingDiscount) {
+                if (campaingDiscount.type_segment == 1) { // Por producto
+                    const products_a = campaingDiscount.discounts_products.map(item => item.id);
+                    if (products_a.includes(product.id)) {
+                        DISCOUNT_EXIST = campaingDiscount;
                     }
                 } else { // Por categoria
-                    const categories_a = CampaingDiscount.categories.map(item => item.id);
-                    if (categories_a.includes(Product.categoryId)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+                    const categories_a = campaingDiscount.discounts_categories.map(item => item.id);
+                    if (categories_a.includes(product.categoryId)) {
+                        DISCOUNT_EXIST = campaingDiscount;
                     }
                 }
             }
-            Products.push(resources.Product.product_list(Product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            Products.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
         }
 
         res.status(200).json({

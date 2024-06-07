@@ -354,20 +354,9 @@ export const remove_imagen = async(req, res) => {
         const productId = req.body._id;
         const galeriaId = req.body.__id;
 
-        // Encuentra el producto
-        const product = await Product.findByPk(productId);
-
-        if (!product) {
-            return res.status(404).json({ message: "Producto no encontrado" });
-        }
-
-        // Obtiene la galería del producto y elimina la imagen especificada
-        let galerias = product.galerias || [];
-        galerias = galerias.filter(galeria => galeria._id !== galeriaId);
-
-        // Actualiza el producto con la nueva galería
-        product.galerias = galerias;
-        await product.save();
+        
+        console.log("-------API: galeriaId: ", galeriaId);
+        await Galeria.destroy({ where: { id: galeriaId } });
 
         res.status(200).json({
             message: "La imagen se eliminó perfectamente",
