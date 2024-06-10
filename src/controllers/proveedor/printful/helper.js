@@ -35,3 +35,7 @@ export const extractSKU = async(str) => {
 export const generateSlug = async(name) => {
     return name.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
 }
+
+export const removeRepeatedColors = async(array) => {
+    return [...new Set(array)];
+}

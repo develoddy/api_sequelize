@@ -10,6 +10,7 @@ import cartsRoutes from "./carts.routes.js";
 import addressClient from "./addressClient.routes.js";
 import sale from "./sale.routes.js";
 import review from "./review.routes.js";
+import productsPrintfulRoutes from "./productsPrintful.routes.js";
 
 const app = express();
 
@@ -24,5 +25,6 @@ app.use("/cart", cartsRoutes);
 app.use("/address_client", addressClient);
 app.use("/sale", sale);
 app.use("/review", review);
+app.use("/printful", productsPrintfulRoutes);
 
 export default app;

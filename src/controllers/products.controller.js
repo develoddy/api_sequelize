@@ -37,8 +37,6 @@ export const register = async(req, res) => {
 
         data.categoryId = data.categorie;
 
-        
-    
         let product = await Product.create( data );
 
         res.status(200).json({
@@ -209,6 +207,7 @@ export const register_imagen = async(req, res) => {
 
                 const galeria = await Galeria.create({ 
                     imagen: imagen_name,
+                    color: req.body.color,
                     productId: req.body._id,
                 });
 
