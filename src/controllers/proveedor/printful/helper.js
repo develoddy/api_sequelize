@@ -39,3 +39,17 @@ export const generateSlug = async(name) => {
 export const removeRepeatedColors = async(array) => {
     return [...new Set(array)];
 }
+
+export const processGalleryImage = async (galleryImagePath) => {
+  const galleryName = galleryImagePath.split('/').pop();
+  const galleryUploadDir = path.resolve('./src/uploads/product');
+
+  if (!fs.existsSync(galleryUploadDir)) {
+    fs.mkdirSync(galleryUploadDir, { recursive: true });
+  }
+
+  const galleryImageFilePath = path.join(galleryUploadDir, galleryName);
+  await downloadImage(galleryImagePath, galleryImageFilePath);
+
+  return galleryName;
+};

@@ -17,6 +17,7 @@ import  {
   extractSKU          , 
   generateSlug        ,
   removeRepeatedColors,
+  processGalleryImage,
 } from "./helper.js";
 
 import fs from 'fs';
@@ -47,30 +48,26 @@ export const show = async( req, res ) => {
   }
 }
 
+/*
 export const getPrintfulProductsss = async() => {
   try{
-      // Get all producto printfull
+      
       const printfulProducts = await getPrintfulProductsService();
       
       if ( printfulProducts ) {
         for ( const product of printfulProducts ) {
           let tags = [ ];
 
-          // Get all details products
+          
           const productDetail = await getPrintfulProductDetail(product.id);
-          console.log("_____API: sync_variants: ", productDetail.sync_variants);
-          /**
-           *  =================================
-           *  =          CATEGORIE            =
-           *  =================================
-           * */
+         
           const categoryResponse = await getPrintfulCategory(productDetail.sync_variants[0].main_category_id);
           const category = categoryResponse.category;
           let existingCategory = await Categorie.findOne({
               where: { title: category.title }
           });
 
-          // SI LA CATEGORÍA NO EXISTE, CREARLA
+          
           if ( !existingCategory ) {
             if (category.image_url) {
                   var img_path = category.image_url;
@@ -90,16 +87,12 @@ export const getPrintfulProductsss = async() => {
             });
           }
           
-          /**
-           *  =================================
-           *  =          PRODCUT              =
-           *  =================================
-           * */
+         
           const existingProduct = await Product.findOne({
             where: { title: product.name }
           });
 
-          // SI EL PRODUCTO NO EXISTE, ENTONCES CREARLO
+          
           if ( !existingProduct ) {
 
             let data = {
@@ -118,40 +111,35 @@ export const getPrintfulProductsss = async() => {
               tags: [],
             };
 
-             // TITLE
+            
             data.title = product.name;
 
-            // SKU
+            
             const sku = await extractSKU(productDetail.sync_variants[0].sku);
             data.sku = sku;
 
-            // RETAIL PRICE
+            
             const retail_price = productDetail.sync_variants[0].retail_price;
             data.price_soles = retail_price;
             data.price_usd = retail_price;
 
-            // SLUG
+            
             const slug = await generateSlug(product.name);
             data.slug = slug;
 
-            // Itera sobre cada variante para extraer el color
+            
             productDetail.sync_variants.forEach(variant => {
               if (variant.color) {
                 tags.push(variant.color);
               }
             });
 
-            // Elimina elementos duplicados del array tags
+            
             tags = await removeRepeatedColors(tags);
 
-            // Convierte tags a una cadena JSON
+            
             let tagsString = JSON.stringify(tags);
             data.tags = tagsString;
-
-            // TAGS
-            /*tags.push(productDetail.sync_variants[0].color);
-            let tagsString = JSON.stringify(tags);
-            data.tags = tagsString;*/
 
             if ( product.thumbnail_url ) {              
               var img_path = product.thumbnail_url;
@@ -167,15 +155,10 @@ export const getPrintfulProductsss = async() => {
               await downloadImage( img_path, imagePath );
             }
 
-            // Create product
+           
             const newProduct = await Product.create(data);
 
-            // Recorre las variantes
-             /**
-             *  =================================
-             *  =         GALERIAS              =
-             *  =================================
-             * */
+            
             if( productDetail.sync_variants.length > 0 ) {
               for (const item of productDetail.sync_variants ) {
                 
@@ -183,8 +166,6 @@ export const getPrintfulProductsss = async() => {
                   const galleryImagePath = item.product.image;
                   const galleryName = galleryImagePath.split('/').pop();
                   const galleryUploadDir = path.resolve('./src/uploads/product');
-
-                  // Verifica si el directorio existe, en caso contrario hay que crearlo
                   if (!fs.existsSync(galleryUploadDir)) {
                       fs.mkdirSync(galleryUploadDir, { recursive: true });
                   }
@@ -192,7 +173,6 @@ export const getPrintfulProductsss = async() => {
                   const galleryImageFilePath = path.join(galleryUploadDir, galleryName);
                   await downloadImage(galleryImagePath, galleryImageFilePath);
 
-                  // Crear la galería en la base de datos
                   await Galeria.create({
                       imagen: galleryName,
                       color: item.color,
@@ -200,7 +180,6 @@ export const getPrintfulProductsss = async() => {
                   });
                 }
 
-                // Crear la variedades en la base de datos
                 if(item.size) {
                   await Variedad.create({
                     valor: item.size,
@@ -217,11 +196,9 @@ export const getPrintfulProductsss = async() => {
     console.error('Error al traer los productos de Printful:', error);
     throw new Error('Error al traer los productos de Printful');
   }
-}
+}*/
 
 // ------
-
-
 export const getPrintfulProducts = async () => {
   try {
     // Get all products from Printful
@@ -233,7 +210,6 @@ export const getPrintfulProducts = async () => {
 
         // Get all details of the product
         const productDetail = await getPrintfulProductDetail(product.id);
-        console.log("_____API: sync_variants: ", productDetail.sync_variants);
 
         /**
          *  =================================
@@ -371,35 +347,42 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
   // Update existing variants
   for (const variant of existingVariants) {
+    // Verifica si variant.valor no está incluido en newVariantValues.
+    // includes es un método de array en JavaScript que comprueba si un valor específico está presente en el array. 
+    // Devuelve true si está presente y false si no lo está.
+    // El operador ! invierte el resultado. Así, si variant.valor no está en newVariantValues, la expresión se evalúa como true.
     if (!newVariantValues.includes(variant.valor)) {
+      // Eliminar la variante si no está en newVariantValues
       await variant.destroy(); // Remove variant if it no longer exists in Printful
     }
   }
 
   // Add new variants and update existing ones
   for (const variant of newVariants) {
-    if (!existingVariantValues.includes(variant.valor)) {
-      await Variedad.create(variant);
+
+    const existingVariant = existingVariants.find(v => v.valor === variant.valor);
+    if (!existingVariant) {
+      await Variedad.create({
+        valor: variant.valor,
+        stock: 0,
+        productId: variant.productId
+      });
     } else {
-      const existingVariant = existingVariants.find(v => v.valor === variant.valor);
-      existingVariant.color = variant.color;
+      existingVariant.valor = variant.valor;
+      existingVariant.stock = 0;
+      existingVariant.productId = variant.productId;
       await existingVariant.save();
     }
   }
 
-  // Update galleries
+  // Process and update galleries
+  const newGalleryImages = new Set();  // Conjunto para almacenar nuevas imágenes de galería
   for (const variant of newVariants) {
     if (variant.product.image) {
       const galleryImagePath = variant.product.image;
-      const galleryName = galleryImagePath.split('/').pop();
-      const galleryUploadDir = path.resolve('./src/uploads/product');
-
-      if (!fs.existsSync(galleryUploadDir)) {
-        fs.mkdirSync(galleryUploadDir, { recursive: true });
-      }
-
-      const galleryImageFilePath = path.join(galleryUploadDir, galleryName);
-      await downloadImage(galleryImagePath, galleryImageFilePath);
+      
+      const galleryName = await processGalleryImage(galleryImagePath);
+      newGalleryImages.add(galleryName);
 
       const existingGallery = existingGalleries.find(gallery => gallery.imagen === galleryName);
       if (!existingGallery) {
@@ -408,10 +391,23 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
           color: variant.color,
           productId
         });
+
       } else {
+        const galleryImagePath = variant.product.image;
+        const galleryName = await processGalleryImage(galleryImagePath);
+        existingGallery.imagen = galleryName;
         existingGallery.color = variant.color;
+        existingGallery.productId = variant.productId;
+
         await existingGallery.save();
       }
+    }
+  }
+
+  // Remove galleries that are no longer associated with any variant
+  for (const existingGallery of existingGalleries) {
+    if (!newGalleryImages.has(existingGallery.imagen)) { // Verificar si la imagen no está en el conjunto de nuevas imágenes
+      await existingGallery.destroy();
     }
   }
 };
