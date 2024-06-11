@@ -7,7 +7,7 @@ import { Variedad } from "../models/Variedad.js";
 import { Galeria } from "../models/Galeria.js";
 import fs from 'fs';
 import path from "path";
-
+import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
 
 export const register = async(req, res) => {
     try {
@@ -143,6 +143,7 @@ export const list = async ( req, res ) => {
 
         // Obtener productos de Printful
         // const printfulProducts = await getPrintfulProducts();
+        await getPrintfulProducts();
 
         res.status( 200 ).json({
             products: products,
