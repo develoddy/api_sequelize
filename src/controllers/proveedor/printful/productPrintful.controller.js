@@ -198,42 +198,49 @@ export const getPrintfulProductsss = async() => {
   }
 }*/
 
-// ------
+
+/*
+ *
+ * Obtiene todos los productos del provedor Printful y los guarda en la base de datos
+ * 
+ */
 export const getPrintfulProducts = async () => {
   try {
-    // Get all products from Printful
+    // Consigue todos los productos de Printful
     const printfulProducts = await getPrintfulProductsService();
 
-    if (printfulProducts) {
-      for (const product of printfulProducts) {
+    if ( printfulProducts ) {
+
+      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      
+      // Continua con el código existente para actualizar y crear productos
+      for ( const product of printfulProducts ) {
         let tags = [];
 
-        // Get all details of the product
-        const productDetail = await getPrintfulProductDetail(product.id);
+        // Obtener todos los detalles del producto
+        const productDetail = await getPrintfulProductDetail( product.id );
 
-        /**
-         *  =================================
-         *  =          CATEGORIE            =
-         *  =================================
-         */
-        const categoryResponse = await getPrintfulCategory(productDetail.sync_variants[0].main_category_id);
+        // Cateogiras
+        const categoryResponse = await getPrintfulCategory( productDetail.sync_variants[ 0 ].main_category_id );
         const category = categoryResponse.category;
         let existingCategory = await Categorie.findOne({
           where: { title: category.title }
         });
 
-        // If the category does not exist, create it
-        if (!existingCategory) {
-          if (category.image_url) {
+        // Si la categoría no existe, créala
+        if ( !existingCategory ) {
+          if ( category.image_url ) {
             var img_path = category.image_url;
             var name = img_path.split('/');
             var portada_name = await removeImageVersion(name[name.length - 1]) + '.png';
             const uploadDir = path.resolve('./src/uploads/categorie');
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
+            if ( !fs.existsSync( uploadDir ) ) {
+              fs.mkdirSync(
+                uploadDir, { recursive: true },
+              );
             }
-            const imagePath = path.join(uploadDir, portada_name);
-            await downloadImage(img_path, imagePath);
+            const imagePath = path.join( uploadDir, portada_name );
+            await downloadImage( img_path, imagePath );
           }
           existingCategory = await Categorie.create({
             title: category.title,
@@ -242,18 +249,15 @@ export const getPrintfulProducts = async () => {
           });
         }
 
-        /**
-         *  =================================
-         *  =          PRODUCT              =
-         *  =================================
-         */
+        // PRODUCT
         let existingProduct = await Product.findOne({
           where: { title: product.name }
         });
 
         let newProduct;
-        if (!existingProduct) {
+        if ( !existingProduct ) {
           let data = {
+            id: product.id,
             title: product.name,
             categoryId: existingCategory.id,
             price_soles: productDetail.sync_variants[0].retail_price,
@@ -266,10 +270,10 @@ export const getPrintfulProducts = async () => {
             state: 2,
             imagen: "tu_imagen",
             type_inventario: 2,
-            tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
+            tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map( variant => variant.color ).filter(Boolean))),
           };
 
-          if (product.thumbnail_url) {
+          if ( product.thumbnail_url ) {
             var img_path = product.thumbnail_url;
             var name = img_path.split('/');
             var portada_name = name[5];
@@ -283,15 +287,18 @@ export const getPrintfulProducts = async () => {
             await downloadImage(img_path, imagePath);
           }
 
-          // Create product
+          // Crea el producto en ddbb
           newProduct = await Product.create(data);
 
-          // Create variants and galleries for the new product
-          await createOrUpdateVariantsAndGalleries(newProduct.id, productDetail.sync_variants);
+          // Crear variantes y galerías para el nuevo producto
+          await createOrUpdateVariantsAndGalleries(
+            newProduct.id, 
+            productDetail.sync_variants
+          );
         } else {
           newProduct = existingProduct;
 
-          // Update product details if necessary
+          // Actualizar los detalles del producto si es necesario
           existingProduct.title = product.name;
           existingProduct.categoryId = existingCategory.id;
           existingProduct.price_soles = productDetail.sync_variants[0].retail_price;
@@ -316,8 +323,11 @@ export const getPrintfulProducts = async () => {
 
           await existingProduct.save();
 
-          // Update variants and galleries for the existing product
-          await createOrUpdateVariantsAndGalleries(newProduct.id, productDetail.sync_variants);
+          // Actualizar variantes y galerías para el producto existente
+          await createOrUpdateVariantsAndGalleries(
+            newProduct.id, 
+            productDetail.sync_variants
+          );
         }
       }
     }
@@ -327,9 +337,61 @@ export const getPrintfulProducts = async () => {
   }
 };
 
+/*
+ *
+ * Elimina todos los productos de la base de datos si no hay productos en el proveedor,
+ * 
+ */
+const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
+  try {
+    // Get all current products from the database
+    const currentProducts = await Product.findAll();
+    const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
+
+    // Borrar categorias liagado al product ya esta!
+    // Borrar variedades  liagado al product no esta!
+    // borrar galerias liagado al product no esta!
+    for (const currentProduct of currentProducts) {
+      if (!printfulProductIds.has(currentProduct.id)) {
+        // Find associated category
+        const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
+
+        // Find and delete associated varieties
+        const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
+        for (const variety of varieties) {
+          await variety.destroy();
+        }
+
+         // Find and delete associated galleries
+        const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
+        for (const gallery of galleries) {
+          await gallery.destroy();
+        }
+
+        // Destroy the product
+        await currentProduct.destroy();
+
+        // Check if the category is still used by any other product
+        const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
+
+        // If no other products use this category, destroy the category
+        if (productsInCategory.length === 0) {
+          await category.destroy();
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error al limpiar la base de datos:', error);
+    throw new Error('Error al limpiar la base de datos');
+  }
+};
 
 
-// Helper function to create or update variants and galleries
+/*
+ *
+ * Crear o actualizar las variantes del producto
+ * 
+ */
 const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // Get existing variants and galleries
   const existingVariants = await Variedad.findAll({ where: { productId } });
@@ -348,9 +410,6 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // Update existing variants
   for (const variant of existingVariants) {
     // Verifica si variant.valor no está incluido en newVariantValues.
-    // includes es un método de array en JavaScript que comprueba si un valor específico está presente en el array. 
-    // Devuelve true si está presente y false si no lo está.
-    // El operador ! invierte el resultado. Así, si variant.valor no está en newVariantValues, la expresión se evalúa como true.
     if (!newVariantValues.includes(variant.valor)) {
       // Eliminar la variante si no está en newVariantValues
       await variant.destroy(); // Remove variant if it no longer exists in Printful
