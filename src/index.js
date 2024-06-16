@@ -22,6 +22,13 @@ import './models/Cupone.js';
 import './models/Cart.js';
 import './models/AddressClient.js';
 
+// New
+import './models/ProductVariants.js';
+import './models/File.js';
+import './models/Option.js';
+//import './models/Value.js';
+
+
 async function main() {
     try {
         await sequelize.sync({ force: false });
