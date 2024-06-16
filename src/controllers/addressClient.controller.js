@@ -6,11 +6,7 @@ import { User } from "../models/User.js";
 export const register = async (req, res) => {
     try {
         // Verifica si el usuario existe antes de crear la dirección
-
-        console.log("--- Addrecliente : list ----", req.body);
-
         const { user: userId, ...addressData } = req.body;
-
 
         const user = await User.findByPk(req.body.user);
         if (!user) {
@@ -37,9 +33,6 @@ export const register = async (req, res) => {
 
 export const list = async (req, res) => {
     try {
-
-    	console.log("--- Addrecliente : list ----", req.query);
-
         const userId = req.query.user_id;
 
         // Busca las direcciones del cliente del usuario especificado
@@ -89,9 +82,6 @@ export const remove = async (req, res) => {
 
 export const update = async (req, res) => {
     try {
-
-    	console.log("--- update address ---");
-    	console.log(req.body);
 
         let data = req.body;
         const id = req.body._id;

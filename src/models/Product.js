@@ -18,6 +18,8 @@ export const Product = sequelize.define('products', {
     resumen: { type: DataTypes.TEXT, allowNull: false },
     tags: { type: DataTypes.STRING, allowNull: false },
     type_inventario: { type: DataTypes.INTEGER, defaultValue: 1 }
+    // New propierties
+    
 }, {
     timestamps: true,
     tableName: 'products'

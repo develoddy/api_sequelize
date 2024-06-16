@@ -5,10 +5,16 @@ import { Categorie } from "../../../models/Categorie.js";
 import { sequelize } from '../../../database/database.js';
 import { Galeria } from "../../../models/Galeria.js";
 import { Variedad } from "../../../models/Variedad.js";
+import { ProductVariants } from "../../../models/ProductVariants.js";
+import { File } from "../../../models/File.js";
+import { Option } from "../../../models/Option.js";
+
+
 import { 
   getPrintfulProductsService, 
   getPrintfulProductDetail,
   getPrintfulCategory,
+  createPrintfulOrderService,
 } from '../../../services/proveedor/printful/printfulService.js'; // Importa la función de Printful
 
 import  { 
@@ -48,156 +54,6 @@ export const show = async( req, res ) => {
   }
 }
 
-/*
-export const getPrintfulProductsss = async() => {
-  try{
-      
-      const printfulProducts = await getPrintfulProductsService();
-      
-      if ( printfulProducts ) {
-        for ( const product of printfulProducts ) {
-          let tags = [ ];
-
-          
-          const productDetail = await getPrintfulProductDetail(product.id);
-         
-          const categoryResponse = await getPrintfulCategory(productDetail.sync_variants[0].main_category_id);
-          const category = categoryResponse.category;
-          let existingCategory = await Categorie.findOne({
-              where: { title: category.title }
-          });
-
-          
-          if ( !existingCategory ) {
-            if (category.image_url) {
-                  var img_path = category.image_url;
-                  var name = img_path.split('/');
-                  var portada_name = await removeImageVersion(name[name.length - 1])+'.png';
-                  const uploadDir = path.resolve('./src/uploads/categorie');
-                  if (!fs.existsSync(uploadDir)) {
-                      fs.mkdirSync(uploadDir, { recursive: true });
-                  }
-                  const imagePath = path.join( uploadDir, portada_name );
-                  await downloadImage(img_path, imagePath);
-            }
-            existingCategory = await Categorie.create({
-                title: category.title,
-                imagen: portada_name,
-                state: 1, 
-            });
-          }
-          
-         
-          const existingProduct = await Product.findOne({
-            where: { title: product.name }
-          });
-
-          
-          if ( !existingProduct ) {
-
-            let data = {
-              title: "tu_title",
-              categoryId: existingCategory.id,
-              price_soles: "tu_retail_price",
-              price_usd: "tu_retail_price",
-              portada: "tu_portada",
-              resumen: "tu_resumen",
-              description: "tu_descripcion",
-              sku: "tu_sku",
-              slug: "tu_slug",
-              state: 2,
-              imagen: "tu_imagen",
-              type_inventario: 2,
-              tags: [],
-            };
-
-            
-            data.title = product.name;
-
-            
-            const sku = await extractSKU(productDetail.sync_variants[0].sku);
-            data.sku = sku;
-
-            
-            const retail_price = productDetail.sync_variants[0].retail_price;
-            data.price_soles = retail_price;
-            data.price_usd = retail_price;
-
-            
-            const slug = await generateSlug(product.name);
-            data.slug = slug;
-
-            
-            productDetail.sync_variants.forEach(variant => {
-              if (variant.color) {
-                tags.push(variant.color);
-              }
-            });
-
-            
-            tags = await removeRepeatedColors(tags);
-
-            
-            let tagsString = JSON.stringify(tags);
-            data.tags = tagsString;
-
-            if ( product.thumbnail_url ) {              
-              var img_path = product.thumbnail_url;
-              var name = img_path.split('/');
-              var portada_name = name[5];
-              data.portada = portada_name;
-
-              const uploadDir = path.resolve('./src/uploads/product');
-              if ( !fs.existsSync( uploadDir ) ) { 
-                  fs.mkdirSync( uploadDir, {  recursive: true, } );
-              }
-              const imagePath = path.join( uploadDir, portada_name );
-              await downloadImage( img_path, imagePath );
-            }
-
-           
-            const newProduct = await Product.create(data);
-
-            
-            if( productDetail.sync_variants.length > 0 ) {
-              for (const item of productDetail.sync_variants ) {
-                
-                if (item.product.image) {
-                  const galleryImagePath = item.product.image;
-                  const galleryName = galleryImagePath.split('/').pop();
-                  const galleryUploadDir = path.resolve('./src/uploads/product');
-                  if (!fs.existsSync(galleryUploadDir)) {
-                      fs.mkdirSync(galleryUploadDir, { recursive: true });
-                  }
-
-                  const galleryImageFilePath = path.join(galleryUploadDir, galleryName);
-                  await downloadImage(galleryImagePath, galleryImageFilePath);
-
-                  await Galeria.create({
-                      imagen: galleryName,
-                      color: item.color,
-                      productId: newProduct.id
-                  });
-                }
-
-                if(item.size) {
-                  await Variedad.create({
-                    valor: item.size,
-                    stock: 0,
-                    productId: newProduct.id
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
-  } catch (error) {
-    console.error('Error al traer los productos de Printful:', error);
-    throw new Error('Error al traer los productos de Printful');
-  }
-}*/
-
 
 /*
  *
@@ -220,12 +76,30 @@ export const getPrintfulProducts = async () => {
         // Obtener todos los detalles del producto
         const productDetail = await getPrintfulProductDetail( product.id );
 
+        // Extraer archivos de los detalles del producto
+        const files = productDetail.sync_variants.flatMap(variant => variant.files || []);
+
+        // Obtener opciones de los detalles del producto
+        /*const optionsData = productDetail.sync_variants.map(variant => ({
+          variantId: variant.id,
+          options: variant.value,
+        }));*/
+
+        const optionsData = productDetail.sync_variants.flatMap(variant => variant.options|| []);
+
+        
+        /*console.log("--------------");
+        console.log(optionsData);
+        console.log("----------------");*/
+
         // Cateogiras
         const categoryResponse = await getPrintfulCategory( productDetail.sync_variants[ 0 ].main_category_id );
+
         const category = categoryResponse.category;
         let existingCategory = await Categorie.findOne({
           where: { title: category.title }
         });
+
 
         // Si la categoría no existe, créala
         if ( !existingCategory ) {
@@ -293,7 +167,9 @@ export const getPrintfulProducts = async () => {
           // Crear variantes y galerías para el nuevo producto
           await createOrUpdateVariantsAndGalleries(
             newProduct.id, 
-            productDetail.sync_variants
+            productDetail.sync_variants,
+            files,
+            optionsData,
           );
         } else {
           newProduct = existingProduct;
@@ -307,15 +183,17 @@ export const getPrintfulProducts = async () => {
           existingProduct.slug = await generateSlug(product.name);
           existingProduct.tags = JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean)));
 
-          if (product.thumbnail_url) {
+          if ( product.thumbnail_url ) {
             var img_path = product.thumbnail_url;
             var name = img_path.split('/');
             var portada_name = name[5];
             existingProduct.portada = portada_name;
 
             const uploadDir = path.resolve('./src/uploads/product');
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
+            if ( !fs.existsSync(uploadDir) ) {
+              fs.mkdirSync(
+                uploadDir, { recursive: true }
+              );
             }
             const imagePath = path.join(uploadDir, portada_name);
             await downloadImage(img_path, imagePath);
@@ -326,7 +204,9 @@ export const getPrintfulProducts = async () => {
           // Actualizar variantes y galerías para el producto existente
           await createOrUpdateVariantsAndGalleries(
             newProduct.id, 
-            productDetail.sync_variants
+            productDetail.sync_variants,
+            files,
+            optionsData,
           );
         }
       }
@@ -334,6 +214,20 @@ export const getPrintfulProducts = async () => {
   } catch (error) {
     console.error('Error al traer los productos de Printful:', error);
     throw new Error('Error al traer los productos de Printful');
+  }
+};
+
+/*
+ * CREATE ORDER
+ *
+ **/
+export const createPrintfulOrder = async( orderData ) => {
+  await createPrintfulOrderService( orderData );
+
+  try {
+
+  } catch ( error) {
+
   }
 };
 
@@ -392,20 +286,42 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
  * Crear o actualizar las variantes del producto
  * 
  */
-const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
+const createOrUpdateVariantsAndGalleries = async (productId, syncVariants, files, optionsData) => {
+
+  
   // Get existing variants and galleries
   const existingVariants = await Variedad.findAll({ where: { productId } });
   const existingGalleries = await Galeria.findAll({ where: { productId } });
 
+ 
+
   const newVariants = syncVariants.map(variant => ({
     valor: variant.size,
     color: variant.color,
+    
+    //new
+    external_id: variant.external_id,
+    sync_product_id: variant.sync_product_id,
+    name: variant.name,
+    synced: variant.synced,
+    variant_id: variant.variant_id,
+    main_category_id: variant.main_category_id,
+    warehouse_product_id: variant.warehouse_product_id,
+    warehouse_product_variant_id: variant.warehouse_product_variant_id,
+    retail_price: variant.retail_price,
+    sku: variant.sku,
+    currency: variant.currency,
+    //new
+
     productId,
     product: { image: variant.product.image } // For gallery
   }));
 
+  
+
   const newVariantValues = newVariants.map(variant => variant.valor);
   const existingVariantValues = existingVariants.map(variant => variant.valor);
+
 
   // Update existing variants
   for (const variant of existingVariants) {
@@ -421,11 +337,75 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
     const existingVariant = existingVariants.find(v => v.valor === variant.valor);
     if (!existingVariant) {
-      await Variedad.create({
+
+      // Create new variant
+      const newVariant = await Variedad.create({
         valor: variant.valor,
         stock: 0,
-        productId: variant.productId
+        productId: variant.productId,
+
+        // New properties
+        external_id: variant.external_id,
+        sync_product_id: variant.sync_product_id,
+        name: variant.name,
+        synced: variant.synced,
+        variant_id: variant.variant_id,
+        main_category_id: variant.main_category_id,
+        warehouse_product_id: variant.warehouse_product_id,
+        warehouse_product_variant_id: variant.warehouse_product_variant_id,
+        retail_price: variant.retail_price,
+        sku: variant.sku,
+        currency: variant.currency,
       });
+
+      // Create new ProductVariant
+      await ProductVariants.create({
+          variant_id: newVariant.variant_id,
+          product_id: newVariant.productId,
+          image: variant.product.image,
+          name: newVariant.name,
+          varietyId: newVariant.id // Ensure the foreign key is set correctly
+      });
+
+      // Register files
+      for (const file of files) {
+          await File.create({
+              type: file.type,
+              hash: file.hash,
+              url: file.url,
+              filename: file.filename,
+              mime_type: file.mime_type,
+              size: file.size,
+              width: file.width,
+              height: file.height,
+              dpi: file.dpi,
+              status: file.status,
+              created: file.created,
+              thumbnail_url: file.thumbnail_url,
+              preview_url: file.preview_url,
+              visible: file.visible,
+              is_temporary: file.is_temporary,
+              message: file.message,
+              varietyId: newVariant.id // Ensure the foreign key is set correctly
+          });
+      }
+
+      
+      console.log("--------------");
+        console.log(optionsData);
+        console.log("----------------");
+
+      // Crear opciones para la nueva variante
+      // Create options for the new variant
+      for (const option of optionsData) {
+        await Option.create({
+          value: option.value,
+          varietyId: newVariant.id, // Ensure the foreign key is set correctly
+        });
+      }
+
+      
+
     } else {
       existingVariant.valor = variant.valor;
       existingVariant.stock = 0;
