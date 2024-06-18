@@ -102,7 +102,6 @@ async function send_email(sale_id) {
 }
 
 
-
 export const register = async (req, res) => {
     try {
         const saleData = req.body.sale;
@@ -138,42 +137,45 @@ export const register = async (req, res) => {
             const files = await File.findOne({ where: { varietyId } });
 
             // Obtener opciones asociadas a la variante
-            //const options = await Option.findAll({ where: { varietyId: varietyId } });
-            //console.log("-------- API options -----------: ", options);
+            const options = await Option.findAll({ where: { varietyId: varietyId } });
 
-            /*const parseOptionValue = (value) => {
-                if (!value) return [];
-                
-                // Remover comillas y corchetes
-                const cleanedValue = value.replace(/[\[\]"]/g, '');
-                
-                // Separar por comas y limpiar espacios
-                return cleanedValue.split(',').map(item => item.trim());
-            };
+            let itemOptions = {};
+            const allowedThreadColors = [
+                "#FFFFFF", "#000000", "#96A1A8", "#A67843", "#FFCC00",
+                "#E25C27", "#CC3366", "#CC3333", "#660000", "#333366",
+                "#005397", "#3399FF", "#6B5294", "#01784E", "#7BA35A"
+            ];
 
-            // Procesar opciones y filtrar solo las que tienen valores en 'value'
-            const validItemOptions = options
-                .map(option => ({
-                    id: option.id,
-                    value: parseOptionValue(option.value)
-                }))
-                .filter(option => option.value.length > 0);
+            options.forEach(option => {
+                let optionValue = option.value;
+                try {
+                    optionValue = JSON.parse(option.value);
+                } catch (error) {
+                    console.warn(`Warning: Could not parse option value for ${option.idOption}`);
+                }
 
-        
-            // Array para almacenar las opciones formateadas que tienen valores
-            let optionsToInclude = [];
-
-            // Filtrar las opciones que tienen valores en value
-            validItemOptions.forEach(option => {
-                if (option.value.length > 0) {
-                    optionsToInclude.push({
-                        id: `OptionKey_${option.id}`, // Ajustar el ID según sea necesario
-                        value: option.value.join(", ") // Unir los valores del array en una cadena separada por comas
-                    });
+                if (option.idOption === 'stitch_color') {
+                    const allowedValues = ['white', 'black'];
+                    const color = Array.isArray(optionValue) ? optionValue[0] : optionValue;
+                    itemOptions[option.idOption] = allowedValues.includes(color) ? color : 'white';
+                } else if (option.idOption.startsWith('thread_colors')) {
+                    // Para opciones que comienzan con 'thread_colors'
+                    const colors = Array.isArray(optionValue) ? optionValue : [optionValue];
+                    itemOptions[option.idOption] = colors.filter(color => allowedThreadColors.includes(color));
+                    // Si no hay colores válidos, asignamos un valor por defecto
+                    if (itemOptions[option.idOption].length === 0) {
+                        itemOptions[option.idOption] = ["#FFFFFF"]; // valor por defecto
+                    }
+                } else {
+                    itemOptions[option.idOption] = Array.isArray(optionValue) ? optionValue[0] : optionValue;
                 }
             });
 
-            const filteredOptions = optionsToInclude.filter(option => option.value.startsWith('#'));*/
+            // Validar que `thread_colors_front_large` esté presente y sea correcto
+            if (!itemOptions['thread_colors_front_large'] || !allowedThreadColors.includes(itemOptions['thread_colors_front_large'][0])) {
+                itemOptions['thread_colors_front_large'] = "#FFFFFF"; // valor por defecto
+            }
+
             
             let item = {
                 variant_id: variantId, 
@@ -186,12 +188,11 @@ export const register = async (req, res) => {
                     filename: files.filename,
                     type: files.type
                 }],
-                options: {
-                    thread_colors_front_large: "#FFFFFF" // Color del hilo para la parte frontal grande
-                }
+                options: itemOptions,
+                //options: {
+                //    thread_colors_front_large: "#FFFFFF" // Color del hilo para la parte frontal grande
+                //}
             };
-
-            console.log("_____ ITEM: ", item);
            
             items.push(item);
 
@@ -225,11 +226,8 @@ export const register = async (req, res) => {
             await Cart.destroy({ where: { id: cart.id } });
         }
 
-        /*
-         *
-         *  Crear la orden en Printful
-         *
-         */
+        
+        // Crear la orden en Printful
         const printfulOrderData = {
             recipient: {
                 name: saleAddress.name,

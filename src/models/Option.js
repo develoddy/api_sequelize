@@ -8,6 +8,7 @@ import { File } from './File.js';
 
 export const Option = sequelize.define('Option', {
   id: {type: DataTypes.INTEGER,autoIncrement: true,primaryKey: true,},
+  idOption: { type: DataTypes.STRING, allowNull: false },
   value: {type: DataTypes.JSON,
     allowNull: false,
     defaultValue: [], // Valor por defecto es un array vacío

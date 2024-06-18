@@ -98,6 +98,24 @@ export const update = async(req, res) => {
     }
 }
 
+export const syncPrintfulProducts = async (req, res) => {
+
+    try {
+        console.log("____API: ProductController Sync...");
+        const printfulProducts = await getPrintfulProducts();
+        console.log("____API: ProductController Sync...", printfulProducts);
+        res.status( 200 ).json({
+            sync: true,
+        });
+    } catch (error) {
+        res.status( 500 ).send({
+            message: "debbug: ProductController syncPrintfulProducts - OCURRIÓ UN PROBLEMA"
+        });
+        console.log(error);
+    }
+
+}
+
 export const list = async ( req, res ) => {
     try {
         var filter  = [];
@@ -143,7 +161,7 @@ export const list = async ( req, res ) => {
 
         // Obtener productos de Printful
         // const printfulProducts = await getPrintfulProducts();
-        await getPrintfulProducts();
+        //await getPrintfulProducts();
 
         res.status( 200 ).json({
             products: products,

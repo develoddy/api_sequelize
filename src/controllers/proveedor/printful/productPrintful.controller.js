@@ -9,7 +9,6 @@ import { ProductVariants } from "../../../models/ProductVariants.js";
 import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
 
-
 import { 
   getPrintfulProductsService, 
   getPrintfulProductDetail,
@@ -54,7 +53,6 @@ export const show = async( req, res ) => {
   }
 }
 
-
 /*
  *
  * Obtiene todos los productos del provedor Printful y los guarda en la base de datos
@@ -63,6 +61,7 @@ export const show = async( req, res ) => {
 export const getPrintfulProducts = async () => {
   try {
     // Consigue todos los productos de Printful
+
     const printfulProducts = await getPrintfulProductsService();
 
     if ( printfulProducts ) {
@@ -79,18 +78,7 @@ export const getPrintfulProducts = async () => {
         // Extraer archivos de los detalles del producto
         const files = productDetail.sync_variants.flatMap(variant => variant.files || []);
 
-        // Obtener opciones de los detalles del producto
-        /*const optionsData = productDetail.sync_variants.map(variant => ({
-          variantId: variant.id,
-          options: variant.value,
-        }));*/
-
         const optionsData = productDetail.sync_variants.flatMap(variant => variant.options|| []);
-
-        
-        /*console.log("--------------");
-        console.log(optionsData);
-        console.log("----------------");*/
 
         // Cateogiras
         const categoryResponse = await getPrintfulCategory( productDetail.sync_variants[ 0 ].main_category_id );
@@ -288,12 +276,9 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
  */
 const createOrUpdateVariantsAndGalleries = async (productId, syncVariants, files, optionsData) => {
 
-  
   // Get existing variants and galleries
   const existingVariants = await Variedad.findAll({ where: { productId } });
   const existingGalleries = await Galeria.findAll({ where: { productId } });
-
- 
 
   const newVariants = syncVariants.map(variant => ({
     valor: variant.size,
@@ -367,8 +352,16 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants, files
           varietyId: newVariant.id // Ensure the foreign key is set correctly
       });
 
+
+
       // Register files
       for (const file of files) {
+
+        if (!file.hash) {
+          console.error('File hash is missing:', file);
+          continue;
+        }
+        try {
           await File.create({
               type: file.type,
               hash: file.hash,
@@ -388,27 +381,24 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants, files
               message: file.message,
               varietyId: newVariant.id // Ensure the foreign key is set correctly
           });
+        } catch (error) {
+          console.error('Error creating file record:', error, file);
+        }
       }
-
-      
-      console.log("--------------");
-        console.log(optionsData);
-        console.log("----------------");
 
       // Crear opciones para la nueva variante
       // Create options for the new variant
       for (const option of optionsData) {
         await Option.create({
+          idOption: option.id,
           value: option.value,
           varietyId: newVariant.id, // Ensure the foreign key is set correctly
         });
       }
 
-      
-
     } else {
       existingVariant.valor = variant.valor;
-      existingVariant.stock = 0;
+      //existingVariant.stock = 0;
       existingVariant.productId = variant.productId;
       await existingVariant.save();
     }

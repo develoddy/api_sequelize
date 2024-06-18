@@ -11,6 +11,7 @@ import {
     register_imagen,
     remove_imagen,
     show,
+    syncPrintfulProducts,
 } from "../controllers/products.controller.js";
 
 
@@ -45,6 +46,7 @@ router.get("/list", auth.verifyAdmin, list);
 router.delete("/delete", auth.verifyAdmin, remove);
 router.get("/uploads/product/:img", getImage);
 router.get("/show/:id", show);
+router.get("/synPrintfulProducts", auth.verifyAdmin, syncPrintfulProducts);
 
 
 // Variedad
