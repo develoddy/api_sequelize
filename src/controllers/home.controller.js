@@ -34,8 +34,6 @@ export const list = async (req, res) => {
         let Categories = await Categorie.findAll({ where: { state: 1 } });
         Categories = Categories.map(categorie => resources.Categorie.categorie_list(categorie));
 
-        
-
         // Obtener descuentos de campaña con sus productos y categorías
         let CampaingDiscount = await Discount.findOne({
             where: {
@@ -133,8 +131,11 @@ export const list = async (req, res) => {
         let ProductList = [];
         if (FlashSale) {
             for (const product of FlashSale.discounts_products) { // Corregir aquí
+                
                 let ObjectT = await Product.findByPk(product.productId); // Corregir aquí
+
                 let variedades = await Variedad.findAll({ where: { productId: product.productId } });
+
                 ProductList.push(resources.Product.product_list(ObjectT, variedades));
             }
         } else {
@@ -162,6 +163,8 @@ export const list = async (req, res) => {
 
 export const show_landing_product = async (req, res) => {
     try {
+
+        console.log("____ API: ", req.query);
         const SLUG = req.params.slug;
         const DISCOUNT_ID = req.query._id;
 

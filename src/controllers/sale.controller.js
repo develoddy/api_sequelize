@@ -118,23 +118,62 @@ export const register = async (req, res) => {
         // Obtener todos los carritos del usuario
         const carts = await Cart.findAll({ where: { userId: sale.userId } });
 
+        console.log(`API____ Obtener todos los carritos del usuario`, carts);
+
         let items = [];
         for (let cart of carts) {
             let variantId = null;
+            let idFile = null;
             let productId = cart.productId;
             let varietyId = cart.variedadId;
 
             // Manejar la reducción de stock y asociar el carrito con la venta
+            //let selectedOption = null; // Esta variable contendrá la opción seleccionada (por ejemplo, la talla)
             if ( cart.variedadId ) { // Inventario múltiple
                 const variedad = await Variedad.findByPk(cart.variedadId);
                 variantId = variedad.variant_id;
                 productId = variedad.productId;
+                //selectedOption = variedad.valor;
             }
 
             const product = await Product.findByPk(productId);
 
+            console.log('______ID DE VARIEDASD:', varietyId);
+
             // Obtener archivos asociados a la variante
-            const files = await File.findOne({ where: { varietyId } });
+            //const files = await File.findOne({ where: { varietyId } });
+            // Obtener archivos asociados a la variante y la opción seleccionada
+            const files = await File.findOne({ 
+                where: { 
+                    varietyId: varietyId,
+                    //option: selectedOption // Asegúrate de tener el campo adecuado
+                },
+                include: [Variedad],
+            });
+
+             // Depuración para verificar los archivos obtenidos
+            console.log(`Archivos obtenidos para el ID de variedad ${varietyId}:`, files);
+
+            // Validaciones de los archivos
+            if (!files) {
+                throw new Error(`No se encontró ningún archivo para la variedad con ID ${varietyId}`);
+            } else if (!files.url && !files.preview_url) {
+                throw new Error(`El archivo para la variedad con ID ${varietyId} no tiene URL ni preview_url`);
+            }
+
+            //if (!varietyId || !files || (!files.url && !files.preview_url)) {
+            //    throw new Error(`El archivo para la variedad con ID ${varietyId} no tiene URL válida`);
+            //}
+
+            // Usar preview_url como alternativa temporal si url está vacío
+            const fileUrl = files.url || files.preview_url;
+
+
+
+            // Check if files exist and are valid
+            //if (!files || !files.url || !files.filename || !files.type || files.type !== 'default') {
+            //    throw new Error(`Archivos o FILES de impresión no válidos o faltantes para el artículo con ID de producto ${productId}`);
+            //}
 
             // Obtener opciones asociadas a la variante
             const options = await Option.findAll({ where: { varietyId: varietyId } });
@@ -184,17 +223,17 @@ export const register = async (req, res) => {
                 retail_price: cart.price_unitario.toString(), // Precio unitario
                // Mapear los archivos encontrados
                 files: [{
-                    url: files.url,
+                    url: fileUrl,//files.url,
                     filename: files.filename,
-                    type: files.type
+                    type: 'default',//files.type
                 }],
                 options: itemOptions,
-                //options: {
-                //    thread_colors_front_large: "#FFFFFF" // Color del hilo para la parte frontal grande
-                //}
             };
-           
+
+            //console.log("API_____ item one, ",item);return;
             items.push(item);
+
+            //console.log("API_____ ITEM, ",item);
 
             // Reducir el stock del producto o variante
             if (varietyId) {
@@ -226,7 +265,8 @@ export const register = async (req, res) => {
             await Cart.destroy({ where: { id: cart.id } });
         }
 
-        
+        console.log("API_____ items muchos, ",items);
+
         // Crear la orden en Printful
         const printfulOrderData = {
             recipient: {
