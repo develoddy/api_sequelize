@@ -5,6 +5,7 @@ import { Galeria } from './Galeria.js';
 
 export const Product = sequelize.define('products', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    idProduct: { type: DataTypes.STRING },
     title: { type: DataTypes.STRING(250), allowNull: false },
     slug: { type: DataTypes.STRING(1000), allowNull: false },
     sku: { type: DataTypes.STRING, allowNull: false },

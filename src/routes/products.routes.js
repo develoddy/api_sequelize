@@ -12,6 +12,7 @@ import {
     remove_imagen,
     show,
     syncPrintfulProducts,
+    syncGelatoProducts,
 } from "../controllers/products.controller.js";
 
 
@@ -47,6 +48,7 @@ router.delete("/delete", auth.verifyAdmin, remove);
 router.get("/uploads/product/:img", getImage);
 router.get("/show/:id", show);
 router.get("/synPrintfulProducts", auth.verifyAdmin, syncPrintfulProducts);
+router.get("/synGelatoProducts", auth.verifyAdmin, syncGelatoProducts);
 
 
 // Variedad

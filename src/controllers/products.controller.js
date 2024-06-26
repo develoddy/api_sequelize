@@ -8,6 +8,37 @@ import { Galeria } from "../models/Galeria.js";
 import fs from 'fs';
 import path from "path";
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
+import { getGelatoProducts } from './proveedor/gelato/productGelato.controller.js';
+
+//  ----- PROVEDORES ------
+export const syncPrintfulProducts = async (req, res) => {
+    try {
+        const printfulProducts = await getPrintfulProducts();
+        res.status( 200 ).json({
+            sync: true,
+        });
+    } catch (error) {
+        res.status( 500 ).send({
+            message: "debbug: ProductController syncPrintfulProducts - OCURRIÓ UN PROBLEMA"
+        });
+        console.log(error);
+    }
+}
+
+export const syncGelatoProducts = async (req, res) => {
+    try {
+        await getGelatoProducts();
+        res.status( 200 ).json({
+            sync: true,
+        });
+    } catch (error) {
+        res.status( 500 ).send({
+            message: "debbug: ProductController syncGelatoProducts - OCURRIÓ UN PROBLEMA"
+        });
+        console.log(error);
+    }
+}
+
 
 export const register = async(req, res) => {
     try {
@@ -96,24 +127,6 @@ export const update = async(req, res) => {
             message: "Debugg: ProducController - Ocurrio un problema en Update"
         });
     }
-}
-
-export const syncPrintfulProducts = async (req, res) => {
-
-    try {
-        console.log("____API: ProductController Sync...");
-        const printfulProducts = await getPrintfulProducts();
-        console.log("____API: ProductController Sync...", printfulProducts);
-        res.status( 200 ).json({
-            sync: true,
-        });
-    } catch (error) {
-        res.status( 500 ).send({
-            message: "debbug: ProductController syncPrintfulProducts - OCURRIÓ UN PROBLEMA"
-        });
-        console.log(error);
-    }
-
 }
 
 export const list = async ( req, res ) => {

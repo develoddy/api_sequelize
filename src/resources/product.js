@@ -1,6 +1,8 @@
 export default {
     product_list: (product, variedades = [], avg_review = 0, count_review = 0, CampaingDiscount = null) => {
 
+        console.log("_____ DEBBUG: REsORUCES - CampaingDiscount", product, CampaingDiscount);
+
         if (!product) {
             // Si product es null, retornar un objeto vacío o lanzar un error según sea necesario
             return {}; // O lanzar un error o manejar la situación de otra manera

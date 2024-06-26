@@ -4,6 +4,7 @@ import { Variedad } from './Variedad.js';
 
 export const File = sequelize.define('files', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  idFile: { type: DataTypes.INTEGER, allowNull: false },
   type: { type: DataTypes.STRING, allowNull: false },
   hash: { type: DataTypes.STRING, allowNull: false },
   url: { type: DataTypes.TEXT, allowNull: true },
@@ -20,6 +21,7 @@ export const File = sequelize.define('files', {
   visible: { type: DataTypes.BOOLEAN, allowNull: false },
   is_temporary: { type: DataTypes.BOOLEAN, allowNull: false },
   message: { type: DataTypes.STRING, allowNull: true },
+  optionVarietyId: { type: DataTypes.INTEGER, allowNull: false } // Campo adicional para diferenciar las opciones
 }, {
   timestamps: true,
   tableName: 'files'
