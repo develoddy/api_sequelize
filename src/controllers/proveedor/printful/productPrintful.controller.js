@@ -8,7 +8,6 @@ import { Variedad } from "../../../models/Variedad.js";
 import { ProductVariants } from "../../../models/ProductVariants.js";
 import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
-
 import { 
   getPrintfulProductsService, 
   getPrintfulProductDetail,
@@ -19,6 +18,7 @@ import {
 import  { 
   removeImageVersion  , 
   downloadImage       , 
+  convertWhiteToTransparent,
   extractSKU          , 
   generateSlug        ,
   removeRepeatedColors,
@@ -62,224 +62,174 @@ export const show = async( req, res ) => {
 }
 
 /*
- *
- * Obtiene todos los productos del provedor Printful y los guarda en la base de datos
- * 
+ * Esta función procesa un producto de Printful.
+ * Obtiene detalles del producto desde Printful usando su ID.
+ * Obtiene o crea una categoría para el producto.
+ * Obtiene o crea el producto en la base de datos local.
+ * Crea o actualiza variantes y galerías del producto.
  */
-export const getPrintfulProducts = async () => {
+const processPrintfulProduct = async (product) => {
   try {
-    // Consigue todos los productos de Printful
+    const productDetail = await getPrintfulProductDetail(product.id);
 
-    const printfulProducts = await getPrintfulProductsService();
+    const category = await getOrCreateCategory(productDetail);
+    const existingProduct = await getOrCreateProduct(product, productDetail, category);
 
-    if ( printfulProducts ) {
-
-      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
-      
-      // Continua con el código existente para actualizar y crear productos
-      for ( const product of printfulProducts ) {
-        let tags = [];
-
-        // Obtener todos los detalles del producto
-        const productDetail = await getPrintfulProductDetail( product.id );
-
-        // Extraer archivos de los detalles del producto
-        const files = productDetail.sync_variants.flatMap(variant => variant.files || []);
-
-        const optionsData = productDetail.sync_variants.flatMap(variant => variant.options|| []);
-
-        // Cateogiras
-        const categoryResponse = await getPrintfulCategory( productDetail.sync_variants[ 0 ].main_category_id );
-
-        const category = categoryResponse.category;
-        let existingCategory = await Categorie.findOne({
-          where: { title: category.title }
-        });
-
-
-        // Si la categoría no existe, créala
-        if ( !existingCategory ) {
-          if ( category.image_url ) {
-            var img_path = category.image_url;
-            var name = img_path.split('/');
-            var portada_name = await removeImageVersion(name[name.length - 1]) + '.png';
-            const uploadDir = path.resolve('./src/uploads/categorie');
-            if ( !fs.existsSync( uploadDir ) ) {
-              fs.mkdirSync(
-                uploadDir, { recursive: true },
-              );
-            }
-            const imagePath = path.join( uploadDir, portada_name );
-            await downloadImage( img_path, imagePath );
-          }
-          existingCategory = await Categorie.create({
-            title: category.title,
-            imagen: portada_name,
-            state: 1,
-          });
-        }
-
-        // PRODUCT
-        let existingProduct = await Product.findOne({
-          //where: { title: product.name }
-          where: { id: product.id }
-        });
-
-        let newProduct;
-        // Si el producto no existe, lo crea
-        if ( !existingProduct ) {
-          let data = {
-            id: product.id,
-            title: product.name,
-            categoryId: existingCategory.id,
-            price_soles: productDetail.sync_variants[0].retail_price,
-            price_usd: productDetail.sync_variants[0].retail_price,
-            portada: "",
-            resumen: "tu_resumen",
-            description: "tu_descripcion",
-            sku: await extractSKU(productDetail.sync_variants[0].sku),
-            slug: await generateSlug(product.name),
-            state: 2,
-            imagen: "tu_imagen",
-            type_inventario: 2,
-            tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map( variant => variant.color ).filter(Boolean))),
-          };
-
-          if ( product.thumbnail_url ) {
-            var img_path = product.thumbnail_url;
-            var name = img_path.split('/');
-            var portada_name = name[5];
-            data.portada = portada_name;
-
-            const uploadDir = path.resolve('./src/uploads/product');
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
-            }
-            const imagePath = path.join(uploadDir, portada_name);
-            await downloadImage(img_path, imagePath);
-          }
-
-          // Crea el producto en ddbb
-          newProduct = await Product.create(data);
-
-          // Crear variantes y galerías para el nuevo producto
-          await createOrUpdateVariantsAndGalleries(
-            newProduct.id, 
-            productDetail.sync_variants,
-          );
-        
-        } else { // Si producto existe, lo actualiza
-          newProduct = existingProduct;
-
-          // Actualizar los detalles del producto si es necesario
-          existingProduct.title = product.name;
-          existingProduct.categoryId = existingCategory.id;
-          existingProduct.price_soles = productDetail.sync_variants[0].retail_price;
-          existingProduct.price_usd = productDetail.sync_variants[0].retail_price;
-          existingProduct.sku = await extractSKU(productDetail.sync_variants[0].sku);
-          existingProduct.slug = await generateSlug(product.name);
-          existingProduct.tags = JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean)));
-
-          if ( product.thumbnail_url ) {
-            var img_path = product.thumbnail_url;
-            var name = img_path.split('/');
-            var portada_name = name[5];
-            existingProduct.portada = portada_name;
-
-            const uploadDir = path.resolve('./src/uploads/product');
-            if ( !fs.existsSync(uploadDir) ) {
-              fs.mkdirSync(
-                uploadDir, { recursive: true }
-              );
-            }
-            const imagePath = path.join(uploadDir, portada_name);
-            await downloadImage(img_path, imagePath);
-          }
-
-          await existingProduct.save();
-
-          // Actualizar variantes y galerías para el producto existente
-          await createOrUpdateVariantsAndGalleries(
-            newProduct.id, 
-            productDetail.sync_variants,
-          );
-        }
-      }
-    }
+    await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
   } catch (error) {
-    console.error('Error al traer los productos de Printful:', error);
-    throw new Error('Error al traer los productos de Printful');
+    console.error('Error processing Printful product:', error);
+    throw new Error('Error processing Printful product');
   }
 };
 
 /*
- * CREATE ORDER
- *
- **/
-export const createPrintfulOrder = async( orderData ) => {
-  await createPrintfulOrderService( orderData );
-
-  try {
-
-  } catch ( error) {
-
-  }
-};
-
-/*
- *
- * Elimina todos los productos de la base de datos si no hay productos en el proveedor,
- * 
+ * Obtiene la categoría asociada a un producto de Printful.
+ * Verifica si la categoría ya existe en la base de datos local.
+ * Si no existe, la crea.
+ * Devuelve la categoría existente o recién creada.
  */
-const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
-  try {
-    // Get all current products from the database
-    const currentProducts = await Product.findAll();
-    const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
+const getOrCreateCategory = async (productDetail) => {
+  const categoryResponse = await getPrintfulCategory(productDetail.sync_variants[0].main_category_id);
+  const category = categoryResponse.category;
 
-    // Borrar categorias liagado al product ya esta!
-    // Borrar variedades  liagado al product no esta!
-    // borrar galerias liagado al product no esta!
-    for (const currentProduct of currentProducts) {
-      if (!printfulProductIds.has(currentProduct.id)) {
-        // Find associated category
-        const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
+  let existingCategory = await Categorie.findOne({
+    where: { title: category.title }
+  });
 
-        // Find and delete associated varieties
-        const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
-        for (const variety of varieties) {
-          await variety.destroy();
-        }
-
-         // Find and delete associated galleries
-        const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
-        for (const gallery of galleries) {
-          await gallery.destroy();
-        }
-
-        // Destroy the product
-        await currentProduct.destroy();
-
-        // Check if the category is still used by any other product
-        const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
-
-        // If no other products use this category, destroy the category
-        if (productsInCategory.length === 0) {
-          await category.destroy();
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error al limpiar la base de datos:', error);
-    throw new Error('Error al limpiar la base de datos');
+  if (!existingCategory) {
+    existingCategory = await createCategory(category);
   }
+
+  return existingCategory;
 };
 
+/*
+ * Crea una nueva categoría en la base de datos local.
+ * Descarga y guarda la imagen de la categoría si está disponible.
+ */
+const createCategory = async (category) => {
+  let portada_name = '';
+
+  if (category.image_url) {
+    var img_path = category.image_url;
+    var name = img_path.split('/');
+    portada_name = await removeImageVersion(name[name.length - 1]) + '.png';
+    const uploadDir = path.resolve('./src/uploads/categorie');
+    
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const imagePath = path.join(uploadDir, portada_name);
+    await downloadImage(img_path, imagePath);
+  }
+
+  return await Categorie.create({
+    title: category.title,
+    imagen: portada_name,
+    state: 1,
+  });
+};
 
 /*
- *
- * Crear o actualizar las variantes del producto
- * 
+ * Busca un producto en la base de datos local por su ID.
+ * Si no existe, crea un nuevo producto.
+ * Si existe, actualiza la información del producto.
+ */
+const getOrCreateProduct = async (product, productDetail, category) => {
+  let existingProduct = await Product.findOne({
+    where: { idProduct: product.id }
+  });
+
+  if (!existingProduct) {
+    existingProduct = await createProduct(product, productDetail, category);
+  } else {
+    existingProduct = await updateProduct(existingProduct, product, productDetail, category);
+  }
+
+  return existingProduct;
+};
+
+/*
+ * Crea un nuevo producto en la base de datos local.
+ * Descarga y guarda la imagen del producto si está disponible.
+ */
+const createProduct = async (product, productDetail, category) => {
+  let portada_name = '';
+  let tags = [];
+
+  let data = {
+    idProduct: product.id,
+    title: product.name,
+    categoryId: category.id,
+    price_soles: productDetail.sync_variants[0].retail_price,
+    price_usd: productDetail.sync_variants[0].retail_price,
+    portada: '',
+    resumen: 'tu_resumen',
+    description: 'tu_descripcion',
+    sku: await extractSKU(productDetail.sync_variants[0].sku),
+    slug: await generateSlug(product.name),
+    state: 2,
+    imagen: 'tu_imagen',
+    type_inventario: 2,
+    tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
+  };
+
+  if (product.thumbnail_url) {
+    var img_path = product.thumbnail_url;
+    var name = img_path.split('/');
+    portada_name = name[5];
+    data.portada = portada_name;
+
+    const uploadDir = path.resolve('./src/uploads/product');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const imagePath = path.join(uploadDir, portada_name);
+    await downloadImage(img_path, imagePath);
+    //await convertWhiteToTransparent(imagePath);
+  }
+
+  return await Product.create(data);
+};
+
+/*
+ * Actualiza un producto existente en la base de datos local con la información más reciente.
+ */
+const updateProduct = async (existingProduct, product, productDetail, category) => {
+  existingProduct.title = product.name;
+  existingProduct.categoryId = category.id;
+  existingProduct.price_soles = productDetail.sync_variants[0].retail_price;
+  existingProduct.price_usd = productDetail.sync_variants[0].retail_price;
+  existingProduct.sku = await extractSKU(productDetail.sync_variants[0].sku);
+  existingProduct.slug = await generateSlug(product.name);
+  existingProduct.tags = JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean)));
+
+  if (product.thumbnail_url) {
+    var img_path = product.thumbnail_url;
+    var name = img_path.split('/');
+    var portada_name = name[5];
+    existingProduct.portada = portada_name;
+
+    const uploadDir = path.resolve('./src/uploads/product');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const imagePath = path.join(uploadDir, portada_name);
+    await downloadImage(img_path, imagePath);
+  }
+
+  await existingProduct.save();
+
+  return existingProduct;
+};
+
+/*
+ * Crea o actualiza las variantes y galerías de un producto.
+ * Maneja las variantes del producto (agrega nuevas y actualiza las existentes).
+ * Maneja las galerías de imágenes asociadas a las variantes del producto.
  */
 const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
@@ -448,4 +398,82 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   }
 };
 
+/*
+ * Limpia la base de datos local eliminando productos que no están presentes en Printful.
+ * Elimina las variantes y galerías asociadas a esos productos.
+ * Elimina la categoría si ya no está asociada a ningún producto.
+ */
+const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
+  try {
+    const currentProducts = await Product.findAll();
+    const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
 
+    for (const currentProduct of currentProducts) {
+      if (!printfulProductIds.has(currentProduct.id)) {
+        // Find associated category
+        const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
+
+        // Find and delete associated varieties
+        const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
+        for (const variety of varieties) {
+          await variety.destroy();
+        }
+
+         // Find and delete associated galleries
+        const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
+        for (const gallery of galleries) {
+          await gallery.destroy();
+        }
+
+        await currentProduct.destroy();
+
+        // Check if the category is still used by any other product
+        const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
+
+        // If no other products use this category, destroy the category
+        if (productsInCategory.length === 0) {
+          await category.destroy();
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error al limpiar la base de datos:', error);
+    throw new Error('Error al limpiar la base de datos');
+  }
+};
+
+/*
+ * Crea una orden en Printful con los datos proporcionados.
+ * No está implementado en el código proporcionado, solo contiene un esqueleto para manejar errores.
+ */
+export const createPrintfulOrder = async( orderData ) => {
+  await createPrintfulOrderService( orderData );
+
+  try {
+
+  } catch ( error) {
+
+  }
+};
+
+/* FUNCION PRINCIPAL
+ * Obtiene todos los productos actuales de Printful.
+ * Limpia la base de datos local eliminando productos locales que ya no existen en Printful.
+ * Procesa cada producto de Printful utilizando la función processPrintfulProduct.
+ */
+export const getPrintfulProducts = async () => {
+  try {
+    const printfulProducts = await getPrintfulProductsService();
+
+    if (printfulProducts) {
+      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+
+      for (const product of printfulProducts) {
+        await processPrintfulProduct(product);
+      }
+    }
+  } catch (error) {
+    console.error('Error al traer los productos de Printful:', error);
+    throw new Error('Error al traer los productos de Printful');
+  }
+};

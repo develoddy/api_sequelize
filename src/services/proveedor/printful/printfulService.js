@@ -21,15 +21,12 @@ export const getPrintfulProductsService = async () => {
 
 export const getPrintfulProductDetail = async ( productId ) => {
     try {
-
         const response = await axios.get(`https://api.printful.com/store/products/${productId}`, {
             headers: {
                 'Authorization': `Bearer ${PRINTFUL_API_TOKEN}`
             }
         });
-
         return response.data.result;
-
     } catch (error) {
         console.error('DEBUG getProductPrintful: Error al obtener la lista de productos de Printful:', error);
         throw new Error('Error al obtener la lista de productos de Printful');

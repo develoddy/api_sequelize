@@ -11,6 +11,7 @@ import addressClient from "./addressClient.routes.js";
 import sale from "./sale.routes.js";
 import review from "./review.routes.js";
 import productsPrintfulRoutes from "./productsPrintful.routes.js";
+import productsGelatoRoutes from "./productsGelato.routes.js";
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use("/address_client", addressClient);
 app.use("/sale", sale);
 app.use("/review", review);
 app.use("/printful", productsPrintfulRoutes);
+app.use("/gelato", productsGelatoRoutes);
 
 export default app;
