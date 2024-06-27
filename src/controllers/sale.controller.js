@@ -118,8 +118,6 @@ export const register = async (req, res) => {
         // Obtener todos los carritos del usuario
         const carts = await Cart.findAll({ where: { userId: sale.userId } });
 
-        console.log(`API____ Obtener todos los carritos del usuario`, carts);
-
         let items = [];
         for (let cart of carts) {
             let variantId = null;
@@ -138,42 +136,25 @@ export const register = async (req, res) => {
 
             const product = await Product.findByPk(productId);
 
-            console.log('______ID DE VARIEDASD:', varietyId);
+            const files = await File.findAll({ where: { varietyId: varietyId } });
 
-            // Obtener archivos asociados a la variante
-            //const files = await File.findOne({ where: { varietyId } });
-            // Obtener archivos asociados a la variante y la opción seleccionada
-            const files = await File.findOne({ 
-                where: { 
-                    varietyId: varietyId,
-                    //option: selectedOption // Asegúrate de tener el campo adecuado
-                },
-                include: [Variedad],
-            });
-
-             // Depuración para verificar los archivos obtenidos
+            // Depuración para verificar los archivos obtenidos
             console.log(`Archivos obtenidos para el ID de variedad ${varietyId}:`, files);
 
             // Validaciones de los archivos
-            if (!files) {
-                throw new Error(`No se encontró ningún archivo para la variedad con ID ${varietyId}`);
-            } else if (!files.url && !files.preview_url) {
-                throw new Error(`El archivo para la variedad con ID ${varietyId} no tiene URL ni preview_url`);
+            if (!files || files.length === 0) {
+                throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
             }
-
-            //if (!varietyId || !files || (!files.url && !files.preview_url)) {
-            //    throw new Error(`El archivo para la variedad con ID ${varietyId} no tiene URL válida`);
-            //}
-
-            // Usar preview_url como alternativa temporal si url está vacío
-            const fileUrl = files.url || files.preview_url;
-
-
-
-            // Check if files exist and are valid
-            //if (!files || !files.url || !files.filename || !files.type || files.type !== 'default') {
-            //    throw new Error(`Archivos o FILES de impresión no válidos o faltantes para el artículo con ID de producto ${productId}`);
-            //}
+            
+            // Mapear los archivos encontrados
+            let itemFiles = [];
+            files.forEach(file => {
+                itemFiles.push({
+                    url: file.url || file.thumbnail_url,
+                    filename: file.filename,
+                    type: file.type,
+                });
+            });
 
             // Obtener opciones asociadas a la variante
             const options = await Option.findAll({ where: { varietyId: varietyId } });
@@ -220,18 +201,14 @@ export const register = async (req, res) => {
                 variant_id: variantId, 
                 quantity: cart.cantidad,
                 name: product.title,
-                retail_price: cart.price_unitario.toString(), // Precio unitario
-               // Mapear los archivos encontrados
-                files: [{
-                    url: fileUrl,//files.url,
-                    filename: files.filename,
-                    type: 'default',//files.type
-                }],
+                retail_price: cart.price_unitario.toString(), 
+                files: itemFiles,
                 options: itemOptions,
             };
 
-            //console.log("API_____ item one, ",item);return;
+            console.log("API_____ item one, ",item);
             items.push(item);
+            
 
             //console.log("API_____ ITEM, ",item);
 

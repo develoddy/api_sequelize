@@ -78,7 +78,7 @@ export const register = async (req, res) => {
             if (valid_cart) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El producto con la variedad ya existe en el carrito de compra",
+                    message_text: "El producto con esta variedad ya se encuentra en su cesta de compra.",
                 });
                 return;
             }
@@ -93,7 +93,7 @@ export const register = async (req, res) => {
             if (valid_cart) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El producto ya existe en el carrito de compra",
+                    message_text: "Este producto ya se encuentra en su cesta de compra.",
                 });
                 return;
             }
@@ -109,7 +109,7 @@ export const register = async (req, res) => {
             if (valid_variedad.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El stock no está disponible!",
+                    message_text: "El stock no está disponible en este momento.",
                 });
                 return;
             }
@@ -123,7 +123,7 @@ export const register = async (req, res) => {
             if (valid_product.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El stock no está disponible!",
+                    message_text: "El stock no está disponible en este momento.",
                 });
                 return;
             }
@@ -154,7 +154,7 @@ export const register = async (req, res) => {
 
         res.status(200).json({
             cart: resources.Cart.cart_list(newCartWithAssociations.toJSON()),
-            message_text: "Success! El carrito se registró con éxito",
+            message_text: "La cesta de compra ha sido registrado satisfactoriamente.",
         });
     } catch (error) {
         res.status(500).send({
@@ -172,11 +172,11 @@ export const remove = async (req, res) => {
         if (cart) {
             await cart.destroy();
             res.status(200).json({
-                message_text: "El cartito se eliminó correctamente!",
+                message_text: "El cesta de compra ha sido eliminado correctamente.",
             });
         } else {
             res.status(404).json({
-                message: "Cart no encontrado"
+                message: "Cesta no encontrado."
             });
         }
     } catch (error) {
@@ -187,15 +187,9 @@ export const remove = async (req, res) => {
     }
 }
 
-
 export const update = async (req, res) => {
     try {
-
-        console.log("--- Api: update cart ---");
-        console.log(req.body);
-
         let data = req.body;
-
 
         // Validar si el stock está disponible
         if ( data.variedad ) {
@@ -206,7 +200,7 @@ export const update = async (req, res) => {
             if ( validVariedad.stock < data.cantidad ) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "Ups! Ha superado el numero maximo de stock",
+                    message_text: "Lo sentimos, ha excedido la cantidad máxima disponible en el stock.",
                 });
                 return;
             }
@@ -219,7 +213,7 @@ export const update = async (req, res) => {
             if (validProduct.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "Ups! Ha superado el numero maximo de stock",
+                    message_text: "Lo sentimos, ha excedido la cantidad máxima disponible en el stock.",
                 });
                 return;
             }
@@ -241,11 +235,9 @@ export const update = async (req, res) => {
             ]
         });
 
-        console.log("-- api newCart --", newCart);
-
         res.status(200).json({
             cart: resources.Cart.cart_list(newCart),
-            message_text: "El cartito se actualizó con éxito!",
+            message_text: "La cesta se actualizó con éxito!",
         });
     } catch (error) {
         res.status(500).send({
@@ -257,9 +249,6 @@ export const update = async (req, res) => {
 
 export const apllyCupon = async (req, res) => {
     try {
-
-        console.log("--- API APLYCUPON ---", req.body);
-        // { code: 'A2C2D3D5', user_id: 1 }
         let data = req.body;
 
         // Validar la existencia del cupón
@@ -276,7 +265,7 @@ export const apllyCupon = async (req, res) => {
         if (!cupon) {
             res.status(200).json({
                 message: 403,
-                message_text: "El cupon ingresado no existe, digite otro nuevamente"
+                message_text: "El cupón ingresado no existe. Por favor, inténtelo de nuevo con otro cupón."
             });
             return;
         }
@@ -292,15 +281,11 @@ export const apllyCupon = async (req, res) => {
         let products = cupon.cupones_products.map(cuponeProduct => cuponeProduct.productId);
         let categories = cupon.cupones_categories.map(cuponeCategorie => cuponeCategorie.categoryId);
 
-        
-
         for (const cart of carts) {
             let subtotal = 0;
             let total = 0;
-
             
             if (products.length > 0 && products.includes(cart.product.id)) {
-
                 if ( cupon.type_discount == 1 ) { // Por porcentaje
                     subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
                 } else { // Por moneda
@@ -308,7 +293,6 @@ export const apllyCupon = async (req, res) => {
                 }
 
                 total = subtotal * cart.cantidad;
-
             
                 await Cart.update({
                     subtotal: subtotal,
@@ -344,7 +328,7 @@ export const apllyCupon = async (req, res) => {
 
         res.status(200).json({
             message: 200,
-            message_text: "El cupon es aplicado correctamente",
+            message_text: "El cupón ha sido aplicado correctamente.",
         });
     } catch (error) {
         res.status(500).send({
