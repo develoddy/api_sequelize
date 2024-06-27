@@ -61,6 +61,27 @@ export const show = async( req, res ) => {
   }
 }
 
+/* FUNCION PRINCIPAL
+ * Obtiene todos los productos actuales de Printful.
+ * Limpia la base de datos local eliminando productos locales que ya no existen en Printful.
+ * Procesa cada producto de Printful utilizando la función processPrintfulProduct.
+ */
+export const getPrintfulProducts = async () => {
+  try {
+    const printfulProducts = await getPrintfulProductsService();
+
+    if (printfulProducts) {
+      //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      for (const product of printfulProducts) {
+        await processPrintfulProduct(product);
+      }
+    }
+  } catch (error) {
+    console.error('Error al traer los productos de Printful:', error);
+    throw new Error('Error al traer los productos de Printful');
+  }
+};
+
 /*
  * Esta función procesa un producto de Printful.
  * Obtiene detalles del producto desde Printful usando su ID.
@@ -141,10 +162,13 @@ const getOrCreateProduct = async (product, productDetail, category) => {
     where: { idProduct: product.id }
   });
 
-  if (!existingProduct) {
+  if (!existingProduct) 
+  {
     existingProduct = await createProduct(product, productDetail, category);
-  } else {
+  } 
+  else {
     existingProduct = await updateProduct(existingProduct, product, productDetail, category);
+    await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
   }
 
   return existingProduct;
@@ -275,8 +299,8 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   for (const variant of newVariants) {
     const existingVariant = existingVariants.find(v => v.valor === variant.valor);
 
+    // existingVariant si no existe, las crea
     if ( !existingVariant ) {
-
       // Create new variant
       let newVariant = await Variedad.create({
         valor: variant.valor,
@@ -307,13 +331,13 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
       });
       
       for (const file of variant.files) {
-        //if (file.type === "default") {
-          //if (!file.hash || !file.url) {
-          if (!file.hash) {
-            console.error('File hash is missing:', file);
-            continue;
-          }
-          try {
+        if ( !file.hash ) {
+          //console.error('File hash is missing:', file);
+          continue;
+        }
+        try {
+          const existingFile = await File.findOne({ where: { hash: file.hash } });
+          if ( !existingFile ) {
             await File.create({
               idFile: file.id,
               type: file.type,
@@ -335,26 +359,33 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
               varietyId: newVariant.id, //newVariant.id // Ensure the foreign key is set correctly
               optionVarietyId: newVariant.variant_id, // Store the size value in the option field
             });
-          } catch (error) {
-            console.error('Error creating file record:', error, file);
           }
-        //}
+        } catch (error) {
+          console.error('Error creating file record:', error, file);
+        }
       }
 
-      // Crear opciones para la nueva variante
-      // Create options for the new variant
-      //for (const option of optionsData) {
+      // Verificar y crear opciones para la nueva variante
       for (const option of variant.options) {
-        await Option.create({
-          idOption: option.id,
-          value: option.value,
-          varietyId: newVariant.id, // Ensure the foreign key is set correctly
+        const existingOption = await Option.findOne({
+          where: {
+            idOption: option.id,
+            varietyId: newVariant.id,
+          },
         });
+
+        if ( !existingOption ) {
+          await Option.create({
+            idOption: option.id,
+            value: option.value,
+            varietyId: newVariant.id,
+          });
+        }
       }
 
     } else {
       existingVariant.valor = variant.valor;
-      //existingVariant.stock = 0;
+      //existingVariant.stock = 10;
       existingVariant.productId = variant.productId;
       await existingVariant.save();
     }
@@ -453,27 +484,5 @@ export const createPrintfulOrder = async( orderData ) => {
 
   } catch ( error) {
 
-  }
-};
-
-/* FUNCION PRINCIPAL
- * Obtiene todos los productos actuales de Printful.
- * Limpia la base de datos local eliminando productos locales que ya no existen en Printful.
- * Procesa cada producto de Printful utilizando la función processPrintfulProduct.
- */
-export const getPrintfulProducts = async () => {
-  try {
-    const printfulProducts = await getPrintfulProductsService();
-
-    if (printfulProducts) {
-      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
-
-      for (const product of printfulProducts) {
-        await processPrintfulProduct(product);
-      }
-    }
-  } catch (error) {
-    console.error('Error al traer los productos de Printful:', error);
-    throw new Error('Error al traer los productos de Printful');
   }
 };

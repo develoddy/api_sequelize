@@ -43,12 +43,10 @@ export const list = async( req, res ) => {
 
 const processPrintfulProduct = async (product) => {
   try {
-    //console.log("___API > Product.controller > processPrintfulProduct : ", product);
     const productDetail = await getGelatoProductDetail(product.id);
     const category = await getOrCreateCategory(product);
     const existingProduct = await getOrCreateProduct(productDetail, category);
     //await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
-
   } catch (error) {
     console.error('Error processing Gelato product:', error);
     throw new Error('Error processing Gelato product');
@@ -109,15 +107,13 @@ const findValidValueMetadata = async (metadataArray) => {
       return item.value;
     }
   }
-  return null; // Si no se encuentra ningún registro válido
+  return null;
 };
 
 const createProduct = async (productDetail, category) => {
   const productUid = await findValidValueMetadata(productDetail.metadata);
   const prices = await getGelatoPriceProduct( productUid );
   const formattedPrice = await formatPrice(prices[0].price);
-  // price: 15.1
-  // price: 10.12
   const uniqueColors = await removeRepeatedGelatoColors(productDetail.productVariantOptions);
   
   let portada_name = '';
@@ -140,38 +136,9 @@ const createProduct = async (productDetail, category) => {
     tags: JSON.stringify(uniqueColors),
   };
 
-  /*
-    {
-      idProduct: 'c88a89ff-908f-4219-aa04-51b8d5d4d16e',
-      title: 'Camiseta guay de cuello redondo Unisex Premium | Bella + Canvas 3001',
-      categoryId: 8,
-      price_soles: Promise { '10.12' },
-      price_usd: Promise { '10.12' },
-      portada: '',
-      resumen: 'tu_resumen',
-      description: 'tu_descripcion',
-      sku: 'tu-sku',
-      slug: 'camiseta-guay-de-cuello-redondo-unisex-premium--bella--canvas-3001',
-      state: 2,
-      imagen: 'tu_imagen',
-      type_inventario: 2,
-      tags: '["Blanco","Baya","Vintage Black"]'
-    }
-  */
-
-
-
-  
-/*
-  "previewUrl": "https://gelato-api-live.s3.eu-west-1.amazonaws.com/ecommerce/store_product_image/95ff1a92-06e9-47cf-a197-afcadeaedc3b/preview?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA3QM3COBPZOL2E4GY%2F20240626%2Feu-west-1%2Fs3%2Faws4_request&X-Amz-Date=20240626T152307Z&X-Amz-SignedHeaders=host&X-Amz-Expires=86400&X-Amz-Signature=e423fcd6b103bb21f0c47ddeb9355196c3b2dfa18dc582cb70ccc973878275a1",
-  */
-  // store_product_image_95ff1a92-06e9-47cf-a197-afcadeaedc3b_preview.jpeg
   if (productDetail.previewUrl) {
     const img_path = productDetail.previewUrl;
-    //var img_path = productDetail.previewUrl;
-    //var name = img_path.split('/');
-    const portada_name = await generateImageName(img_path); //portada_name = name[5]; 
-    console.log("___API: portada_name", portada_name);
+    const portada_name = await generateImageName(img_path); 
     data.portada = portada_name;
     const uploadDir = path.resolve('./src/uploads/product');
     if (!fs.existsSync(uploadDir)) {
@@ -179,16 +146,10 @@ const createProduct = async (productDetail, category) => {
     }
     const imagePath = path.join(uploadDir, portada_name);
     await downloadImage(img_path, imagePath);
-    //await convertWhiteToTransparent(imagePath);
   }
 
   return await Product.create(data);
 };
-
-
-
-
-
 
 
 
