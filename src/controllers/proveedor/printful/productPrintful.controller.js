@@ -61,7 +61,7 @@ export const show = async( req, res ) => {
   }
 }
 
-/* FUNCION PRINCIPAL
+/* ----- FUNCION PRINCIPAL ------
  * Obtiene todos los productos actuales de Printful.
  * Limpia la base de datos local eliminando productos locales que ya no existen en Printful.
  * Procesa cada producto de Printful utilizando la función processPrintfulProduct.
@@ -72,6 +72,7 @@ export const getPrintfulProducts = async () => {
 
     if (printfulProducts) {
       await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);
       }
@@ -93,10 +94,14 @@ const processPrintfulProduct = async (product) => {
   try {
     const productDetail = await getPrintfulProductDetail(product.id);
 
+    console.log("__API Detail: ", productDetail);
+
     const category = await getOrCreateCategory(productDetail);
     const existingProduct = await getOrCreateProduct(product, productDetail, category);
 
-    await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
+    if (existingProduct) {
+      await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
+    }
     
   } catch (error) {
     console.error('Error processing Printful product:', error);
@@ -159,6 +164,7 @@ const createCategory = async (category) => {
  * Si existe, actualiza la información del producto.
  */
 const getOrCreateProduct = async (product, productDetail, category) => {
+
   let existingProduct = await Product.findOne({
     where: { idProduct: product.id }
   });
@@ -169,8 +175,10 @@ const getOrCreateProduct = async (product, productDetail, category) => {
   } 
   else {
     existingProduct = await updateProduct(existingProduct, product, productDetail, category);
-    await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
   }
+
+  // Siempre se debe actualizar las variantes y galerías si el producto ya existe
+  await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
 
   return existingProduct;
 };
@@ -200,7 +208,7 @@ const createProduct = async (product, productDetail, category) => {
     tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
   };
 
-  if (product.thumbnail_url) {
+  if ( product.thumbnail_url ) {
     var img_path = product.thumbnail_url;
     var name = img_path.split('/');
     portada_name = name[5];
@@ -257,7 +265,6 @@ const updateProduct = async (existingProduct, product, productDetail, category) 
  * Maneja las galerías de imágenes asociadas a las variantes del producto.
  */
 const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
-
   // Get existing variants and galleries
   const existingVariants = await Variedad.findAll({ where: { productId } });
   const existingGalleries = await Galeria.findAll({ where: { productId } });
@@ -299,13 +306,12 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // Add new variants and update existing ones
   for (const variant of newVariants) {
     const existingVariant = existingVariants.find(v => v.valor === variant.valor);
-
     // existingVariant si no existe, las crea
-    if ( !existingVariant ) {
+    if ( !existingVariant ) {//if (!existingVariantValues.includes(variant.valor)) {
       // Create new variant
       let newVariant = await Variedad.create({
         valor: variant.valor,
-        stock: 0,
+        stock: 10,
         productId: variant.productId,
 
         // New properties
@@ -371,11 +377,22 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         const existingOption = await Option.findOne({
           where: {
             idOption: option.id,
-            varietyId: newVariant.id,
           },
         });
 
-        if ( !existingOption ) {
+        if (existingOption) {
+          if ( existingOption.varietyId !== newVariant.id ) {
+            // Si la opción existente no está asociada a la nueva variante, se elimina
+            await existingOption.destroy();
+            // Crear una nueva opción para la nueva variante
+            await Option.create({
+              idOption: option.id,
+              value: option.value,
+              varietyId: newVariant.id,
+            });
+          }
+        } else {
+          // Si no existe la opción, crear una nueva para la nueva variante
           await Option.create({
             idOption: option.id,
             value: option.value,
@@ -386,7 +403,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
     } else {
       existingVariant.valor = variant.valor;
-      //existingVariant.stock = 10;
+      existingVariant.stock = 10;
       existingVariant.productId = variant.productId;
       await existingVariant.save();
     }
@@ -396,34 +413,38 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // Process and update galleries
   const newGalleryImages = new Set();  // Conjunto para almacenar nuevas imágenes de galería
   for (const variant of newVariants) {
-    if (variant.product.image) {
-      const galleryImagePath = variant.product.image;
-      
-      const galleryName = await processGalleryImage(galleryImagePath);
-      newGalleryImages.add(galleryName);
+    for (const file of variant.files) {
+      if (file.type === 'preview' && file.preview_url) {
+        const galleryImageUrl = file.preview_url; //const galleryImagePath = variant.product.image;
 
-      const existingGallery = existingGalleries.find(gallery => gallery.imagen === galleryName);
-      if (!existingGallery) {
-        await Galeria.create({
-          imagen: galleryName,
-          color: variant.color,
-          productId
-        });
+        let galleryName = await processGalleryImage(galleryImageUrl);
+        newGalleryImages.add(galleryName);
 
-      } else {
-        const galleryImagePath = variant.product.image;
-        const galleryName = await processGalleryImage(galleryImagePath);
-        existingGallery.imagen = galleryName;
-        existingGallery.color = variant.color;
-        existingGallery.productId = variant.productId;
+        const existingGallery = existingGalleries.find(gallery => gallery.imagen === galleryName);
+        if ( !existingGallery ) 
+        {
+          await Galeria.create({
+            imagen: galleryName,
+            color: variant.color,
+            productId
+          });
 
-        await existingGallery.save();
+        } 
+        /*else {
+          const galleryImagePath = galleryName;
+          const galleryName = await processGalleryImage(galleryImagePath);
+          existingGallery.imagen = galleryName;
+          existingGallery.color = variant.color;
+          existingGallery.productId = variant.productId;
+
+          await existingGallery.save();
+        }*/
       }
     }
   }
 
-  // Remove galleries that are no longer associated with any variant
-  for (const existingGallery of existingGalleries) {
+  // Eliminar galerías que ya no están asociadas a ninguna variante
+  for ( const existingGallery of existingGalleries ) {
     if (!newGalleryImages.has(existingGallery.imagen)) { // Verificar si la imagen no está en el conjunto de nuevas imágenes
       await existingGallery.destroy();
     }
@@ -433,31 +454,120 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 /*
  * Limpia la base de datos local eliminando productos que no están presentes en Printful.
  * Elimina las variantes y galerías asociadas a esos productos.
+ * Elimina los ficheros Files si ya no está asociada a ningún producto.
+ * Elimina los optioms  si ya no está asociada a ningún producto.
  * Elimina la categoría si ya no está asociada a ningún producto.
  */
 const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
   try {
+    // Obtén todos los productos actuales de la base de datos
     const currentProducts = await Product.findAll();
-    const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
 
+    // Crear un conjunto de IDs de productos que existen en Printful
+    const printfulProductIds = new Set(printfulProducts.map(product => product.id));
+
+    // Recorrer los productos actuales de la base de datos y elimina los que no están en Printful
     for (const currentProduct of currentProducts) {
+      if (!printfulProductIds.has(currentProduct.idProduct)) {
+        // Eliminar el producto y sus componentes relacionados
+        await deleteProductAndRelatedComponents(currentProduct);
+      }
+    }
+  } catch (error) {
+    console.error('Error al limpiar la base de datos:', error);
+    throw new Error('Error al limpiar la base de datos');
+  }
+};
+
+/*
+ * Busca todas las variedades (Variedad) asociadas al producto (product.id).
+ * Itera sobre cada variedad encontrada y llama a deleteVarietyAndRelatedFiles(variety) para eliminar la variedad y todos los archivos (File) asociados a esa variedad.
+ * También llama a deleteOptionsForVariant(variety.id) para eliminar todas las opciones (Option) asociadas a esa variedad.
+*/
+const deleteProductAndRelatedComponents = async (product) => {
+  // Encontrar la categoría asociada
+  const category = await Categorie.findOne({ where: { id: product.categoryId } });
+
+  // Encontrar y eliminar las variedades asociadas
+  const varieties = await Variedad.findAll({ where: { productId: product.id } });
+  for (const variety of varieties) {
+    await deleteVarietyAndRelatedFiles(variety);
+    await deleteOptionsForVariant(variety.id);
+  }
+
+  // Encontrar y eliminar las galerías asociadas
+  const galleries = await Galeria.findAll({ where: { productId: product.id } });
+  for (const gallery of galleries) {
+    await gallery.destroy();
+  }
+
+  // Eliminar el producto finalmente
+  await product.destroy();
+
+  // Verificar si la categoría sigue siendo utilizada por algún otro producto
+  const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
+
+  // Si ningún otro producto usa esta categoría, eliminar la categoría
+  if (productsInCategory.length === 0) {
+    await category.destroy();
+  }
+};
+
+/*
+ * Busca todos los archivos (File) que están asociados a la variedad (variety.id)
+ */
+const deleteVarietyAndRelatedFiles = async (variety) => {
+  // Encontrar y eliminar los archivos asociados a la variedad
+  const files = await File.findAll({ where: { varietyId: variety.id } });
+  for (const file of files) {
+    await file.destroy();
+  }
+  // Eliminar la variedad finalmente
+  await variety.destroy();
+};
+
+/*
+ * Este método elimina todas las opciones (Option) asociadas a una variante específica 
+ */
+const deleteOptionsForVariant = async (variantId) => {
+  try {
+    // Eliminar todas las opciones asociadas a la variante
+    await Option.destroy({ where: { varietyId: variantId } });
+  } catch (error) {
+    console.error(`Error deleting options for variant ${variantId}:`, error);
+    throw new Error(`Error deleting options for variant ${variantId}`);
+  }
+};
+
+
+
+/*const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
+  try {
+    // Obtener todos los productos actuales de la base de datos
+    const currentProducts = await Product.findAll();
+  
+
+    // Crear un conjunto de IDs de productos que existen en Printful
+    const printfulProductIds = new Set( printfulProducts.map( product => product.idProduct ) );
+
+    // Recorrer los productos actuales y eliminar los que no están en Printful
+    for (const currentProduct of currentProducts) {
+
       if (!printfulProductIds.has(currentProduct.idProduct)) { //if (!printfulProductIds.has(currentProduct.id)) {
-        // Find associated category
+        // Encontrar la categoría asociada
         const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
 
-        // Find and delete associated varieties
+        // Encontrar y eliminar las variedades asociadas
         const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
         for (const variety of varieties) {
-
           const files = await File.findAll({ where: { varietyId: variety.id } });
           for (const file of files) {
             await file.destroy();
           }
-          
           await variety.destroy();
         }
 
-         // Find and delete associated galleries
+        // Encontrar y eliminar las galerías asociadas
         const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
         for (const gallery of galleries) {
           await gallery.destroy();
@@ -465,10 +575,10 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
 
         await currentProduct.destroy();
 
-        // Check if the category is still used by any other product
+        // Verificar si la categoría sigue siendo utilizada por algún otro producto
         const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
 
-        // If no other products use this category, destroy the category
+        // Si ningún otro producto usa esta categoría, eliminar la categoría
         if (productsInCategory.length === 0) {
           await category.destroy();
         }
@@ -478,7 +588,7 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
     console.error('Error al limpiar la base de datos:', error);
     throw new Error('Error al limpiar la base de datos');
   }
-};
+};*/
 
 /*
  * Crea una orden en Printful con los datos proporcionados.
