@@ -72,6 +72,7 @@ export const getPrintfulProducts = async () => {
 
     if (printfulProducts) {
       await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);
       }
@@ -96,7 +97,9 @@ const processPrintfulProduct = async (product) => {
     const category = await getOrCreateCategory(productDetail);
     const existingProduct = await getOrCreateProduct(product, productDetail, category);
 
-    await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
+    if (existingProduct) {
+      await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
+    }
     
   } catch (error) {
     console.error('Error processing Printful product:', error);
@@ -159,6 +162,7 @@ const createCategory = async (category) => {
  * Si existe, actualiza la información del producto.
  */
 const getOrCreateProduct = async (product, productDetail, category) => {
+
   let existingProduct = await Product.findOne({
     where: { idProduct: product.id }
   });
@@ -200,7 +204,7 @@ const createProduct = async (product, productDetail, category) => {
     tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
   };
 
-  if (product.thumbnail_url) {
+  if ( product.thumbnail_url ) {
     var img_path = product.thumbnail_url;
     var name = img_path.split('/');
     portada_name = name[5];
@@ -257,7 +261,6 @@ const updateProduct = async (existingProduct, product, productDetail, category) 
  * Maneja las galerías de imágenes asociadas a las variantes del producto.
  */
 const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
-
   // Get existing variants and galleries
   const existingVariants = await Variedad.findAll({ where: { productId } });
   const existingGalleries = await Galeria.findAll({ where: { productId } });
@@ -298,14 +301,13 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
   // Add new variants and update existing ones
   for (const variant of newVariants) {
-    const existingVariant = existingVariants.find(v => v.valor === variant.valor);
-
+    //const existingVariant = existingVariants.find(v => v.valor === variant.valor);
     // existingVariant si no existe, las crea
-    if ( !existingVariant ) {
+    if (!existingVariantValues.includes(variant.valor)) {//if ( !existingVariant ) {
       // Create new variant
       let newVariant = await Variedad.create({
         valor: variant.valor,
-        stock: 0,
+        stock: 10,
         productId: variant.productId,
 
         // New properties
@@ -371,11 +373,22 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         const existingOption = await Option.findOne({
           where: {
             idOption: option.id,
-            varietyId: newVariant.id,
           },
         });
 
-        if ( !existingOption ) {
+        if (existingOption) {
+          if ( existingOption.varietyId !== newVariant.id ) {
+            // Si la opción existente no está asociada a la nueva variante, se elimina
+            await existingOption.destroy();
+            // Crear una nueva opción para la nueva variante
+            await Option.create({
+              idOption: option.id,
+              value: option.value,
+              varietyId: newVariant.id,
+            });
+          }
+        } else {
+          // Si no existe la opción, crear una nueva para la nueva variante
           await Option.create({
             idOption: option.id,
             value: option.value,
@@ -386,7 +399,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
     } else {
       existingVariant.valor = variant.valor;
-      //existingVariant.stock = 10;
+      existingVariant.stock = 10;
       existingVariant.productId = variant.productId;
       await existingVariant.save();
     }
@@ -437,27 +450,33 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
  */
 const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
   try {
+    // Obtener todos los productos actuales de la base de datos
     const currentProducts = await Product.findAll();
-    const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
+    console.log("_____API: currentProducts", currentProducts);
+    //return;
 
+    // Crear un conjunto de IDs de productos que existen en Printful
+    const printfulProductIds = new Set( printfulProducts.map( product => product.idProduct ) );
+
+    // Recorrer los productos actuales y eliminar los que no están en Printful
     for (const currentProduct of currentProducts) {
+      console.log("___-Api: currentProduct:" , currentProduct);
+
       if (!printfulProductIds.has(currentProduct.idProduct)) { //if (!printfulProductIds.has(currentProduct.id)) {
-        // Find associated category
+        // Encontrar la categoría asociada
         const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
 
-        // Find and delete associated varieties
+        // Encontrar y eliminar las variedades asociadas
         const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
         for (const variety of varieties) {
-
           const files = await File.findAll({ where: { varietyId: variety.id } });
           for (const file of files) {
             await file.destroy();
           }
-          
           await variety.destroy();
         }
 
-         // Find and delete associated galleries
+        // Encontrar y eliminar las galerías asociadas
         const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
         for (const gallery of galleries) {
           await gallery.destroy();
@@ -465,10 +484,10 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
 
         await currentProduct.destroy();
 
-        // Check if the category is still used by any other product
+        // Verificar si la categoría sigue siendo utilizada por algún otro producto
         const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
 
-        // If no other products use this category, destroy the category
+        // Si ningún otro producto usa esta categoría, eliminar la categoría
         if (productsInCategory.length === 0) {
           await category.destroy();
         }
