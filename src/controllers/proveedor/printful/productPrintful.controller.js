@@ -71,7 +71,7 @@ export const getPrintfulProducts = async () => {
     const printfulProducts = await getPrintfulProductsService();
 
     if (printfulProducts) {
-      //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);
       }
@@ -97,6 +97,7 @@ const processPrintfulProduct = async (product) => {
     const existingProduct = await getOrCreateProduct(product, productDetail, category);
 
     await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
+    
   } catch (error) {
     console.error('Error processing Printful product:', error);
     throw new Error('Error processing Printful product');
@@ -440,13 +441,19 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
     const printfulProductIds = new Set( printfulProducts.map( product => product.id ) );
 
     for (const currentProduct of currentProducts) {
-      if (!printfulProductIds.has(currentProduct.id)) {
+      if (!printfulProductIds.has(currentProduct.idProduct)) { //if (!printfulProductIds.has(currentProduct.id)) {
         // Find associated category
         const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
 
         // Find and delete associated varieties
         const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
         for (const variety of varieties) {
+
+          const files = await File.findAll({ where: { varietyId: variety.id } });
+          for (const file of files) {
+            await file.destroy();
+          }
+          
           await variety.destroy();
         }
 
