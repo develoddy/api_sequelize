@@ -150,7 +150,7 @@ export const register = async (req, res) => {
             let itemFiles = [];
             files.forEach(file => {
                 itemFiles.push({
-                    url: file.url || file.thumbnail_url,
+                    url: file.url || file.preview_url,
                     filename: file.filename,
                     type: file.type,
                 });
@@ -206,12 +206,27 @@ export const register = async (req, res) => {
                 options: itemOptions,
             };
 
-            console.log("API_____ item one, ",item);
+            /*
+                [
+                  {
+                    variant_id: 10776,
+                    quantity: 1,
+                    name: 'Unisex Hoodie',
+                    retail_price: '23.5',
+                    files: [ [Object] ],
+                    options: {
+                      thread_colors_wrist_left: [Array],
+                      text_thread_colors_wrist_left: undefined,
+                      thread_colors_wrist_right: [Array],
+                      text_thread_colors_wrist_right: undefined,
+                      thread_colors_front_large: '#FFFFFF'
+                    }
+                  }
+                ]
+            */
+            //console.log("API_____ item one, ",item);
             items.push(item);
             
-
-            //console.log("API_____ ITEM, ",item);
-
             // Reducir el stock del producto o variante
             if (varietyId) {
                 const variedad = await Variedad.findByPk(varietyId);
@@ -242,7 +257,8 @@ export const register = async (req, res) => {
             await Cart.destroy({ where: { id: cart.id } });
         }
 
-        console.log("API_____ items muchos, ",items);
+        // Crear la orden en Printful
+        console.log("API_____ items muchos, ", JSON.stringify(items, null, 2)); // Impresión detallada de items
 
         // Crear la orden en Printful
         const printfulOrderData = {
