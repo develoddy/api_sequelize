@@ -94,12 +94,11 @@ const processPrintfulProduct = async (product) => {
   try {
     const productDetail = await getPrintfulProductDetail(product.id);
 
-    console.log("__API Detail: ", productDetail);
-
     const category = await getOrCreateCategory(productDetail);
     const existingProduct = await getOrCreateProduct(product, productDetail, category);
 
     if (existingProduct) {
+      
       await createOrUpdateVariantsAndGalleries(existingProduct.id, productDetail.sync_variants);
     }
     
@@ -300,6 +299,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
     if (!newVariantValues.includes(variant.valor)) {
       // Eliminar la variante si no está en newVariantValues
       await variant.destroy(); // Remove variant if it no longer exists in Printful
+      //await Option.destroy({ where: { varietyId: variant.id } });
     }
   }
 
@@ -372,40 +372,30 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         }
       }
 
-      // Verificar y crear opciones para la nueva variante
-      for (const option of variant.options) {
-        const existingOption = await Option.findOne({
-          where: {
-            idOption: option.id,
-          },
-        });
 
-        if (existingOption) {
-          if ( existingOption.varietyId !== newVariant.id ) {
-            // Si la opción existente no está asociada a la nueva variante, se elimina
-            await existingOption.destroy();
-            // Crear una nueva opción para la nueva variante
-            await Option.create({
-              idOption: option.id,
-              value: option.value,
-              varietyId: newVariant.id,
-            });
-          }
-        } else {
-          // Si no existe la opción, crear una nueva para la nueva variante
-          await Option.create({
-            idOption: option.id,
-            value: option.value,
-            varietyId: newVariant.id,
-          });
-        }
+      await Option.destroy({
+        where: {},
+        truncate: true
+      });
+
+      // Crear opciones para la nueva variante
+      for (const option of variant.options) {
+        await Option.create({
+          idOption: option.id,
+          value: option.value,
+          varietyId: newVariant.id, // Ensure the foreign key is set correctly
+        });
       }
 
     } else {
-      existingVariant.valor = variant.valor;
-      existingVariant.stock = 10;
-      existingVariant.productId = variant.productId;
-      await existingVariant.save();
+      // Create new options
+      for (const option of variant.options) {
+        await Option.create({
+          idOption: option.id,
+          value: option.value,
+          varietyId: existingVariant.id, // Ensure the foreign key is set correctly
+        });
+      }
     }
   }
 
@@ -428,17 +418,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
             color: variant.color,
             productId
           });
-
         } 
-        /*else {
-          const galleryImagePath = galleryName;
-          const galleryName = await processGalleryImage(galleryImagePath);
-          existingGallery.imagen = galleryName;
-          existingGallery.color = variant.color;
-          existingGallery.productId = variant.productId;
-
-          await existingGallery.save();
-        }*/
       }
     }
   }
@@ -470,6 +450,8 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
     for (const currentProduct of currentProducts) {
       if (!printfulProductIds.has(currentProduct.idProduct)) {
         // Eliminar el producto y sus componentes relacionados
+
+        console.log("__APII: currentProduct", currentProduct);
         await deleteProductAndRelatedComponents(currentProduct);
       }
     }
@@ -492,7 +474,7 @@ const deleteProductAndRelatedComponents = async (product) => {
   const varieties = await Variedad.findAll({ where: { productId: product.id } });
   for (const variety of varieties) {
     await deleteVarietyAndRelatedFiles(variety);
-    await deleteOptionsForVariant(variety.id);
+    await deleteOptionsForVariant(variety);
   }
 
   // Encontrar y eliminar las galerías asociadas
@@ -529,16 +511,62 @@ const deleteVarietyAndRelatedFiles = async (variety) => {
 /*
  * Este método elimina todas las opciones (Option) asociadas a una variante específica 
  */
-const deleteOptionsForVariant = async (variantId) => {
+const deleteOptionsForVariant = async (variety) => {
   try {
     // Eliminar todas las opciones asociadas a la variante
-    await Option.destroy({ where: { varietyId: variantId } });
+    //await Option.destroy({ where: { varietyId: variantId } });
+
+  console.log("_______API: deleteOptionsForVariant recibos IDs de variedades: ", variety);
+    const options = await Option.findAll({ where: { varietyId: variety.id } });
+    console.log("_______API: options relaciones con variedades: ", options);
+    for (const option of options) {
+      await option.destroy();
+    }
   } catch (error) {
     console.error(`Error deleting options for variant ${variantId}:`, error);
     throw new Error(`Error deleting options for variant ${variantId}`);
   }
 };
 
+
+
+/*const destroyAllTables = async () => {
+
+  await Categorie.destroy({
+    where: {},
+    truncate: true
+  });
+
+  await Variedad.destroy({
+    where: {},
+    truncate: true
+  });  
+
+  await Galeria.destroy({
+    where: {},
+    truncate: true
+  });
+
+  await File.destroy({
+    where: {},
+    truncate: true
+  });
+
+  await Option.destroy({
+    where: {},
+    truncate: true
+  });
+
+   await ProductVariants.destroy({
+    where: {},
+    truncate: true
+  });
+
+ await Product.destroy({
+    where: {},
+    truncate: true
+  });
+};*/
 
 
 /*const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
