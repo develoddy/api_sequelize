@@ -55,7 +55,6 @@ async function send_email(sale_id) {
         if ( orderDetails ) {
             orderDetails.forEach(orderDetail => {
                 orderDetail.product.portada = `${process.env.URL_BACKEND}/api/products/uploads/product/${orderDetail.product.portada}`;
-
             });
         }
 
@@ -126,12 +125,10 @@ export const register = async (req, res) => {
             let varietyId = cart.variedadId;
 
             // Manejar la reducción de stock y asociar el carrito con la venta
-            //let selectedOption = null; // Esta variable contendrá la opción seleccionada (por ejemplo, la talla)
             if ( cart.variedadId ) { // Inventario múltiple
                 const variedad = await Variedad.findByPk(cart.variedadId);
                 variantId = variedad.variant_id;
                 productId = variedad.productId;
-                //selectedOption = variedad.valor;
             }
 
             const product = await Product.findByPk(productId);
@@ -139,13 +136,13 @@ export const register = async (req, res) => {
             const files = await File.findAll({ where: { varietyId: varietyId } });
 
             // Depuración para verificar los archivos obtenidos
-            console.log(`Archivos obtenidos para el ID de variedad ${varietyId}:`, files);
+            //console.log(`Archivos obtenidos para el ID de variedad ${varietyId}:`, files);
 
             // Validaciones de los archivos
             if (!files || files.length === 0) {
                 throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
             }
-            
+
             // Mapear los archivos encontrados
             let itemFiles = [];
             files.forEach(file => {
@@ -196,7 +193,6 @@ export const register = async (req, res) => {
                 itemOptions['thread_colors_front_large'] = "#FFFFFF"; // valor por defecto
             }
 
-            
             let item = {
                 variant_id: variantId, 
                 quantity: cart.cantidad,
@@ -205,26 +201,6 @@ export const register = async (req, res) => {
                 files: itemFiles,
                 options: itemOptions,
             };
-
-            /*
-                [
-                  {
-                    variant_id: 10776,
-                    quantity: 1,
-                    name: 'Unisex Hoodie',
-                    retail_price: '23.5',
-                    files: [ [Object] ],
-                    options: {
-                      thread_colors_wrist_left: [Array],
-                      text_thread_colors_wrist_left: undefined,
-                      thread_colors_wrist_right: [Array],
-                      text_thread_colors_wrist_right: undefined,
-                      thread_colors_front_large: '#FFFFFF'
-                    }
-                  }
-                ]
-            */
-            //console.log("API_____ item one, ",item);
             items.push(item);
             
             // Reducir el stock del producto o variante
@@ -258,7 +234,7 @@ export const register = async (req, res) => {
         }
 
         // Crear la orden en Printful
-        console.log("API_____ items muchos, ", JSON.stringify(items, null, 2)); // Impresión detallada de items
+        // console.log("API_____ items muchos, ", JSON.stringify(items, null, 2)); // Impresión detallada de items
 
         // Crear la orden en Printful
         const printfulOrderData = {

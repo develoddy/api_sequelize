@@ -5,6 +5,11 @@ import { Product } from "../models/Product.js";
 import { Categorie } from "../models/Categorie.js";
 import { Variedad } from "../models/Variedad.js";
 import { Galeria } from "../models/Galeria.js";
+import { File } from "../models/File.js";
+import { Option } from "../models/Option.js";
+import { SaleDetail } from "../models/SaleDetail.js";
+
+
 import fs from 'fs';
 import path from "path";
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
@@ -191,10 +196,49 @@ export const list = async ( req, res ) => {
 export const remove = async(req, res) => {
     try {
         let _id = req.query._id;
+
+        // Encuentra el producto por ID
+        const product = await Product.findByPk(_id);
+        if ( !product ) {
+            return res.status(404).json({
+                message: "El producto no se encontró."
+            });
+        }
+
+        // Obtén todas las variedades del producto
+        const variedades = await Variedad.findAll({ where: { productId: _id } });
+
+        // Elimina los archivos asociados a cada variedad
+        for (const variedad of variedades) {
+
+            await SaleDetail.destroy({ where: { productId: _id, variedadId: variedad.id } });
+
+            // Elimina las opciones asociadas a cada variedad
+            await Option.destroy({ where: { varietyId: variedad.id } });
+
+            // Elimina los archivos asociados a cada variedad
+            await File.destroy({ where: { varietyId: variedad.id } });
+        }
+
+        // Guarda el categoryId del producto antes de eliminarlo
+        const categoryId = product.categoryId;
+        
+        await Variedad.destroy({ where: { categoryId: _id } });
+
+        // Elimina todas las variedades relacionadas con el producto
+        await Variedad.destroy({ where: { productId: _id } });
+
+        // Elimina el producto
         await Product.destroy({ where: { id: _id } });
 
+        // Verifica si la categoría no está asociada a otros productos antes de eliminarla
+        const categoryInUse = await Product.findOne({ where: { categoryId: categoryId } });
+        if (!categoryInUse) {
+            await Categorie.destroy({ where: { id: categoryId } });
+        }
+
         res.status(200).json({
-            message: "¡Success! El producto se ha eliminado correctamente"
+            message: "El producto, sus variedades, opciones, archivos y categoría se han eliminado correctamente."
         });
     } catch (error) {
         res.status(500).send({

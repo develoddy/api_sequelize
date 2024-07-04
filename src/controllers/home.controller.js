@@ -242,7 +242,6 @@ export const show_landing_product = async (req, res) => {
 export const profile_client = async (req, res) => {
 
     try {
-
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario

@@ -3,6 +3,7 @@ import { sequelize } from '../database/database.js';
 import { Categorie } from './Categorie.js';
 import { Galeria } from './Galeria.js';
 
+
 export const Product = sequelize.define('products', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     idProduct: { type: DataTypes.STRING },
@@ -38,4 +39,3 @@ Product.hasMany(Galeria, {
     foreignKey: 'productId',
     sourceKey: 'id',
 });
-
