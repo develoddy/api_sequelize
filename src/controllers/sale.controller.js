@@ -8,10 +8,8 @@ import { SaleDetail } from "../models/SaleDetail.js";
 import { SaleAddress } from "../models/SaleAddress.js";
 import { Galeria } from "../models/Galeria.js";
 import { Option } from "../models/Option.js";
-
 import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
-
 import fs from 'fs';
 import path from "path";
 import handlebars from 'handlebars';
