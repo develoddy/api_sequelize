@@ -483,7 +483,9 @@
 																			<tr>
 																				<td class="img" width="34" style="font-size:0pt; line-height:0pt; text-align:left;">
 																					<a href="#" target="_blank">
-																						<img src="../images/ico_facebook.png" width="34" height="34" editable="true" border="0" alt="" />
+																						<!-- http://localhost:3500/assets/images/ico_facebook.png -->
+																						<!-- <%= process.env.URL_FRONTEND %>/profile -->
+																						<img src="<%= process.env.URL_BACKEND %>/assets/images/ico_facebook.png" width="34" height="34" editable="true" border="0" alt="" />
 																					</a>
 																				</td>
 																				<td class="img" width="15" style="font-size:0pt; line-height:0pt; text-align:left;"></td>
