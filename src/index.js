@@ -4,11 +4,11 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import './models/User.js';
+import './models/Variedad.js';
 import './models/Slider.js';
 import './models/Galeria.js';
 import './models/Categorie.js';
 import './models/Product.js';
-import './models/Variedad.js';
 import './models/Sale.js';
 import './models/SaleDetail.js';
 import './models/SaleAddress.js';
@@ -21,12 +21,10 @@ import './models/CuponeProduct.js';
 import './models/Cupone.js';
 import './models/Cart.js';
 import './models/AddressClient.js';
-
 // New
 import './models/ProductVariants.js';
 import './models/File.js';
 import './models/Option.js';
-//import './models/Value.js';
 
 
 async function main() {

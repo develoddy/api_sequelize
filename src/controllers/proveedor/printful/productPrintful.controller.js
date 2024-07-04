@@ -6,6 +6,7 @@ import { sequelize } from '../../../database/database.js';
 import { Galeria } from "../../../models/Galeria.js";
 import { Variedad } from "../../../models/Variedad.js";
 import { ProductVariants } from "../../../models/ProductVariants.js";
+import { SaleDetail } from "../../../models/SaleDetail.js";
 import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
 import { 
@@ -71,7 +72,7 @@ export const getPrintfulProducts = async () => {
     const printfulProducts = await getPrintfulProductsService();
 
     if (printfulProducts) {
-      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
       
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);
@@ -167,6 +168,8 @@ const getOrCreateProduct = async (product, productDetail, category) => {
   let existingProduct = await Product.findOne({
     where: { idProduct: product.id }
   });
+
+  let oldProductId = existingProduct ? existingProduct.id : null;
 
   if (!existingProduct) 
   {
@@ -299,16 +302,20 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
     if (!newVariantValues.includes(variant.valor)) {
       // Eliminar la variante si no está en newVariantValues
       await variant.destroy(); // Remove variant if it no longer exists in Printful
-      //await Option.destroy({ where: { varietyId: variant.id } });
     }
   }
 
   // Add new variants and update existing ones
   for (const variant of newVariants) {
+
     const existingVariant = existingVariants.find(v => v.valor === variant.valor);
+
+    let oldVariedadId = existingVariant ? existingVariant.id : null;
+
     // existingVariant si no existe, las crea
-    if ( !existingVariant ) {//if (!existingVariantValues.includes(variant.valor)) {
-      // Create new variant
+    if ( !existingVariant ) { 
+
+      // Create new variant 
       let newVariant = await Variedad.create({
         valor: variant.valor,
         stock: 10,
@@ -328,6 +335,10 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         currency: variant.currency,
       });
 
+      if (oldVariedadId && oldVariedadId !== existingVariant.id) {
+        idMapping.variedades[oldVariedadId] = existingVariant.id;
+      }
+
       // Create new ProductVariant
       await ProductVariants.create({
           variant_id: newVariant.variant_id,
@@ -337,14 +348,15 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
           varietyId: newVariant.id // Ensure the foreign key is set correctly
       });
       
+      // Create or update Files
       for (const file of variant.files) {
         if ( !file.hash ) {
           //console.error('File hash is missing:', file);
           continue;
         }
         try {
-          const existingFile = await File.findOne({ where: { hash: file.hash } });
-          if ( !existingFile ) {
+          //const existingFile = await File.findOne({ where: { hash: file.hash } });
+          //if ( !existingFile ) {
             await File.create({
               idFile: file.id,
               type: file.type,
@@ -366,19 +378,14 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
               varietyId: newVariant.id, //newVariant.id // Ensure the foreign key is set correctly
               optionVarietyId: newVariant.variant_id, // Store the size value in the option field
             });
-          }
+          //}
         } catch (error) {
           console.error('Error creating file record:', error, file);
         }
       }
 
-
-      await Option.destroy({
-        where: {},
-        truncate: true
-      });
-
-      // Crear opciones para la nueva variante
+      // Create or update Options
+      await Option.destroy({ where: {}, truncate: true });
       for (const option of variant.options) {
         await Option.create({
           idOption: option.id,
@@ -398,7 +405,6 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
       }
     }
   }
-
 
   // Process and update galleries
   const newGalleryImages = new Set();  // Conjunto para almacenar nuevas imágenes de galería
@@ -430,6 +436,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
     }
   }
 };
+
 
 /*
  * Limpia la base de datos local eliminando productos que no están presentes en Printful.

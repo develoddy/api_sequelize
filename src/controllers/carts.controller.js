@@ -101,6 +101,11 @@ export const register = async (req, res) => {
 
         // SEGUNDO VAMOS A VALIDAR SI EL STOCK ESTÁ DISPONIBLE
         if (data.variedad) {
+
+            if( data.variedad == 'multiple' ) {
+                return;
+            }
+
             let valid_variedad = await Variedad.findOne({
                 where: {
                     id: data.variedad,
@@ -109,7 +114,7 @@ export const register = async (req, res) => {
             if (valid_variedad.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El stock no está disponible en este momento.",
+                    message_text: "V El stock no está disponible en este momento.",
                 });
                 return;
             }
@@ -123,7 +128,7 @@ export const register = async (req, res) => {
             if (valid_product.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El stock no está disponible en este momento.",
+                    message_text: "P IU El stock no está disponible en este momento.",
                 });
                 return;
             }

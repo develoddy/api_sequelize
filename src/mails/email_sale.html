@@ -45,7 +45,7 @@
 		.l-grey a { color: #6e6e6e; }
 		.l-purple a { color: #9128df; }
 
-		.gradient { background: linear-gradient(to right, #9028df 0%,#f3189e 100%); }
+		.gradient { background: linear-gradient(to right, #000 0%,#000 100%); }
 
 		.btn-secondary { border-radius: 10px; background: linear-gradient(to right, #9028df 0%,#f3189e 100%); }
 
@@ -94,7 +94,7 @@
 			.mmt-0 { margin-top: 0 !important; }
 		}
 
-			</style>
+	</style>
 </head>
 <body class="body" style="padding:0 !important; margin:0 auto !important; display:block !important; min-width:100% !important; width:100% !important; background:#f4ecfa; -webkit-text-size-adjust:none;">
 	<center>
@@ -111,7 +111,9 @@
 											<table width="100%" border="0" cellspacing="0" cellpadding="0">
 													<tr>
 														<td class="text-12 c-grey l-grey a-right py-20" style="font-size:12px; line-height:16px; font-family:'PT Sans', Arial, sans-serif; min-width:auto !important; color:#6e6e6e; text-align:right; padding-top: 20px; padding-bottom: 20px;">
-															<webversion class="link c-grey" style="text-decoration:none; color:#6e6e6e;"><span class="link c-grey" style="text-decoration:none; color:#6e6e6e;">View this email in your browser</span></webversion>
+															<webversion class="link c-grey" style="text-decoration:none; color:#6e6e6e;">
+																<span class="link c-grey" style="text-decoration:none; color:#6e6e6e;">View this email in your browser</span>
+															</webversion>
 														</td>
 													</tr>
 												</table>											<!-- END Top -->
@@ -150,14 +152,14 @@
 																								<tr>
 																									<td class="title-36 a-center pb-15" style="font-size:36px; line-height:40px; color:#282828; font-family:'PT Sans', Arial, sans-serif; min-width:auto !important; text-align:center; padding-bottom: 15px;">
 																										<multiline>
-																											<strong>¡Gracias por tu orden!</strong>
+																											<strong>¡Gracias por su pedido!</strong>
 																										</multiline>
 																									</td>
 																								</tr>
 																								<tr>
 																									<td class="text-16 lh-26 a-center" style="font-size:16px; color:#6e6e6e; font-family:'PT Sans', Arial, sans-serif; min-width:auto !important; line-height: 26px; text-align:center;">
 																										<multiline>
-																											Le enviaremos información de seguimiento tan pronto como se envíe su pedido.
+																											Le enviaremos la información de seguimiento tan pronto como su pedido haya sido enviado.
 																										</multiline>
 																									</td>
 																								</tr>
@@ -179,8 +181,11 @@
 																											<tr>
 																												<td class="btn-20 btn-secondary c-white l-white" bgcolor="#f3189e" style="font-size:20px; line-height:24px; mso-padding-alt:15px 35px; font-family:'PT Sans', Arial, sans-serif; text-align:center; font-weight:bold; text-transform:uppercase; min-width:auto !important; border-radius:10px; background: linear-gradient(to right, #ff914d 0%, #f3189e 100%); color:#ffffff;">
 																													<multiline>
-																														<a href="#" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
+																														<!--<a href="#" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
 																															<span class="link c-white" style="text-decoration:none; color:#ffffff;">ORDEN: #<%= order.id %></span>
+																														</a>-->
+																														<a href="#" target="_blank" class="link c-white" style="display: block; border-radius: 7px; padding: 15px 35px; text-decoration:none; color:#ffffff; background-color: #000000;">
+																															    <span class="link c-white" style="text-decoration:none; color:#ffffff;">ORDEN: #<%= order.id %></span>
 																														</a>
 																													</multiline>
 																												</td>
@@ -227,8 +232,11 @@
 																														</tr>
 																														<tr>
 																															<td class="text-16" style="font-size:16px; line-height:20px; color:#6e6e6e; font-family:'PT Sans', Arial, sans-serif; text-align:left; min-width:auto !important;">
-																																<multiline>
+																																<!--<multiline>
 																																	<%= address_sale.name + ' ' +  address_sale.surname %> 
+																																</multiline>-->
+																																<multiline>
+																																	Su pedido está previsto que llegue entre el 10 y el 15 de julio de 2024.
 																																</multiline>
 																															</td>
 																														</tr>
@@ -288,7 +296,7 @@
 																																		<% } %>
 																																		<strong>Cantidad:</strong> <%= order_detail[i].cantidad %>
 																																		<br />
-																																		<strong>Precio:</strong> <%= order_detail[i].total %>
+																																		<strong>Precio:</strong> <%= order_detail[i].total %> €
 																																	</multiline>
 																																</td>
 																															</tr>
@@ -385,8 +393,11 @@
 																																	<tr>
 																																		<td class="btn-20 btn-secondary c-white l-white" bgcolor="#f3189e" style="font-size:20px; line-height:24px; mso-padding-alt:15px 35px; font-family:'PT Sans', Arial, sans-serif; text-align:center; font-weight:bold; text-transform:uppercase; min-width:auto !important; border-radius:10px; background:linear-gradient(to right, #9028df 0%,#f3189e 100%); color:#ffffff;">
 																																			<multiline>
-																																				<a href="#" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
+																																				<!--<a href="#" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
 																																					<span class="link c-white" style="text-decoration:none; color:#ffffff;">TOTAL: <%= order.total %> <%= order.currency_payment %></span>
+																																				</a>-->
+																																				<a href="#" target="_blank" class="link c-white" style="display: block; border-radius: 7px; padding: 15px 35px; text-decoration:none; color:#ffffff; background-color: #000000;">
+																																				    <span class="link c-white" style="text-decoration:none; color:#ffffff;">TOTAL: <%= order.total %> <%= order.currency_payment %></span>
 																																				</a>
 																																			</multiline>
 																																		</td>
@@ -413,7 +424,13 @@
 																								<tr>
 																									<td class="text-16 lh-26 a-center pb-25" style="font-size:16px; color:#6e6e6e; font-family:'PT Sans', Arial, sans-serif; min-width:auto !important; line-height: 26px; text-align:center; padding-bottom: 25px;">
 																										<multiline>
-																											<em>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </em>
+																											<small>
+																												Gracias por tu pedido, <%= address_sale.name %>! <br>
+																												Hemos recibido tu pedido y estamos procesándolo. <br>
+																												Puedes ver los detalles de tu pedido a continuación. <br>
+																												Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos.<br>
+																												¡Gracias por comprar con nosotros!
+																											</small>
 																										</multiline>
 																									</td>
 																								</tr>
@@ -424,8 +441,11 @@
 																											<tr>
 																												<td class="btn-16 c-white l-white" bgcolor="#f3189e" style="font-size:16px; line-height:20px; mso-padding-alt:15px 35px; font-family:'PT Sans', Arial, sans-serif; text-align:center; font-weight:bold; text-transform:uppercase; border-radius:25px; min-width:auto !important; color:#ffffff;">
 																													<multiline>
-																														<a href="http://localhost:5000/profile" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
+																														<!--<a href="http://localhost:5000/profile" target="_blank" class="link c-white" style="display: block; padding: 15px 35px; text-decoration:none; color:#ffffff;">
 																															<span class="link c-white" style="text-decoration:none; color:#ffffff;">VER MI PEDIDO</span>
+																														</a>-->
+																														<a href="<%= process.env.URL_FRONTEND %>/profile" target="_blank" class="link c-white" style="display: block; border-radius: 7px; padding: 15px 35px; text-decoration:none; color:#ffffff; background-color: #4286F4;">
+																														    <span class="link c-white" style="text-decoration:none; color:#ffffff;">VER MI PEDIDO</span>
 																														</a>
 																													</multiline>
 																												</td>

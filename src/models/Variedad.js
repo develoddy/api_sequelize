@@ -32,15 +32,15 @@ export const Variedad = sequelize.define('variedades', {
 // belongsTo: En este caso, establece que una variedad de producto pertenece a un producto específico.
 //Variedad.belongsTo(Product, { foreignKey: 'productId' });
 Variedad.belongsTo(Product, { foreignKey: 'productId', targetKey: 'id' });
-Product.hasMany(Variedad, { foreignKey: 'productId', sourceKey: 'id' });
+Product.hasMany(Variedad, { foreignKey: 'productId', sourceKey: 'id', });
 
 // Define las asociaciones con los nuevos modelos
-Variedad.hasOne(ProductVariants, { foreignKey: 'varietyId' });
+Variedad.hasOne(ProductVariants, { foreignKey: 'varietyId', });
 ProductVariants.belongsTo(Variedad, { foreignKey: 'varietyId' });
 
-Variedad.hasMany(File, { foreignKey: 'varietyId' });
+Variedad.hasMany(File, { foreignKey: 'varietyId', });
 File.belongsTo(Variedad, { foreignKey: 'varietyId' });
 
 // Define la asociación con el modelo de Option
 Option.belongsTo(Variedad, { foreignKey: 'varietyId' });
-Variedad.hasMany(Option, { foreignKey: 'varietyId' });
+Variedad.hasMany(Option, { foreignKey: 'varietyId',  });
