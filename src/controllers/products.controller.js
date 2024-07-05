@@ -220,13 +220,10 @@ export const remove = async(req, res) => {
             await File.destroy({ where: { varietyId: variedad.id } });
         }
 
+        await Variedad.destroy({ where: { productId: _id } });
+
         // Guarda el categoryId del producto antes de eliminarlo
         const categoryId = product.categoryId;
-        
-        await Variedad.destroy({ where: { categoryId: _id } });
-
-        // Elimina todas las variedades relacionadas con el producto
-        await Variedad.destroy({ where: { productId: _id } });
 
         // Elimina el producto
         await Product.destroy({ where: { id: _id } });
