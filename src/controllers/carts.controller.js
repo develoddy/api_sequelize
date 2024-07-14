@@ -270,7 +270,7 @@ export const apllyCupon = async (req, res) => {
         if (!cupon) {
             res.status(200).json({
                 message: 403,
-                message_text: "El cupón ingresado no existe. Por favor, inténtelo de nuevo con otro cupón."
+                message_text: "El cupón ingresado no es válido. Por favor, inténtelo con otro cupón."
             });
             return;
         }
