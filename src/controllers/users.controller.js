@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import resources from "../resources/index.js";
 import { User } from "../models/User.js";
 import token from "../services/token.js";
@@ -39,11 +39,20 @@ export const register = async ( req, res ) => {
     try {
         req.body.password = await bcrypt.hash( req.body.password, 10 );
         const user = await User.create( req.body );
-        res.status( 200 ).json( user );
-        res.send(
-            'register user:' + req.body.password 
-        );
+        res.status(200).json({
+            status: 200,
+            message: "Usuario registrado correctamente.",
+            data: user
+        });
+        //res.status( 200 ).json( user );
+        //res.send('register user:' + req.body.password );
     } catch ( error ) {
+        // Verificar si el error es una violación de la restricción única
+        if (error instanceof Sequelize.UniqueConstraintError) {
+            return res.status(400).send({
+                message: "Este correo electrónico ya está registrado en nuestro sistema."
+            });
+        }
         res.status(500).send({
             message: "debbug: UserController register - OCURRIÓ UN PROBLEMA"
         });
