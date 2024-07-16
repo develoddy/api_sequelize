@@ -29,7 +29,7 @@ import './models/Option.js';
 
 async function main() {
     try {
-        await sequelize.sync({ force: true });
+        await sequelize.sync({ force: false });
         app.listen( 3500 )
         console.log("Server running on port 35000");
     } catch (error) {
