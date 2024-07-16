@@ -72,7 +72,7 @@ export const getPrintfulProducts = async () => {
     const printfulProducts = await getPrintfulProductsService();
 
     if (printfulProducts) {
-      //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
       
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);

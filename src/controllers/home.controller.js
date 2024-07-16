@@ -301,8 +301,6 @@ export const profile_client = async (req, res) => {
                     total: detail_order.total,
                     review: reviewS,
                 });
-
-                console.log("---- API: profile_client collection_detail_orders", collection_detail_orders);
             }
 
             sale_orders.push({
