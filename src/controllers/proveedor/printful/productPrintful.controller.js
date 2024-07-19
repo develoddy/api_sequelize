@@ -9,6 +9,7 @@ import { ProductVariants } from "../../../models/ProductVariants.js";
 import { SaleDetail } from "../../../models/SaleDetail.js";
 import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
+import { Cart } from "../../../models/Cart.js";
 import { 
   getPrintfulProductsService, 
   getPrintfulProductDetail,
@@ -28,6 +29,8 @@ import  {
 
 import fs from 'fs';
 import path from "path";
+
+let idMapping = { products: {}, variedades: {} };
 
 export const list = async( req, res ) => {
   try{
@@ -72,7 +75,7 @@ export const getPrintfulProducts = async () => {
     const printfulProducts = await getPrintfulProductsService();
 
     if (printfulProducts) {
-      await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
+      //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
       
       for (const product of printfulProducts) {
         await processPrintfulProduct(product);
@@ -85,7 +88,7 @@ export const getPrintfulProducts = async () => {
 };
 
 /*
- * Esta función procesa un producto de Printful.
+ * Esta función procesa un producto de Printful. 
  * Obtiene detalles del producto desde Printful usando su ID.
  * Obtiene o crea una categoría para el producto.
  * Obtiene o crea el producto en la base de datos local.
@@ -383,9 +386,9 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
           console.error('Error creating file record:', error, file);
         }
       }
-
       // Create or update Options
-      await Option.destroy({ where: {}, truncate: true });
+      //await Option.destroy({ where: {}, truncate: true });
+      await Option.destroy({ where: { varietyId: newVariant.id } });
       for (const option of variant.options) {
         await Option.create({
           idOption: option.id,
@@ -395,6 +398,8 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
       }
 
     } else {
+      // Remove existing options for the existing variant
+      await Option.destroy({ where: { varietyId: existingVariant.id } });
       // Create new options
       for (const option of variant.options) {
         await Option.create({
@@ -405,6 +410,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
       }
     }
   }
+
 
   // Process and update galleries
   const newGalleryImages = new Set();  // Conjunto para almacenar nuevas imágenes de galería
@@ -437,7 +443,6 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   }
 };
 
-
 /*
  * Limpia la base de datos local eliminando productos que no están presentes en Printful.
  * Elimina las variantes y galerías asociadas a esos productos.
@@ -457,8 +462,6 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
     for (const currentProduct of currentProducts) {
       if (!printfulProductIds.has(currentProduct.idProduct)) {
         // Eliminar el producto y sus componentes relacionados
-
-        console.log("__APII: currentProduct", currentProduct);
         await deleteProductAndRelatedComponents(currentProduct);
       }
     }
@@ -534,6 +537,9 @@ const deleteOptionsForVariant = async (variety) => {
     throw new Error(`Error deleting options for variant ${variantId}`);
   }
 };
+
+
+
 
 
 

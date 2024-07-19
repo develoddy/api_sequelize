@@ -248,7 +248,7 @@ export const profile_client = async (req, res) => {
         let Orders = await Sale.findAll({ where: { userId: user_id } });
 
         let sale_orders = [];
-        for (const order of Orders) {
+        for ( const order of Orders ) {
             // Obtener detalles de las órdenes con sus relaciones
             let detail_orders = await SaleDetail.findAll({
                 where: { saleId: order.id },
@@ -266,17 +266,13 @@ export const profile_client = async (req, res) => {
                     }
                 ]
             });
-
             // Obtener dirección de la orden
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
             let collection_detail_orders = [];
-
-            for (const detail_order of detail_orders) {
+            for ( const detail_order of detail_orders ) {
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
-
-                
 
                 collection_detail_orders.push({
                     _id: detail_order.id,
