@@ -51,10 +51,6 @@ export const variedad_update = async (req, res) => {
 
 export const variedad_remove = async (req, res) => {
     try {
-
-        console.log("---- update variedad multiple ----");
-        console.log(req.params);
-
         const _id = req.params.id;
         await Variedad.destroy({ where: { id: _id } });
         res.status(200).json({

@@ -133,9 +133,6 @@ export const register = async (req, res) => {
 
             const files = await File.findAll({ where: { varietyId: varietyId } });
 
-            // Depuración para verificar los archivos obtenidos
-            //console.log(`Archivos obtenidos para el ID de variedad ${varietyId}:`, files);
-
             // Validaciones de los archivos
             if (!files || files.length === 0) {
                 throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
@@ -226,13 +223,10 @@ export const register = async (req, res) => {
             };
 
             await SaleDetail.create(saleDetailData);
-
+            
             // Remove the cart item
             await Cart.destroy({ where: { id: cart.id } });
         }
-
-        // Crear la orden en Printful
-        // console.log("API_____ items muchos, ", JSON.stringify(items, null, 2)); // Impresión detallada de items
 
         // Crear la orden en Printful
         const printfulOrderData = {
@@ -249,11 +243,30 @@ export const register = async (req, res) => {
         
         await createPrintfulOrder(printfulOrderData);
 
+
         // Send email (assuming send_email is a defined function)
         await send_email(sale.id);
 
+        // Obtener los detalles de la venta
+        let saleDetails = await SaleDetail.findAll({ 
+            where: { saleId: sale.id },
+            include: [
+                { model: Product },
+                { model: Variedad }
+            ]
+        });
+
+        // Añadir la URL completa de la imagen a cada detalle de venta
+        saleDetails = saleDetails.map(detail => {
+            detail = detail.toJSON();  // Convertir el detalle a un objeto JSON simple
+            detail.product.imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`;
+            return detail;
+        });
+
         res.status(200).json({
             message: "Muy bien! La orden se generó correctamente",
+            sale: sale,
+            saleDetails: saleDetails,
         });
     } catch (error) {
         res.status(500).send({
