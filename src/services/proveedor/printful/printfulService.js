@@ -38,9 +38,6 @@ export const createPrintfulOrderService = async ( orderData ) => {
         const response = await printfulApi.post('/orders', orderData);
         return response.data.result;
     } catch ( error ) {
-        //console.error('DEBUG createPrintfulOrder: Error al crear la orden en Printful:', error);
-        //throw new Error('DEBUG createPrintfulOrder: Error al crear la orden en Printful');
-
         if (error.response) {
             // El servidor respondió con un estado que no está en el rango de 2xx
             console.error('DEBUG createPrintfulOrder: Error al crear la orden en Printful:', error.response.data);

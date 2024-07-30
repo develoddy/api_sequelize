@@ -523,12 +523,7 @@ const deleteVarietyAndRelatedFiles = async (variety) => {
  */
 const deleteOptionsForVariant = async (variety) => {
   try {
-    // Eliminar todas las opciones asociadas a la variante
-    //await Option.destroy({ where: { varietyId: variantId } });
-
-  console.log("_______API: deleteOptionsForVariant recibos IDs de variedades: ", variety);
     const options = await Option.findAll({ where: { varietyId: variety.id } });
-    console.log("_______API: options relaciones con variedades: ", options);
     for (const option of options) {
       await option.destroy();
     }
@@ -540,107 +535,18 @@ const deleteOptionsForVariant = async (variety) => {
 
 
 
-
-
-
-/*const destroyAllTables = async () => {
-
-  await Categorie.destroy({
-    where: {},
-    truncate: true
-  });
-
-  await Variedad.destroy({
-    where: {},
-    truncate: true
-  });  
-
-  await Galeria.destroy({
-    where: {},
-    truncate: true
-  });
-
-  await File.destroy({
-    where: {},
-    truncate: true
-  });
-
-  await Option.destroy({
-    where: {},
-    truncate: true
-  });
-
-   await ProductVariants.destroy({
-    where: {},
-    truncate: true
-  });
-
- await Product.destroy({
-    where: {},
-    truncate: true
-  });
-};*/
-
-
-/*const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
-  try {
-    // Obtener todos los productos actuales de la base de datos
-    const currentProducts = await Product.findAll();
-  
-
-    // Crear un conjunto de IDs de productos que existen en Printful
-    const printfulProductIds = new Set( printfulProducts.map( product => product.idProduct ) );
-
-    // Recorrer los productos actuales y eliminar los que no están en Printful
-    for (const currentProduct of currentProducts) {
-
-      if (!printfulProductIds.has(currentProduct.idProduct)) { //if (!printfulProductIds.has(currentProduct.id)) {
-        // Encontrar la categoría asociada
-        const category = await Categorie.findOne({ where: { id: currentProduct.categoryId } });
-
-        // Encontrar y eliminar las variedades asociadas
-        const varieties = await Variedad.findAll({ where: { productId: currentProduct.id } });
-        for (const variety of varieties) {
-          const files = await File.findAll({ where: { varietyId: variety.id } });
-          for (const file of files) {
-            await file.destroy();
-          }
-          await variety.destroy();
-        }
-
-        // Encontrar y eliminar las galerías asociadas
-        const galleries = await Galeria.findAll({ where: { productId: currentProduct.id } });
-        for (const gallery of galleries) {
-          await gallery.destroy();
-        }
-
-        await currentProduct.destroy();
-
-        // Verificar si la categoría sigue siendo utilizada por algún otro producto
-        const productsInCategory = await Product.findAll({ where: { categoryId: category.id } });
-
-        // Si ningún otro producto usa esta categoría, eliminar la categoría
-        if (productsInCategory.length === 0) {
-          await category.destroy();
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error al limpiar la base de datos:', error);
-    throw new Error('Error al limpiar la base de datos');
-  }
-};*/
-
 /*
  * Crea una orden en Printful con los datos proporcionados.
  * No está implementado en el código proporcionado, solo contiene un esqueleto para manejar errores.
  */
 export const createPrintfulOrder = async( orderData ) => {
-  await createPrintfulOrderService( orderData );
-
+ 
   try {
-
+    await createPrintfulOrderService( orderData );
+    /*res.status(200).json({
+      message: "Muy bien! La orden se generó correctamente",
+    });*/
   } catch ( error) {
-
+    console.error('DEBUG createPrintfulOrder: No response received:', error.request);
   }
 };
