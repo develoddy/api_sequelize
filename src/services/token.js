@@ -1,25 +1,19 @@
 import jwt from "jsonwebtoken";
 import {User} from '../models/User.js';
 
-
-
 export default {
     encode: async (id, rol, email) => {
-        console.log("Debug - id in encode:", id); // Depuración
         const token = jwt.sign({ id, rol, email }, 'ecommerce_udemy', { expiresIn: '1d' });
-        console.log("Debug - Token generated:", token);  // Depuración
         return token;
     },
     decode: async (token) => {
         try {
             // Verificar el token y obtener el payload
             const decoded = jwt.verify(token, 'ecommerce_udemy');
-            console.log("Debug - Decoded token payload:", decoded);  // Depuración
             
             // Asegurarse de que el id esté presente en el payload
             const { id } = decoded;
             if (!id) {
-                console.log("Debug - id is undefined in the token payload.");
                 return false;
             }
             

@@ -24,10 +24,10 @@ async function send_email(sale_id) {
 
     try {
         const readHTMLFile = (path, callback) => {
-            fs.readFile(path, { encoding: 'utf-8' }, (err, html) => {
-                if (err) {
+            fs.readFile( path, { encoding: 'utf-8' }, ( err, html ) => {
+                if ( err ) {
                     throw err;
-                    callback(err);
+                    callback( err );
                 } else {
                     callback(null, html);
                 }
@@ -133,6 +133,10 @@ export const register = async (req, res) => {
 
             const files = await File.findAll({ where: { varietyId: varietyId } });
 
+            //console.log("---- Debugg Sale.controller -----");
+            //console.log(files);
+            //return;
+
             // Validaciones de los archivos
             if (!files || files.length === 0) {
                 throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
@@ -142,9 +146,19 @@ export const register = async (req, res) => {
             let itemFiles = [];
             files.forEach(file => {
                 itemFiles.push({
-                    url: file.url || file.preview_url,
+                    //url: file.url || file.thumbnail_url,
+                    url: file.preview_url,
                     filename: file.filename,
                     type: file.type,
+                    position: {
+                        "area_width": 1800,
+                        "area_height": 1800,
+                        "width": 300,
+                        "height": 300,
+                        "top": 300,
+                        "left": 1500,
+                        "limit_to_print_area": true,
+                    }//file.position || "N/A",
                 });
             });
 
@@ -183,10 +197,13 @@ export const register = async (req, res) => {
                 }
             });
 
+            //console.log("__Debbug: Option > :", itemOptions);
+            //console.log("________________________-");
+
             // Validar que `thread_colors_front_large` esté presente y sea correcto
-            if (!itemOptions['thread_colors_front_large'] || !allowedThreadColors.includes(itemOptions['thread_colors_front_large'][0])) {
-                itemOptions['thread_colors_front_large'] = "#FFFFFF"; // valor por defecto
-            }
+            //if (!itemOptions['thread_colors_front_large'] || !allowedThreadColors.includes(itemOptions['thread_colors_front_large'][0])) {
+            //    itemOptions['thread_colors_front_large'] = "#FFFFFF"; // valor por defecto
+            //}
 
             let item = {
                 variant_id: variantId, 
@@ -197,6 +214,17 @@ export const register = async (req, res) => {
                 options: itemOptions,
             };
             items.push(item);
+
+            //console.log("__Debbug: send item: ", items);
+            
+            // Debugging output
+            console.log("__Debug: send item: ", JSON.stringify(items, null, 2));
+            console.log("---------------------------------");
+
+            item.files.forEach(file => {
+                console.log("__Debug: file position: ", file.position);
+                console.log("---------------------------------");
+            });
             
             // Reducir el stock del producto o variante
             if (varietyId) {
@@ -252,7 +280,7 @@ export const register = async (req, res) => {
             where: { saleId: sale.id },
             include: [
                 { model: Product },
-                { model: Variedad }
+                { model: Variedad, include: { model: File } }
             ]
         });
 

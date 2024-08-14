@@ -8,6 +8,7 @@ import { Option } from './Option.js';
 export const Variedad = sequelize.define('variedades', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   valor: { type: DataTypes.STRING, allowNull: false },
+  color: { type: DataTypes.STRING, allowNull: false },
   stock: { type: DataTypes.INTEGER, allowNull: false },
   // New properties
 
