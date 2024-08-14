@@ -6,6 +6,7 @@ import { Categorie } from "../models/Categorie.js";
 import { Discount } from "../models/Discount.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
+import { File } from "../models/File.js";
 import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
 import { Galeria } from "../models/Galeria.js";
@@ -39,7 +40,7 @@ export const list = async (req, res) => {
                 userId: user_id
             },
             include: [
-                { model: Variedad },
+                { model: Variedad, include: { model: File } },
                 { model: Product, include: { model: Categorie } }
             ]
         });
@@ -152,7 +153,7 @@ export const register = async (req, res) => {
         // Obtener el carrito con las asociaciones
         let newCartWithAssociations = await Cart.findByPk(newCart.id, {
             include: [
-                { model: Variedad },
+                { model: Variedad, include: { model: File }  },
                 { model: Product, include: { model: Categorie } }
             ]
         });

@@ -15,7 +15,7 @@ import {
   getPrintfulProductDetail,
   getPrintfulCategory,
   createPrintfulOrderService,
-} from '../../../services/proveedor/printful/printfulService.js'; // Importa la función de Printful
+} from '../../../services/proveedor/printful/printfulService.js';
 
 import  { 
   removeImageVersion  , 
@@ -74,7 +74,7 @@ export const getPrintfulProducts = async () => {
   try {
     const printfulProducts = await getPrintfulProductsService();
 
-    if (printfulProducts) {
+    if ( printfulProducts ) {
       //await clearLocalDatabaseIfNoProviderProducts(printfulProducts);
       
       for (const product of printfulProducts) {
@@ -126,7 +126,7 @@ const getOrCreateCategory = async (productDetail) => {
     where: { title: category.title }
   });
 
-  if (!existingCategory) {
+  if ( !existingCategory ) {
     existingCategory = await createCategory(category);
   }
 
@@ -174,8 +174,7 @@ const getOrCreateProduct = async (product, productDetail, category) => {
 
   let oldProductId = existingProduct ? existingProduct.id : null;
 
-  if (!existingProduct) 
-  {
+  if ( !existingProduct ) {
     existingProduct = await createProduct(product, productDetail, category);
   } 
   else {
@@ -322,6 +321,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
       let newVariant = await Variedad.create({
         valor: variant.valor,
         stock: 10,
+        color: variant.color,
         productId: variant.productId,
 
         // New properties

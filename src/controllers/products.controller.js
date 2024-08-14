@@ -15,7 +15,7 @@ import path from "path";
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
 import { getGelatoProducts } from './proveedor/gelato/productGelato.controller.js';
 
-//  ----- PROVEDORES ------
+//  ----- START PROVEDORES ------
 export const syncPrintfulProducts = async (req, res) => {
     try {
         const printfulProducts = await getPrintfulProducts();
@@ -43,8 +43,11 @@ export const syncGelatoProducts = async (req, res) => {
         console.log(error);
     }
 }
+//  ----- END PROVEDORES ------
 
 
+
+/* ============= ENDPOINTS ============= */
 export const register = async(req, res) => {
     try {
         let data = req.body;
@@ -309,116 +312,6 @@ export const register_imagen = async(req, res) => {
         console.error('Error al registrar las imágenes:', error);
         res.status(500).json({ message: 'Error del servidor al registrar las imágenes' });
     }
-
-
-
-
-    // try {
-    //     const files = req.files; // Asumiendo que req.files es un array de archivos si múltiples imágenes se suben
-    //     const galerias = req.body.galerias; // Si tienes un cuerpo JSON con un campo galerias
-
-    //     // Verificar si hay archivos subidos
-    //     if (!files || files.length === 0) {
-    //         return res.status(400).send({
-    //             message: "No se subieron imágenes"
-    //         });
-    //     }
-
-    //     // Encontrar el producto por ID
-    //     let product = await Product.findByPk(req.body._id);
-        
-    //     if (!product) {
-    //         return res.status(404).send({
-    //             message: "Producto no encontrado"
-    //         });
-    //     }
-
-    //     // Si galerias ya existe, asegúrate de que sea un array
-    //     let currentGalerias = product.galerias ? (Array.isArray(product.galerias) ? product.galerias : JSON.parse(product.galerias)) : [];
-
-    //     // Agregar las nuevas imágenes a galerias
-    //     files.forEach(file => {
-    //         console.log("---- 1 file: " + file);
-    //         var img_path = file.path;
-    //         console.log("---- 2 img_path: " + img_path);
-    //         var name = img_path.split('/');
-    //         console.log("---- 3 name: " + name);
-    //         var imagen_name = name[name.length - 1];
-    //         console.log("---- 4 imagen_name: " + imagen_name);
-
-    //         currentGalerias.push({
-    //             imagen: imagen_name,
-    //             _id: req.body.__id // Aquí deberías generar un ID único si __id no es proporcionado
-    //         });
-    //     });
-
-    //     // Actualizar el campo galerias del producto
-    //     product.galerias = currentGalerias;
-    //     await product.save();
-
-    //     // Responder al cliente con éxito
-    //     res.status(200).json({
-    //         message: "Las imágenes se subieron perfectamente",
-    //         imagenes: currentGalerias.map(g => ({
-    //             imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + g.imagen,
-    //             _id: g._id
-    //         }))
-    //     });
-    // } catch (error) {
-    //     res.status(500).send({
-    //         message: "debbug: ProductController register_imagen - OCURRIÓ UN PROBLEMA"
-    //     });
-    //     console.log(error);
-    // }
-
-
-
-    // try {
-
-    //     if (req.files && req.files.length > 0) {
-    //         const portadaFile = req.files.find(file => file.fieldname === 'imagen');
-    //         if (portadaFile) {
-    //             var img_path = portadaFile.path;
-    //             var name = img_path.split('/');
-    //             var imagen_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
-    //         }
-    //     }
-
-    //     // Buscar el producto por su ID
-    //     let product = await Product.findByPk(req.body._id);
-
-    //     if (!product) {
-    //         return res.status(404).json({ message: 'Product not found' });
-    //     }
-
-    //     // Actualizar el campo galerias del producto
-    //     let galerias = product.galerias ? product.galerias : [];
-    //     galerias.push({
-    //         imagen: imagen_name,
-    //         _id: req.body.__id
-    //     });
-
-    //     // Guardar los cambios en el producto
-    //     product.galerias = galerias;
-    //     await product.save();
-
-    //     // Responder con éxito
-    //     res.status(200).json({
-    //         message: "La imagen se subió perfectamente",
-    //         imagen: {
-    //             //imagen: imagen_name,
-    //             imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+imagen_name,
-    //             _id: req.body.__id
-    //         }
-    //     });
-
-        
-    // } catch (error) {
-    //     res.status(500).send({
-    //         message: "debbug: ProductController register_imagen - OCURRIÓ UN PROBLEMA"
-    //     });
-    //     console.log(error);
-    // }
 }
 
 export const remove_imagen = async(req, res) => {
