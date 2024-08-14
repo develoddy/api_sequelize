@@ -310,13 +310,13 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // Add new variants and update existing ones
   for (const variant of newVariants) {
 
-    const existingVariant = existingVariants.find(v => v.valor === variant.valor);
+    //const existingVariant = existingVariants.find(v => v.valor === variant.valor);
+    const existingVariant = existingVariants.find(v => v.sku === variant.sku);
 
     let oldVariedadId = existingVariant ? existingVariant.id : null;
 
     // existingVariant si no existe, las crea
     if ( !existingVariant ) { 
-
       // Create new variant 
       let newVariant = await Variedad.create({
         valor: variant.valor,
@@ -386,6 +386,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
           console.error('Error creating file record:', error, file);
         }
       }
+
       // Create or update Options
       //await Option.destroy({ where: {}, truncate: true });
       await Option.destroy({ where: { varietyId: newVariant.id } });
