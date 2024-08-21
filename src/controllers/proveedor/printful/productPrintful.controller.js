@@ -543,11 +543,13 @@ const deleteOptionsForVariant = async (variety) => {
 export const createPrintfulOrder = async( orderData ) => {
  
   try {
-    await createPrintfulOrderService( orderData );
+    let data = await createPrintfulOrderService( orderData );
+    return data;
     /*res.status(200).json({
       message: "Muy bien! La orden se generó correctamente",
     });*/
-  } catch ( error) {
+  } catch ( error ) {
     console.error('DEBUG createPrintfulOrder: No response received:', error.request);
+    return "error_order"
   }
 };
