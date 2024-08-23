@@ -122,6 +122,7 @@ export const update = async(req, res) => {
             }
         }
 
+        
 
         await Product.update(data, { where: { id: data._id } });
 
