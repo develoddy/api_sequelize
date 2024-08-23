@@ -1,10 +1,11 @@
 import { Op } from 'sequelize';
 import { Review } from "../models/Review.js";
+import { User } from "../models/User.js";
 
 
 export const register = async (req, res) => {
     try {
-    	const { product, sale_detail, user, cantidad, description } = req.body;
+    	const { product, sale_detail, user, cantidad, title, description } = req.body;
 
     	console.log("----- API: Review register", req.body);
 
@@ -20,6 +21,7 @@ export const register = async (req, res) => {
             saleDetailId: sale_detail,
             userId: user,
             cantidad,
+            title,
             description
         });
         
@@ -57,7 +59,13 @@ export const update = async (req, res) => {
         }
 
         // Obtén la reseña actualizada
-        const reviewD = await Review.findByPk(_id);
+        const reviewD = await Review.findByPk(_id, {
+          include: [
+            {
+              model: User,
+            }
+          ]
+        });
 
         res.status(200).send({
             message: "La reseña ha sido modificada correctamente",

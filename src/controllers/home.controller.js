@@ -242,6 +242,9 @@ export const show_landing_product = async (req, res) => {
 export const profile_client = async (req, res) => {
 
     try {
+
+        console.log("_______Debugg profile_client: ", req.body);
+
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario
@@ -249,6 +252,8 @@ export const profile_client = async (req, res) => {
 
         let sale_orders = [];
         for ( const order of Orders ) {
+
+            console.log("Debugg 1 for blucle API Home.controller order: ", order);
             // Obtener detalles de las órdenes con sus relaciones
             let detail_orders = await SaleDetail.findAll({
                 where: { saleId: order.id },
@@ -266,11 +271,17 @@ export const profile_client = async (req, res) => {
                     }
                 ]
             });
+
+            console.log("Debugg 2 API Home.controller detail_order: ", detail_orders);
+
             // Obtener dirección de la orden
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
+
+                console.log("Debugg 3 API Home.controller: ", detail_order);
+
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
 

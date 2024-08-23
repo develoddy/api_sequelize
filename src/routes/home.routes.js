@@ -23,4 +23,5 @@ router.post("/profile_client", auth.verifyEcommerce, profile_client);
 router.post("/update_client", auth.verifyEcommerce, update_client);
 router.post("/filters_products", filters_products);
 
+
 export default router;

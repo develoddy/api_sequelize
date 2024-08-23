@@ -7,7 +7,8 @@ import { User } from './User.js';
 export const Review = sequelize.define('reviews', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   cantidad: { type: DataTypes.INTEGER, allowNull: false },
-  description: { type: DataTypes.STRING, allowNull: false }
+  title: { type: DataTypes.STRING, allowNull: false },
+  description: { type: DataTypes.TEXT, allowNull: false },
 }, {
   timestamps: true,
   tableName: 'reviews'
