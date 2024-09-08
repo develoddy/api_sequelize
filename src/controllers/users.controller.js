@@ -90,12 +90,12 @@ export const login = async( req, res ) => {
                 });
             } else {
                 res.status(500).send({
-                    message: "El correo electrónico o la contraseña que has introducido es incorrecta."
+                    message: "Tu e-mail o contraseña no son correctos o no están registrados"
                 });
             }
         } else {
             res.status(500).send({
-                message: "El correo electrónico o la contraseña que has introducido es incorrecta."
+                message: "Tu e-mail o contraseña no son correctos o no están registrados"
             });
         }
     } catch (error) {

@@ -45,10 +45,32 @@ export const list = async (req, res) => {
             ]
         });
 
+        //console.log("API 49 > List cart: ", JSON.stringify(carts, null, 2));
+
+
+        // Filtrar y eliminar productos que ya no existen o que están ignorados
+        /*for (let cart of carts) {
+            // Verifica si el producto ha sido eliminado o está en estado ignorado
+            if (!cart.product || cart.product.state == 1) {
+                console.log(`Simulacion de Producto con ID ${cart.productId} ha sido eliminado. Se eliminará del carrito :(.`);
+                // Eliminar el item del carrito
+                await Cart.destroy({ where: { id: cart.id } });
+            } else {
+                //console.log(`API 59 Simulacion de Producto con ID ${cart.productId} aun puede estar en carrito. porque existe en la DB :)`);
+                console.log("API 49 > List cart: ", JSON.stringify(cart, null, 2));
+                if (cart.state == 1) {
+
+                }
+            }
+        }*/
+
+
+
         // Mapeando los resultados para transformarlos según sea necesario
         let CARTS = carts.map(cart => {
             return resources.Cart.cart_list(cart);
         });
+
 
         // Enviando la respuesta
         res.status(200).json({

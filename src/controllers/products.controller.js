@@ -7,6 +7,7 @@ import { Variedad } from "../models/Variedad.js";
 import { Galeria } from "../models/Galeria.js";
 import { File } from "../models/File.js";
 import { Option } from "../models/Option.js";
+import { Cart } from "../models/Cart.js";
 import { SaleDetail } from "../models/SaleDetail.js";
 
 
@@ -110,6 +111,34 @@ export const update = async(req, res) => {
             return;
         }
 
+
+        // Utilizando Sequelize para buscar los carritos del usuario
+        let carts = await Cart.findAll({
+            where: {
+                productId: data._id,
+            },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
+        });
+
+
+        // Filtrar y eliminar productos que ya no existen o que están ignorados
+        for (let cart of carts) {
+            // Verifica si el producto ha sido eliminado o está en estado ignorado
+            if (cart.product.state == 1) {
+                console.log(`Simulacion de Producto con ID ${cart.productId} ha sido eliminado. Se eliminará del carrito :(.`);
+                // Eliminar el item del carrito
+                await Cart.destroy({ where: { id: cart.id } });
+            } else {
+                //console.log(`API 59 Simulacion de Producto con ID ${cart.productId} aun puede estar en carrito. porque existe en la DB :)`);
+                console.log("API 136 > update else: ", JSON.stringify(cart, null, 2));
+            }
+        }
+
+
+
         data.slug = data.title.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
 
         if ( req.files && req.files.length > 0 ) {
@@ -208,6 +237,14 @@ export const remove = async(req, res) => {
                 message: "El producto no se encontró."
             });
         }
+
+        await Galeria.destroy({ where: { productId: _id } });
+
+        
+
+        await Cart.destroy({ where: { productId: _id } });
+
+        
 
         // Obtén todas las variedades del producto
         const variedades = await Variedad.findAll({ where: { productId: _id } });
