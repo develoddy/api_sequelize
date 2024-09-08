@@ -175,9 +175,13 @@ const prepareItemsForPrintful = async (carts, sale) => {
 
     for (const cart of carts) {
         const itemFiles = await getItemFiles(cart);
+
+        
         const itemOptions = await getItemOptions(cart);
         const item = await createItem(cart, itemFiles, itemOptions);
         items.push(item);
+
+        console.log("API 185 > prepareItemsForPrintful > items: ", JSON.stringify(items, null, 2));
 
         // Reducir el stock del producto o variante
         await updateStock(cart);
@@ -229,19 +233,23 @@ const getItemFiles = async (cart) => {
         }],
     });
 
+
+
     if (!files || files.length === 0) {
         throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
     }
 
+    console.log("API 238 > getItemFiles > files: ", JSON.stringify(files, null, 2));
     return files.map((file, index) => processFile(file, index));
 };
 
 // Procesar cada archivo
 const processFile = (file, index) => {
     const printAreas = {
+        "T-shirts": { width: 12, height: 16 },
         "Long sleeve shirts": { width: 12, height: 16 },
         "Hoodies": { width: 14, height: 14 },
-        "hat": { width: 5, height: 3 },
+        "hat": { width: 5, height: 3 },//T-shirts
     };
 
     const categoryTitle = file.variedade.product.category.title;
@@ -266,22 +274,27 @@ const processFile = (file, index) => {
 };
 
 const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
-    let leftPosition = (printAreaWidthPixels - file.width) / 2;
+    /*let leftPosition = (printAreaWidthPixels - file.width) / 2;
     let topPosition = 0;
     const marginRight = 0.8 * printAreaWidthPixels;
     const marginTop = 0.2 * printAreaWidthPixels;
     leftPosition = Math.min(leftPosition + marginRight, printAreaWidthPixels - (file.width / 2));
-    topPosition = Math.max(topPosition, +marginTop);
+    topPosition = Math.max(topPosition, +marginTop);*/
 
-    const scaleFactor = 0.5;
-    const scaledWidth = file.width * scaleFactor;
-    const scaledHeight = file.height * scaleFactor;
+
+    //const scaleFactor = 0.5; // Esta constante se utiliza para reducir el tamaño del logo o la imagen a la mitad (50% de su tamaño original).
+    //const scaledWidth = file.width * scaleFactor;
+    //const scaledHeight = file.height * scaleFactor;
+
+    // Cálculo para centrar el logo
+    const leftPosition = (printAreaWidthPixels - file.width) / 2;
+    const topPosition = (printAreaHeightPixels - file.height) / 2;
 
     return {
         "area_width": printAreaWidthPixels,
         "area_height": printAreaHeightPixels,
-        "width": scaledWidth,
-        "height": scaledHeight,
+        "width": file.width,//scaledWidth,
+        "height": file.height,//scaledHeight,
         "top": topPosition,
         "left": leftPosition,
         "limit_to_print_area": true
