@@ -3,6 +3,7 @@ import Categorie from './categorie.js';
 import Product from './product.js';
 import Slider from './slider.js';
 import Cart from './cart.js';
+import Wishlist from './wishlist.js';
 
 
 export default {
@@ -11,4 +12,5 @@ export default {
     Product,
     Slider,
     Cart,
+    Wishlist,
 }

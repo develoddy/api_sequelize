@@ -13,6 +13,7 @@ import review from "./review.routes.js";
 import productsPrintfulRoutes from "./productsPrintful.routes.js";
 import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
+import wishlistRoutes from "./wishlist.routes.js";
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/sale", sale);
 app.use("/review", review);
 app.use("/printful", productsPrintfulRoutes);
 app.use("/gelato", productsGelatoRoutes);
-app.use("/dropi", productsDropiRoutes);
+//app.use("/dropi", productsDropiRoutes);
+app.use("/wishlist", wishlistRoutes);
 
 export default app;

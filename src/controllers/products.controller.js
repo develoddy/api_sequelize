@@ -357,8 +357,6 @@ export const remove_imagen = async(req, res) => {
         const productId = req.body._id;
         const galeriaId = req.body.__id;
 
-        
-        console.log("-------API: galeriaId: ", galeriaId);
         await Galeria.destroy({ where: { id: galeriaId } });
 
         res.status(200).json({
