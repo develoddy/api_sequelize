@@ -1,5 +1,7 @@
 export default {
     wishlist_list: (wishlist) => {
+
+      // Método para manejar la estructura de wishlist cuando el usuario está autenticado
         return {
             _id: wishlist.id,
             user: wishlist.userId,
