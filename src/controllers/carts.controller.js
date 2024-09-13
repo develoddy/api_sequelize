@@ -34,7 +34,7 @@ export const list = async (req, res) => {
 
         let user_id = req.query.user_id;
 
-        // Utilizando Sequelize para buscar los carritos del usuario
+        // Buscar productos en  carrito de compras del usuario
         let carts = await Cart.findAll({
             where: {
                 userId: user_id
@@ -44,27 +44,6 @@ export const list = async (req, res) => {
                 { model: Product, include: { model: Categorie } }
             ]
         });
-
-        //console.log("API 49 > List cart: ", JSON.stringify(carts, null, 2));
-
-
-        // Filtrar y eliminar productos que ya no existen o que están ignorados
-        /*for (let cart of carts) {
-            // Verifica si el producto ha sido eliminado o está en estado ignorado
-            if (!cart.product || cart.product.state == 1) {
-                console.log(`Simulacion de Producto con ID ${cart.productId} ha sido eliminado. Se eliminará del carrito :(.`);
-                // Eliminar el item del carrito
-                await Cart.destroy({ where: { id: cart.id } });
-            } else {
-                //console.log(`API 59 Simulacion de Producto con ID ${cart.productId} aun puede estar en carrito. porque existe en la DB :)`);
-                console.log("API 49 > List cart: ", JSON.stringify(cart, null, 2));
-                if (cart.state == 1) {
-
-                }
-            }
-        }*/
-
-
 
         // Mapeando los resultados para transformarlos según sea necesario
         let CARTS = carts.map(cart => {
@@ -88,7 +67,7 @@ export const register = async (req, res) => {
     try {
 
         let data = req.body;
-        
+
         // PRIMERO VAMOS A VALIDAR SI EL PRODUCTO EXISTE EN EL CARRITO DE COMPRA
         if (data.variedad) {
             let valid_cart = await Cart.findOne({
@@ -101,7 +80,7 @@ export const register = async (req, res) => {
             if (valid_cart) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "El producto con esta variedad ya se encuentra en su cesta de compra.",
+                    message_text: "El producto con esta variedad ya se encuentra en su cesta de compra",
                 });
                 return;
             }
@@ -116,7 +95,7 @@ export const register = async (req, res) => {
             if (valid_cart) {
                 res.status(200).json({
                     message: 403,
-                    message_text: "Este producto ya se encuentra en su cesta de compra.",
+                    message_text: "Este producto ya se encuentra en su cesta de compra",
                 });
                 return;
             }
@@ -182,7 +161,7 @@ export const register = async (req, res) => {
 
         res.status(200).json({
             cart: resources.Cart.cart_list(newCartWithAssociations.toJSON()),
-            message_text: "La cesta de compra ha sido registrado satisfactoriamente.",
+            message_text: "La cesta de compra ha sido registrado satisfactoriamente",
         });
     } catch (error) {
         res.status(500).send({
@@ -200,7 +179,7 @@ export const remove = async (req, res) => {
         if (cart) {
             await cart.destroy();
             res.status(200).json({
-                message_text: "El cesta de compra ha sido eliminado correctamente.",
+                message_text: "El carrito de compra ha sido eliminado correctamente.",
             });
         } else {
             res.status(404).json({
@@ -288,8 +267,6 @@ export const apllyCupon = async (req, res) => {
             ]
         });
 
-        
-
         if (!cupon) {
             res.status(200).json({
                 message: 403,
@@ -298,7 +275,6 @@ export const apllyCupon = async (req, res) => {
             return;
         }
 
-        
         // Parte operativa
         let carts = await Cart.findAll({
             where: { userId: data.user_id },
@@ -312,7 +288,7 @@ export const apllyCupon = async (req, res) => {
         for (const cart of carts) {
             let subtotal = 0;
             let total = 0;
-            
+
             if (products.length > 0 && products.includes(cart.product.id)) {
                 if ( cupon.type_discount == 1 ) { // Por porcentaje
                     subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
@@ -321,7 +297,7 @@ export const apllyCupon = async (req, res) => {
                 }
 
                 total = subtotal * cart.cantidad;
-            
+
                 await Cart.update({
                     subtotal: subtotal,
                     total: total,

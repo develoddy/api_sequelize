@@ -164,7 +164,6 @@ export const list = async (req, res) => {
 export const show_landing_product = async (req, res) => {
     try {
 
-        console.log("____ API: ", req.query);
         const SLUG = req.params.slug;
         const DISCOUNT_ID = req.query._id;
 
@@ -243,25 +242,22 @@ export const profile_client = async (req, res) => {
 
     try {
 
-        console.log("_______Debugg profile_client: ", req.body);
-
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario
         let Orders = await Sale.findAll({ where: { userId: user_id } });
 
         let sale_orders = [];
+
         for ( const order of Orders ) {
 
-            console.log("Debugg 1 for blucle API Home.controller order: ", order);
             // Obtener detalles de las órdenes con sus relaciones
             let detail_orders = await SaleDetail.findAll({
                 where: { saleId: order.id },
                 include: [
                     {
                         model: Product,
-                        include: [
-                            {
+                        include: [{
                                 model: Categorie, 
                             }
                         ]
@@ -272,15 +268,11 @@ export const profile_client = async (req, res) => {
                 ]
             });
 
-            console.log("Debugg 2 API Home.controller detail_order: ", detail_orders);
-
             // Obtener dirección de la orden
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
-
-                console.log("Debugg 3 API Home.controller: ", detail_order);
 
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
@@ -523,11 +515,7 @@ export const filters_products = async (req, res) => {
                     });
                 }
             }
-
-            //console.log("___ FILTRO products_s & categories_s ", products_s, categories_s);
         }
-
-        //console.log("-----API variedad_selected: ", variedad_selected);
 
         // FILTRO DE VARIEDAD
         if (variedad_selected) {

@@ -86,7 +86,7 @@ export const getPrintfulProducts = async () => {
     // CREA UN CONJUNTO DE IDS DE PRODUCTOS QUE EXISTEN EN PRINTFUL
     const printfulProductMap = new Map(
       printfulProducts.map(
-        product => [ product.id, product] 
+        product => [ product.id, product ] 
       )
     );
 
@@ -94,14 +94,17 @@ export const getPrintfulProducts = async () => {
     const currentProducts = await Product.findAll();
 
     if ( currentProducts.length > 0 ) {
+
       // RECORRE LOS PRODUCTOS ACTUALES DE LA BBDD Y ELIMINA LOS QUE NO ESTAN EN PRINTFUL
       
       for (const currentProduct of currentProducts) {
 
         const idProductDB =  String(currentProduct.idProduct);
 
-        // VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
-        // SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
+        /* 
+         * VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
+         * SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
+         **/
         
         if ( !printfulProductMap.has( parseInt( idProductDB ) ) ) {
           
@@ -110,6 +113,7 @@ export const getPrintfulProducts = async () => {
         } else {
 
           // SI EL PRODUCTO ACTUAL DE LA BBDD SI ESTÁ EN PRINTFUL, PUEDES HACER MÁS COSAS CON EL OBJETO COMPLETO SI ES NECESARIO
+          
           const printfulProduct = printfulProductMap.get(parseInt(idProductDB));
 
           if ( printfulProduct.is_ignored == true ) {
@@ -117,11 +121,9 @@ export const getPrintfulProducts = async () => {
           } else {
             //console.log("API 112 Producto actual tiene el is_inore a FALSE de DB ", JSON.stringify(printfulProduct, null, 2));
           }
-          // PUEDES USAR printfulProduct.is_ignored AQUÍ PARA TOMAR DECISIONES ADICIONALES
         }
       }
     }
-
 
     for ( const product of printfulProducts ) {
       await processPrintfulProduct( product );
