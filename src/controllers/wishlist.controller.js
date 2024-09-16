@@ -235,7 +235,7 @@ export const register = async (req, res) => {
         });
 
         res.status(200).json({
-            wishlist: resources.Wishlist.wishlist_list(newWishlistWithAssociations.toJSON()),
+            wishlist: resources.Wishlist.product_list(newWishlistWithAssociations.toJSON()),
             message_text: "El producto ha sido añadido a sus favoritos",
         });
 
