@@ -8,253 +8,157 @@ import { Variedad } from "../models/Variedad.js";
 import { File } from "../models/File.js";
 import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
+import { Galeria } from "../models/Galeria.js";
+
+import { Discount } from "../models/Discount.js";
+import { DiscountProduct } from "../models/DiscountProduct.js";
+import { DiscountCategorie } from "../models/DiscountCategorie.js";
+import { SaleDetail } from '../models/SaleDetail.js';
+import { Sale } from '../models/Sale.js';
 // RESOURCES
 import resources from "../resources/index.js";
 import bcrypt from 'bcryptjs';
 
-/*
-export const list = async (req, res) => {
-    try {
-        let user_id = req.query.user_id;
 
-        // Buscar productos en la lista de deseos del usuario
-        let wishlist = await Wishlist.findAll({
-            where: {
-                userId: user_id,
-            },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Mapeando los resultados para transformarlos según sea necesario
-        let WISHLIST = wishlist.map(wishlist => {
-            return resources.Wishlist.wishlist_list(wishlist);
-        });
-
-        // Usar Promise.all para obtener los reviews de cada producto en la wishlist
-        const wishlistWithReviews = await Promise.all(WISHLIST.map(async (item) => {
-            try {
-                // Obtener reviews del producto actual en la wishlist
-                let reviews = await Review.findAll({
-                    where: { productId: item.product._id },
-                    include: [{ model: User }]
-                });
-
-                // Calcular el promedio de reviews (AVG_REVIEW) y la cantidad de reviews (COUNT_REVIEW)
-                let count_review = reviews.length;
-                let avg_review = count_review > 0
-                    ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / count_review)
-                    : 0;
-
-                // Incluir reviews, promedio y cantidad dentro del objeto de cada producto
-                return {
-                    ...item, // Mantener las propiedades originales del item
-                    REVIEWS: reviews,
-                    AVG_REVIEW: avg_review,
-                    COUNT_REVIEW: count_review
-                };
-            } catch (error) {
-                console.error("Error fetching reviews for product", item.product._id, error);
-                return { ...item, REVIEWS: [], AVG_REVIEW: 0, COUNT_REVIEW: 0 };
-            }
-        }));
-
-        // Enviar la respuesta final
-        res.status(200).json({
-            wishlists: wishlistWithReviews
-        });
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            message: "debug: WishlistController list OCURRIÓ UN PROBLEMA"
-        });
-    }
-};*/
-
-
-/*
 export const list = async (req, res) => {
     try {
 
-
+        const TIME_NOW = req.query.TIME_NOW;
         let user_id = req.query.user_id;
         let productIds = req.query.productIds ? req.query.productIds.split(",") : []; // Recibir los productIds desde la query string
 
-        console.log("____API: req.query.user_id: ", user_id);
-        console.log("_____API: req.body.productIds ", productIds);
-
-        // Si hay un usuario autenticado, busca en la wishlist del usuario
-        let wishlist;
         if (user_id) {
-            wishlist = await Wishlist.findAll({
-                where: {
-                    userId: user_id,
-                },
+            // Si hay un usuario autenticado, busca en la wishlist del usuario
+            let wishlist = await Wishlist.findAll({
+                where: { userId: user_id },
                 include: [
                     { model: Variedad, include: { model: File } },
-                    { model: Product, include: { model: Categorie } }
-                ]
-            });
-        } else if (productIds.length > 0) {
-            // Si no hay user_id, buscar productos por los IDs en LocalStorage
-            wishlist = await Product.findAll({
-                where: {
-                    id: productIds
-                },
-                include: [
-                    { model: Variedad, include: { model: File } },
-                    { model: Categorie }
+                    { model: Product, include: [ { model: Categorie }, { model: Galeria } ] }
                 ]
             });
 
-            console.log("____API wishlist ELSE: ", wishlist);
-        } else {
-            return res.status(400).json({
-                message: "No hay productos en la lista de deseos y el usuario no está autenticado."
-            });
-        }
+            //console.log("wishlist", JSON.stringify(wishlist, null, 2));
 
-        // Mapeo de resultados y obtención de reviews
-        let WISHLIST = wishlist.map(wishlist => resources.Wishlist.wishlist_list(wishlist));
-
-        const wishlistWithReviews = await Promise.all(WISHLIST.map(async (item) => {
-            try {
-                let reviews = await Review.findAll({
-                    where: { productId: item.product._id },
-                    include: [{ model: User }]
-                });
-
-                let count_review = reviews.length;
-                let avg_review = count_review > 0
-                    ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / count_review)
-                    : 0;
-
-                return {
-                    ...item,
-                    REVIEWS: reviews,
-                    AVG_REVIEW: avg_review,
-                    COUNT_REVIEW: count_review
-                };
-            } catch (error) {
-                console.error("Error fetching reviews for product", item.product._id, error);
-                return { ...item, REVIEWS: [], AVG_REVIEW: 0, COUNT_REVIEW: 0 };
-            }
-        }));
-
-        // Enviar la respuesta
-        res.status(200).json({
-            wishlists: wishlistWithReviews
-        });
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            message: "debug: WishlistController list OCURRIÓ UN PROBLEMA"
-        });
-    }
-};
-*/
-
-
-
-export const list = async (req, res) => {
-    try {
-        let user_id = req.query.user_id;
-        let productIds = req.query.productIds ? req.query.productIds.split(",") : []; // Recibir los productIds desde la query string
-
-        console.log("____API: req.query.user_id: ", user_id);
-        console.log("_____API: req.query.productIds ", productIds);
-
-        // Si hay un usuario autenticado, busca en la wishlist del usuario
-        let wishlist;
-        if (user_id) {
-            wishlist = await Wishlist.findAll({
+            // Obtener descuentos de campaña con sus productos y categorías
+            let CampaingDiscount = await Discount.findOne({
                 where: {
-                    userId: user_id,
+                    type_campaign: 1,
+                    start_date_num: { [Op.lte]: TIME_NOW },
+                    end_date_num: { [Op.gte]: TIME_NOW },
                 },
                 include: [
-                    { model: Variedad, include: { model: File } },
-                    { model: Product, include: { model: Categorie } }
+                    { model: DiscountProduct },
+                    { model: DiscountCategorie }
                 ]
             });
 
-            // Mapear usando wishlist_list
-            let WISHLIST = wishlist.map(item => resources.Wishlist.wishlist_list(item));
-
-            // Obtener reviews
-            const wishlistWithReviews = await Promise.all(WISHLIST.map(async (item) => {
+            let wishlistWithDetails = await Promise.all(wishlist.map(async (item) => {
                 try {
-                    let reviews = await Review.findAll({
-                        where: { productId: item.product._id },
-                        include: [{ model: User }]
-                    });
+                    let product = item.product;
+                    let variedades = await Variedad.findAll({ where: { productId: product.id } });
+                    let reviews = await Review.findAll({ where: { productId: product.id } });
 
                     let count_review = reviews.length;
                     let avg_review = count_review > 0
-                        ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / count_review)
+                        ? Math.ceil(reviews.reduce((sum, review) => sum + review.cantidad, 0) / count_review)
                         : 0;
 
-                    return {
-                        ...item,
-                        REVIEWS: reviews,
-                        AVG_REVIEW: avg_review,
-                        COUNT_REVIEW: count_review
-                    };
+                    let campaingDiscount = null; // Suponiendo que necesitas una lógica para encontrar descuentos en campaña
+                    // Si tienes lógica para descuentos en campañas, añádelo aquí.
+                    // Ejemplo:
+                    if (CampaingDiscount) {
+                        if (CampaingDiscount.type_segment === 1) {
+                             let products_a = CampaingDiscount.discounts_products.map(item => item.productId);
+                             if (products_a.includes(product.id)) {
+                                 campaingDiscount = CampaingDiscount;
+                             }
+                         } else {
+                             let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
+                             if (categories_a.includes(product.categoryId)) {
+                                 campaingDiscount = CampaingDiscount;
+                             }
+                         }
+                    }
+
+                    //console.log("API; campaingDiscount: ", JSON.stringify(campaingDiscount, null, 2));
+
+                    return resources.Wishlist.product_list(item, product, variedades, avg_review, count_review, campaingDiscount);
                 } catch (error) {
-                    console.error("Error fetching reviews for product", item.product._id, error);
-                    return { ...item, REVIEWS: [], AVG_REVIEW: 0, COUNT_REVIEW: 0 };
+                    console.error("Error fetching details for product", item.product.id, error);
+                    return null; // O maneja el error según sea necesario
                 }
             }));
 
+            // Obtener ventas flash
+            let FlashSale = await Discount.findOne({
+                where: {
+                    type_campaign: 2,
+                    start_date_num: { [Op.lte]: TIME_NOW },
+                    end_date_num: { [Op.gte]: TIME_NOW },
+                },
+                include: [
+                    { model: DiscountProduct },
+                ]
+            });
+
+            let ProductList = [];
+            if (FlashSale) {
+                for (const product of FlashSale.discounts_products) { // Corregir aquí
+
+                    let ObjectT = await Product.findByPk(product.productId); // Corregir aquí
+
+                    let variedades = await Variedad.findAll({ where: { productId: product.productId } });
+
+                    ProductList.push(resources.Wishlist.product_list(ObjectT, variedades));
+                }
+            } else {
+                FlashSale = null;
+                ProductList = [];
+            }
+
+            // Filtrar resultados nulos
+            wishlistWithDetails = wishlistWithDetails.filter(item => item !== null);
+
             // Enviar la respuesta
             res.status(200).json({
-                wishlists: wishlistWithReviews
+                wishlists: wishlistWithDetails,
+                FlashSale: FlashSale,
+                campaign_products: ProductList,
             });
 
         } else if (productIds.length > 0) {
             // Si no hay user_id, buscar productos por los IDs en LocalStorage
             let products = await Product.findAll({
-                where: {
-                    id: productIds
-                },
-                include: [
-                    { model: Variedad, include: { model: File } },
-                    { model: Categorie }
-                ]
+                where: { id: productIds },
+                include: [ { model: Variedad, include: { model: File } }, { model: Categorie } ]
             });
 
-            // Mapear usando product_list
-            let formattedProducts = products.map(product => resources.Product.product_list(product));
-
-            // Obtener reviews (si es necesario)
-            const productsWithReviews = await Promise.all(formattedProducts.map(async (item) => {
+            let productsWithDetails = await Promise.all(products.map(async (product) => {
                 try {
-                    let reviews = await Review.findAll({
-                        where: { productId: item._id },
-                        include: [{ model: User }]
-                    });
+                    let variedades = await Variedad.findAll({ where: { productId: product.id } });
+                    let reviews = await Review.findAll({ where: { productId: product.id } });
 
                     let count_review = reviews.length;
                     let avg_review = count_review > 0
-                        ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / count_review)
+                        ? Math.ceil(reviews.reduce((sum, review) => sum + review.cantidad, 0) / count_review)
                         : 0;
 
-                    return {
-                        ...item,
-                        REVIEWS: reviews,
-                        AVG_REVIEW: avg_review,
-                        COUNT_REVIEW: count_review
-                    };
+                    let campaingDiscount = null; // Suponiendo que necesitas una lógica para encontrar descuentos en campaña
+                    // Si tienes lógica para descuentos en campañas, añádelo aquí.
+
+                    return resources.Wishlist.product_list(product, variedades, avg_review, count_review, campaingDiscount);
                 } catch (error) {
-                    console.error("Error fetching reviews for product", item._id, error);
-                    return { ...item, REVIEWS: [], AVG_REVIEW: 0, COUNT_REVIEW: 0 };
+                    console.error("Error fetching details for product", product.id, error);
+                    return null; // O maneja el error según sea necesario
                 }
             }));
 
+            // Filtrar resultados nulos
+            productsWithDetails = productsWithDetails.filter(item => item !== null);
+
             // Enviar la respuesta
             res.status(200).json({
-                products: productsWithReviews
+                products: productsWithDetails
             });
 
         } else {
@@ -269,7 +173,6 @@ export const list = async (req, res) => {
         });
     }
 };
-
 
 export const register = async (req, res) => {
     try {
