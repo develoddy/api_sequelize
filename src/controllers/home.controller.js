@@ -24,6 +24,7 @@ import bcrypt from 'bcryptjs';
 
 export const list = async (req, res) => {
     try {
+
         const TIME_NOW = req.query.TIME_NOW;
 
         // Obtener sliders
@@ -91,7 +92,7 @@ export const list = async (req, res) => {
             order: [['createdAt', 'ASC']]
         });
 
-        
+
         let ObjectOurProducts = [];
         for (const product of OurProducts) {
             let variedades = await Variedad.findAll({ where: { productId: product.id } });
@@ -131,7 +132,7 @@ export const list = async (req, res) => {
         let ProductList = [];
         if (FlashSale) {
             for (const product of FlashSale.discounts_products) { // Corregir aquí
-                
+
                 let ObjectT = await Product.findByPk(product.productId); // Corregir aquí
 
                 let variedades = await Variedad.findAll({ where: { productId: product.productId } });
@@ -258,7 +259,7 @@ export const profile_client = async (req, res) => {
                     {
                         model: Product,
                         include: [{
-                                model: Categorie, 
+                                model: Categorie,
                             }
                         ]
                     },
@@ -336,7 +337,7 @@ export const update_client = async (req, res) => {
     try {
         let updateData = { ...req.body };
 
-       
+
         if (req.files && req.files.length > 0) {
             const avatarFile = req.files.find(file => file.fieldname === 'avatar');
             if (avatarFile) {
@@ -503,7 +504,7 @@ export const filters_products = async (req, res) => {
                     { model: DiscountCategorie }
                 ]
             });
-            
+
             if (campaingDiscount) {
                 if (campaingDiscount.type_segment == 1) {
                     campaingDiscount.discounts_products.forEach(item => {
