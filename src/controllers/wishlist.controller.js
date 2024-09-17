@@ -126,45 +126,6 @@ export const list = async (req, res) => {
                 campaign_products: ProductList,
             });
 
-        } else if (productIds.length > 0) {
-            // Si no hay user_id, buscar productos por los IDs en LocalStorage
-            let products = await Product.findAll({
-                where: { id: productIds },
-                include: [ { model: Variedad, include: { model: File } }, { model: Categorie } ]
-            });
-
-            let productsWithDetails = await Promise.all(products.map(async (product) => {
-                try {
-                    let variedades = await Variedad.findAll({ where: { productId: product.id } });
-                    let reviews = await Review.findAll({ where: { productId: product.id } });
-
-                    let count_review = reviews.length;
-                    let avg_review = count_review > 0
-                        ? Math.ceil(reviews.reduce((sum, review) => sum + review.cantidad, 0) / count_review)
-                        : 0;
-
-                    let campaingDiscount = null; // Suponiendo que necesitas una lógica para encontrar descuentos en campaña
-                    // Si tienes lógica para descuentos en campañas, añádelo aquí.
-
-                    return resources.Wishlist.product_list(product, variedades, avg_review, count_review, campaingDiscount);
-                } catch (error) {
-                    console.error("Error fetching details for product", product.id, error);
-                    return null; // O maneja el error según sea necesario
-                }
-            }));
-
-            // Filtrar resultados nulos
-            productsWithDetails = productsWithDetails.filter(item => item !== null);
-
-            // Enviar la respuesta
-            res.status(200).json({
-                products: productsWithDetails
-            });
-
-        } else {
-            return res.status(400).json({
-                message: "No hay productos en la lista de deseos y el usuario no está autenticado."
-            });
         }
     } catch (error) {
         console.log(error);
@@ -226,16 +187,39 @@ export const register = async (req, res) => {
             total: data.total
         });
 
-        // Obtener el carrito con las asociaciones
+        // Obtener los favoritos con las asociaciones
         let newWishlistWithAssociations = await Wishlist.findByPk(newWishlist.id, {
             include: [
                 { model: Variedad, include: { model: File }  },
-                { model: Product, include: { model: Categorie } }
+                { model: Product, include: [{ model: Categorie }, { model: Galeria }] }
             ]
         });
 
+        // Convertir los detalles de la wishlist en un formato adecuado
+        let product = newWishlistWithAssociations.product;
+        let variedades = await Variedad.findAll({ where: { productId: product.id } });
+        let reviews = await Review.findAll({ where: { productId: product.id } });
+
+        let count_review = reviews.length;
+        let avg_review = count_review > 0
+            ? Math.ceil(reviews.reduce((sum, review) => sum + review.cantidad, 0) / count_review)
+            : 0;
+
+        // Aquí puedes añadir lógica para los descuentos de campaña si es necesario
+        let campaingDiscount = null;
+
+        // Crear la respuesta final usando tu recurso `Wishlist`
+        let wishlistWithDetails = resources.Wishlist.product_list(
+            newWishlistWithAssociations,
+            product,
+            variedades,
+            avg_review,
+            count_review,
+            campaingDiscount
+        );
+
         res.status(200).json({
-            wishlist: resources.Wishlist.product_list(newWishlistWithAssociations.toJSON()),
+            wishlist: wishlistWithDetails,//resources.Wishlist.product_list(newWishlistWithAssociations.toJSON()),
             message_text: "El producto ha sido añadido a sus favoritos",
         });
 
