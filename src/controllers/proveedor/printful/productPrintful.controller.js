@@ -10,18 +10,20 @@ import { SaleDetail } from "../../../models/SaleDetail.js";
 import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
 import { Cart } from "../../../models/Cart.js";
-import { 
-  getPrintfulProductsService, 
+import { Wishlist } from "../../../models/Wishlist.js";
+
+import {
+  getPrintfulProductsService,
   getPrintfulProductDetail,
   getPrintfulCategory,
   createPrintfulOrderService,
 } from '../../../services/proveedor/printful/printfulService.js';
 
-import  { 
-  removeImageVersion  , 
-  downloadImage       , 
+import  {
+  removeImageVersion  ,
+  downloadImage       ,
   convertWhiteToTransparent,
-  extractSKU          , 
+  extractSKU          ,
   generateSlug        ,
   removeRepeatedColors,
   processGalleryImage,
@@ -43,7 +45,7 @@ export const list = async( req, res ) => {
     throw new Error('Error al traer los productos de Printful');
   }
 }
-  
+
 export const show = async( req, res ) => {
   try{
     let product_id = req.params.id;
@@ -82,11 +84,11 @@ export const getPrintfulProducts = async () => {
   try {
 
     const printfulProducts = await getPrintfulProductsService();
-    
+
     // CREA UN CONJUNTO DE IDS DE PRODUCTOS QUE EXISTEN EN PRINTFUL
     const printfulProductMap = new Map(
       printfulProducts.map(
-        product => [ product.id, product ] 
+        product => [ product.id, product ]
       )
     );
 
@@ -96,24 +98,24 @@ export const getPrintfulProducts = async () => {
     if ( currentProducts.length > 0 ) {
 
       // RECORRE LOS PRODUCTOS ACTUALES DE LA BBDD Y ELIMINA LOS QUE NO ESTAN EN PRINTFUL
-      
+
       for (const currentProduct of currentProducts) {
 
         const idProductDB =  String(currentProduct.idProduct);
 
-        /* 
+        /*
          * VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
          * SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
          **/
-        
+
         if ( !printfulProductMap.has( parseInt( idProductDB ) ) ) {
-          
+
           await deleteProductAndRelatedComponents( currentProduct ); // ELIMINAR EL PRODUCTO Y SUS COMPONENTES RELACIONADOS
 
         } else {
 
           // SI EL PRODUCTO ACTUAL DE LA BBDD SI ESTÁ EN PRINTFUL, PUEDES HACER MÁS COSAS CON EL OBJETO COMPLETO SI ES NECESARIO
-          
+
           const printfulProduct = printfulProductMap.get(parseInt(idProductDB));
 
           if ( printfulProduct.is_ignored == true ) {
@@ -128,7 +130,7 @@ export const getPrintfulProducts = async () => {
     for ( const product of printfulProducts ) {
       await processPrintfulProduct( product );
     }
-    
+
 
   } catch ( error ) {
     console.error('Error al traer los productos de Printful:', error);
@@ -138,7 +140,7 @@ export const getPrintfulProducts = async () => {
 
 
 /*
- * Esta función procesa un producto de Printful. 
+ * Esta función procesa un producto de Printful.
  * Obtiene detalles del producto desde Printful usando su ID.
  * Obtiene o crea una categoría para el producto.
  * Obtiene o crea el producto en la base de datos local.
@@ -153,11 +155,11 @@ const processPrintfulProduct = async (product) => {
 
     if ( existingProduct ) {
       await createOrUpdateVariantsAndGalleries( existingProduct.id, productDetail.sync_variants );
-    } 
+    }
     //else {
     // clearLocalDatabaseIfNoProviderProducts
     //}
-    
+
   } catch ( error ) {
     console.error('Error processing Printful product:', error);
     throw new Error('Error processing Printful product');
@@ -199,7 +201,7 @@ const createCategory = async (category) => {
     var name = img_path.split('/');
     portada_name = await removeImageVersion(name[name.length - 1]) + '.png';
     const uploadDir = path.resolve('./src/uploads/categorie');
-    
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -230,10 +232,10 @@ const getOrCreateProduct = async (product, productDetail, category) => {
 
   let oldProductId = existingProduct ? existingProduct.id : null;
 
-  
+
   if ( !existingProduct ) {
     existingProduct = await createProduct( product, productDetail, category );
-  } 
+  }
   else {
     existingProduct = await updateProduct( existingProduct, product, productDetail, category );
   }
@@ -359,7 +361,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   const newVariantValues = newVariants.map( variant => variant.valor );
   const existingVariantValues = existingVariants.map( variant => variant.valor );
 
-  
+
   // ACTUALIZAR VARIANTES EXISTENTES
   for ( const variant of existingVariants ) {
     // VERIFICA SI VARIANT.VALOR NO ESTÁ INCLUIDO EN  newVariantValues
@@ -374,10 +376,10 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
     const existingVariant = existingVariants.find(
       v => v.sku === variant.sku
     );
-    
+
     let oldVariedadId = existingVariant ? existingVariant.id : null;
 
-    if ( !existingVariant ) { 
+    if ( !existingVariant ) {
 
       // CREAR VARIEDADES
       let newVariant = await Variedad.create({
@@ -402,17 +404,17 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         idMapping.variedades[oldVariedadId] = existingVariant.id;
       }
 
-    
+
       // CREAR PRODUCRO
       await ProductVariants.create({
           variant_id  : newVariant.variant_id,
           product_id  : newVariant.productId,
           image       : variant.product.image,
           name        : newVariant.name,
-          varietyId   : newVariant.id 
+          varietyId   : newVariant.id
       });
-      
-      
+
+
       // CREAR FILES O ARCHIVOS
       for ( const file of variant.files ) {
         try {
@@ -435,7 +437,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
               is_temporary    : file.is_temporary,
               message         : file.message,
               varietyId       : newVariant.id,
-              optionVarietyId : newVariant.variant_id, 
+              optionVarietyId : newVariant.variant_id,
             });
         } catch ( error ) {
           console.error('Error creating file record:', error, file);
@@ -444,27 +446,27 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
 
 
       // DESTRUYE Y CREA LAS OPTIONES DE CADA VARIEDA DEL PRODUCTO
-      await Option.destroy({ 
-        where: { 
-          varietyId: newVariant.id 
-        } 
+      await Option.destroy({
+        where: {
+          varietyId: newVariant.id
+        }
       });
 
       for ( const option of variant.options ) {
         await Option.create({
           idOption  : option.id     ,
           value     : option.value  ,
-          varietyId : newVariant.id , 
+          varietyId : newVariant.id ,
         });
       }
 
     } else {
 
       // ELIMINAR LAS OPCIONES EXISRTENTES PARA LA VARIANTE EXISTENTE
-      await Option.destroy({ 
-        where: { 
-          varietyId: existingVariant.id 
-        } 
+      await Option.destroy({
+        where: {
+          varietyId: existingVariant.id
+        }
       });
 
       for (const option of variant.options) {
@@ -485,7 +487,7 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
     for ( const file of variant.files ) {
       if ( file.type === 'preview' && file.preview_url ) {
 
-        const galleryImageUrl = file.preview_url; 
+        const galleryImageUrl = file.preview_url;
         let galleryName       = await processGalleryImage(galleryImageUrl);
 
         newGalleryImages.add(galleryName);
@@ -493,20 +495,20 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
         const existingGallery = existingGalleries.find(
           gallery => gallery.imagen === galleryName
         );
-        
+
         if ( !existingGallery ) {
           await Galeria.create({
             imagen    : galleryName                     ,
             color     : variant.color || 'no hay color' ,
             productId                                   ,
           });
-        } 
+        }
       }
     }
 
   }
 
-  
+
   // ELIMINAR GALERIAS QUE YA NO ESTÁN ASOCIADAS A NINGUNA VARIANTE
   for ( const existingGallery of existingGalleries ) {
     if ( !newGalleryImages.has( existingGallery.imagen ) ) { // VERIFICAR SI LA IMAGEN NO ESTÁ EN EL CONJUNTO DE NUEVAS IMAGENES
@@ -555,22 +557,22 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
 const deleteProductAndRelatedComponents = async (product) => {
 
   // BUSCAR LA CATEGORIA ASOCIADA
-  const category = await Categorie.findOne({ 
-    where: { 
-      id: product.categoryId 
-    } 
+  const category = await Categorie.findOne({
+    where: {
+      id: product.categoryId
+    }
   });
 
-  await Cart.destroy({ 
-    where: { 
-      productId: product.id 
-    } 
+  await Cart.destroy({
+    where: {
+      productId: product.id
+    }
   });
 
   // ENCONTRAR Y ELIMINAR LAS VARIEDADES ASOCIADAS
-  const varieties = await Variedad.findAll({ 
-    where: { 
-      productId: product.id 
+  const varieties = await Variedad.findAll({
+    where: {
+      productId: product.id
     }
   });
 
@@ -579,66 +581,81 @@ const deleteProductAndRelatedComponents = async (product) => {
     await deleteOptionsForVariant( variety );
   }
 
+  // ENCONTRAR Y ELIMINAR LOS FAVORITOS ASOCIADOS
+  const wishlists = await Wishlist.findAll({
+    where: {
+      productId: product.id
+    }
+  });
+  
+  if (wishlists) {
+    for ( const wishlist of wishlists ) {
+      await wishlist.destroy();
+    }
+  }
+
+
+
   // ENCONTRAR Y ELIMINAR LAS GALERIAS ASOCIADAS
-  const galleries = await Galeria.findAll({ 
-    where: { 
-      productId: product.id 
-    } 
+  const galleries = await Galeria.findAll({
+    where: {
+      productId: product.id
+    }
   });
 
   for ( const gallery of galleries ) {
     await gallery.destroy();
   }
-  
+
   // ELIMINAR EL PRODUCTO FINALMENTE
-  const count = await Product.destroy({ 
-    where: { 
-      idProduct: product.idProduct 
-    } 
-  }); 
+  const count = await Product.destroy({
+    where: {
+      idProduct: product.idProduct
+    }
+  });
 
   // VERIFICAR SI LA CATEGORIA SIGUE SIENDO UTLIZADA POR ALGUN OTRO PRODUCTO
-  const productsInCategory = await Product.findAll({ 
-    where: { 
-      categoryId: category.id 
-    } 
+  const productsInCategory = await Product.findAll({
+    where: {
+      categoryId: category.id
+    }
   });
-  
+
   // SI NINGUN OTRO PRODUCTO USA ESTA CATEGORIA, ELIMINAR LA CATEGORIA
   if ( productsInCategory.length === 0 ) {
     await category.destroy();
   }
-  
+
 };
 
 /*
  * Busca todos los archivos (File) que están asociados a la variedad (variety.id)
  */
 const deleteVarietyAndRelatedFiles = async (variety) => {
-  
+
   // ENCONTRAR Y ELIMINAR LOS ARCHIVOS ASOCIADOS A LA VARIEDAD
-  const files = await File.findAll({ 
-    where: { 
-      varietyId: variety.id 
-    } 
+  const files = await File.findAll({
+    where: {
+      varietyId: variety.id
+    }
   });
 
   for ( const file of files ) {
     await file.destroy();
   }
-  
+
 };
 
 
 /*
- * Este método elimina todas las opciones (Option) asociadas a una variante específica 
+ * Este método elimina todas las opciones (Option) asociadas a una variante específica
  */
 const deleteOptionsForVariant = async (variety) => {
   try {
-    const options = await Option.findAll({ 
-      where: { 
-        varietyId: variety.id 
-      } 
+    const options = await Option.findAll({
+      where: {
+        varietyId: variety.id
+      }
     });
 
     for ( const option of options ) {
@@ -660,7 +677,7 @@ const deleteOptionsForVariant = async (variety) => {
  * No está implementado en el código proporcionado, solo contiene un esqueleto para manejar errores.
  */
 export const createPrintfulOrder = async( orderData ) => {
- 
+
   try {
     let data = await createPrintfulOrderService( orderData );
     return data;
