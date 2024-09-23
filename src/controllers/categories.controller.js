@@ -38,16 +38,16 @@ export const update = async(req, res) => {
             }
         }
 
-        await Categorie.update(req.body, { 
-            where: { 
-                id: req.body._id 
+        await Categorie.update(req.body, {
+            where: {
+                id: req.body._id
             }
         });
 
-        const CategorieT = await Categorie.findOne({ 
-            where: { 
-                id: req.body._id 
-            } 
+        const CategorieT = await Categorie.findOne({
+            where: {
+                id: req.body._id
+            }
         });
 
         res.status(200).json({
@@ -76,8 +76,8 @@ export const list = async (req, res) => {
             order: [['createdAt', 'DESC']]
         });
 
-        categories = categories.map((user) => {
-            return resources.Categorie.categorie_list(user);
+        categories = categories.map((categorie) => {
+            return resources.Categorie.categorie_list(categorie);
         });
 
         res.status(200).json({
@@ -93,10 +93,10 @@ export const list = async (req, res) => {
 
 export const remove = async(req, res) => {
     try {
-        
-        const deletedCategorie = await Categorie.destroy({ 
-            where: { 
-                id: req.query._id 
+
+        const deletedCategorie = await Categorie.destroy({
+            where: {
+                id: req.query._id
             }
          });
 
@@ -104,7 +104,7 @@ export const remove = async(req, res) => {
             res.status( 200 ).json({
                 message: "¡Success! La categoria se borro correctamente"
             });
-            
+
         } else {
             res.status( 404 ).json({
                 message: "¡Ups! La categoria que intenta borrar, no existe"

@@ -8,6 +8,7 @@ import { Galeria } from "../models/Galeria.js";
 import { File } from "../models/File.js";
 import { Option } from "../models/Option.js";
 import { Cart } from "../models/Cart.js";
+import { Wishlist } from "../models/Wishlist.js";
 import { SaleDetail } from "../models/SaleDetail.js";
 
 
@@ -64,7 +65,7 @@ export const register = async(req, res) => {
         }
 
         data.slug = data.title.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
-        
+
         if (req.files && req.files.length > 0) {
             const portadaFile = req.files.find(file => file.fieldname === 'imagen');
             if (portadaFile) {
@@ -95,12 +96,12 @@ export const update = async(req, res) => {
         let data = req.body;
 
         data.categoryId = data.categorie;
- 
-        let valid_Product = await Product.findOne({ 
-            where: { 
-                title: data.title, 
+
+        let valid_Product = await Product.findOne({
+            where: {
+                title: data.title,
                 id: { [ Op.ne ]: data._id }
-            } 
+            }
         });
 
         if( valid_Product ) {
@@ -151,7 +152,7 @@ export const update = async(req, res) => {
             }
         }
 
-        
+
 
         await Product.update(data, { where: { id: data._id } });
 
@@ -217,7 +218,7 @@ export const list = async ( req, res ) => {
         res.status( 200 ).json({
             products: products,
         });
-        
+
     } catch ( error ) {
         res.status( 500 ).send({
             message: "debbug: ProductController list - OCURRIÓ UN PROBLEMA"
@@ -240,11 +241,11 @@ export const remove = async(req, res) => {
 
         await Galeria.destroy({ where: { productId: _id } });
 
-        
+        await Wishlist.destroy({ where: { productId: _id } });
 
         await Cart.destroy({ where: { productId: _id } });
 
-        
+
 
         // Obtén todas las variedades del producto
         const variedades = await Variedad.findAll({ where: { productId: _id } });
@@ -319,7 +320,7 @@ export const register_imagen = async(req, res) => {
                 var name = img_path.split('/');
                 var imagen_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
 
-                const galeria = await Galeria.create({ 
+                const galeria = await Galeria.create({
                     imagen: imagen_name,
                     color: req.body.color,
                     productId: req.body._id,

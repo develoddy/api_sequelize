@@ -22,6 +22,7 @@ import { AddressClient } from "../models/AddressClient.js";
 import resources from "../resources/index.js";
 import bcrypt from 'bcryptjs';
 
+
 export const list = async (req, res) => {
     try {
 
@@ -451,8 +452,12 @@ export const search_product = async (req, res) => {
 
 export const config_initial = async (req, res) => {
     try {
-        const categories = await Categorie.findAll({ where: { state: 1 } });
+        let categories = await Categorie.findAll({ where: { state: 1 } });
         const variedades = await Variedad.findAll();
+
+        categories = categories.map((categorie) => {
+            return resources.Categorie.categorie_list(categorie);
+        });
 
         res.status(200).json({
             categories: categories,
