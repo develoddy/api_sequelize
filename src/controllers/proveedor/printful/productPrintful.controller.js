@@ -579,6 +579,8 @@ const deleteProductAndRelatedComponents = async (product) => {
   for ( const variety of varieties ) {
     await deleteVarietyAndRelatedFiles( variety );
     await deleteOptionsForVariant( variety );
+
+    await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id } });
   }
 
   // ENCONTRAR Y ELIMINAR LOS FAVORITOS ASOCIADOS
@@ -587,7 +589,7 @@ const deleteProductAndRelatedComponents = async (product) => {
       productId: product.id
     }
   });
-  
+
   if (wishlists) {
     for ( const wishlist of wishlists ) {
       await wishlist.destroy();
