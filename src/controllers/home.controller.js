@@ -244,6 +244,8 @@ export const profile_client = async (req, res) => {
 
     try {
 
+      console.log("Profile_cliente: ", req.body);
+
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario
@@ -270,11 +272,15 @@ export const profile_client = async (req, res) => {
                 ]
             });
 
+            console.log("SQL detail_orders", JSON.stringify(detail_orders, null, 2));
+
             // Obtener dirección de la orden
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
+
+              console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
 
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });

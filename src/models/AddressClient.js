@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
-import { User } from './User.js'; 
+import { User } from './User.js';
 
 export const AddressClient = sequelize.define('address_clients', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -8,6 +8,7 @@ export const AddressClient = sequelize.define('address_clients', {
     surname: { type: DataTypes.STRING(250), allowNull: false },
     pais: { type: DataTypes.STRING(250), allowNull: false },
     address: { type: DataTypes.STRING(250), allowNull: false },
+    zipcode: { type: DataTypes.STRING(250), allowNull: false },
     referencia: { type: DataTypes.STRING(250), allowNull: true },
     ciudad: { type: DataTypes.STRING(250), allowNull: false },
     region: { type: DataTypes.STRING(250), allowNull: false },

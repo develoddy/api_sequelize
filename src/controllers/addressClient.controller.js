@@ -20,7 +20,8 @@ export const register = async (req, res) => {
         const addressClient = await AddressClient.create({ ...addressData, userId });
 
         res.status(200).json({
-            message: "La dirección del cliente se registró correctamente",
+            status: 200,
+            message: "La dirección de envío ha sido registrado con éxito.",
             address_client: addressClient,
         });
     } catch (error) {
@@ -42,8 +43,6 @@ export const list = async (req, res) => {
             where: { userId: userId },
             order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
         });
-
-        console.log(addressClients);
 
         res.status(200).json({
             address_client: addressClients, // Ajusta el nombre de la propiedad según sea necesario
@@ -76,7 +75,7 @@ export const remove = async (req, res) => {
         }
     } catch (error) {
         res.status(500).send({
-            message: "debbug: AddressClienteController delete OCURRIÓ UN PROBLEMA"
+            message: error,//"debbug: AddressClienteController delete OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
     }
@@ -98,7 +97,8 @@ export const update = async (req, res) => {
             const updatedAddressClient = await AddressClient.findByPk(id);
 
             res.status(200).json({
-                message: "LA DIRECCION DEL CLIENTE SE HA MODIFICADO CORRECTAMENTE",
+                status: 200,
+                message: "La dirección de envío ha sido modificado con éxito.",
                 address_client: updatedAddressClient,
             });
         } else {
