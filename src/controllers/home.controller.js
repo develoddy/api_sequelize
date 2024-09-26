@@ -272,8 +272,6 @@ export const profile_client = async (req, res) => {
                 ]
             });
 
-            console.log("SQL detail_orders", JSON.stringify(detail_orders, null, 2));
-
             // Obtener dirección de la orden
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
