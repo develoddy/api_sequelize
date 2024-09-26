@@ -5,7 +5,10 @@ export default {
             name: user.name,
             surname: user.surname,
             email: user.email,
-            avatar: user.avatar
+            avatar: user.avatar,
+            phone: user.phone,
+            birthday: user.birthday,
+            zipcode: user.zipcode
         }
     }
 }

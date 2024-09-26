@@ -11,7 +11,8 @@ export const User = sequelize.define( 'users', {
     avatar: { type: DataTypes.STRING(250), allowNull: true },
     state: { type: DataTypes.INTEGER, defaultValue: 1 },
     phone: { type: DataTypes.STRING(20), allowNull: true },
-    birthday: { type: DataTypes.STRING(20), allowNull: true }
+    birthday: { type: DataTypes.STRING(20), allowNull: true },
+    zipcode: { type: DataTypes.STRING(20), allowNull: true },
 }, {
     timestamps: true,
     tableName: 'users' // Opcional: Define el nombre de la tabla en la base de datos

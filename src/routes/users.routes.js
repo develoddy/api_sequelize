@@ -1,6 +1,6 @@
 import { Router } from "express";
 import auth from '../middlewares/auth.js';
-import { 
+import {
     register,
     register_admin,
     login,
@@ -8,6 +8,7 @@ import {
     list,
     update,
     remove,
+    detail_user,
 } from "../controllers/users.controller.js";
 
 const router = Router();
@@ -19,5 +20,7 @@ router.get( '/list', auth.verifyAdmin, list);
 router.post( '/login', login );
 router.post( '/login_admin', login_admin);
 router.delete("/delete", remove);
+router.post( '/detail_user', auth.verifyEcommerce, detail_user );
+
 
 export default router;

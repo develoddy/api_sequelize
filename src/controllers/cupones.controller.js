@@ -96,7 +96,6 @@ export const update = async(req, res) => {
             return;
         }
 
-        console.log(data);
         await Cupone.update(data, {
             where: { id: data._id }
         });
@@ -177,8 +176,8 @@ export const list = async(req, res) => {
                 ['createdAt', 'DESC']
             ]
         });
-        
-    
+
+
         res.status(200).json({
             message: 200,
             cupones: cupones,
@@ -194,7 +193,7 @@ export const list = async(req, res) => {
 export const show =async(req, res) => {
     try {
         var cupone_id = req.query.cupone_id;
-    
+
         let cupone = await Cupone.findOne({
             where: { id: cupone_id },
             include: [
@@ -216,16 +215,16 @@ export const show =async(req, res) => {
             message: "debbug: CuponeController show - OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
-    }    
+    }
 }
 
 export const config = async(req, res) => {
     try {
-        let Products = await Product.findAll({ 
+        let Products = await Product.findAll({
             where: { state: 2 },
         });
-       
-        let Categories = await Categorie.findAll({ 
+
+        let Categories = await Categorie.findAll({
             where: { state: 1 }
         });
 

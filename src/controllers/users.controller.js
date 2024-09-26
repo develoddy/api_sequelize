@@ -1,13 +1,14 @@
 import { Op, Sequelize } from 'sequelize';
 import resources from "../resources/index.js";
 import { User } from "../models/User.js";
+import { AddressClient } from "../models/AddressClient.js";
 import token from "../services/token.js";
 import bcrypt from 'bcryptjs';
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
 
 export const register_admin = async( req, res ) => {
     try {
-        const userV = await User.findOne({ 
+        const userV = await User.findOne({
             where: {
                 email: req.body.email
             }
@@ -63,9 +64,9 @@ export const register = async ( req, res ) => {
 export const login = async( req, res ) => {
     try {
         //const user = await User.findOne({email: req.body.email, state:1});
-        const user = await User.findOne({ 
+        const user = await User.findOne({
             where: {
-                email: req.body.email, 
+                email: req.body.email,
                 state: 1
             }
         });
@@ -108,10 +109,10 @@ export const login = async( req, res ) => {
 
 export const login_admin = async( req, res ) => {
     try {
-        const user = await User.findOne({ 
+        const user = await User.findOne({
             where: {
-                email: req.body.email, 
-                state: 1, 
+                email: req.body.email,
+                state: 1,
                 rol: "admin"
             }
         });
@@ -161,7 +162,7 @@ export const update = async(req, res) => {
             var avatar_name = name[2];
             console.log(avatar_name);
         }
-        
+
         if ( req.body.password ) {
             req.body.password = await bcrypt.hash( req.body.password, 10 );
         }
@@ -226,9 +227,9 @@ export const list = async( req, res ) => {
 export const remove = async( req, res ) => {
     try {
 
-        const deletedUser = await User.destroy({ 
-            where: { 
-                id: req.query._id 
+        const deletedUser = await User.destroy({
+            where: {
+                id: req.query._id
             }
          });
 
@@ -248,4 +249,31 @@ export const remove = async( req, res ) => {
         });
         console.log(error);
     }
+}
+
+export const detail_user = async( req, res ) => {
+  try {
+
+    console.log(req.body);
+
+    const user = await User.findOne({
+      where: {
+          email: req.body.email
+      },
+    });
+
+    if ( user ) {
+      res.status(200).json({
+          status: 200,
+          user: user
+      });
+    }
+
+  } catch (error) {
+    res.status(500).send({
+      message: error
+    })
+  } finally {
+
+  }
 }
