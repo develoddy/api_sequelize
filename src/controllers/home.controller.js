@@ -365,12 +365,13 @@ export const update_client = async (req, res) => {
         const updatedUser = await User.findOne({ where: { id: req.body._id } });
 
         res.status(200).json({
+            status:200,
             message: "Se ha guardado su información correctamente.",
             user: {
                 name: updatedUser.name,
                 surname: updatedUser.surname,
                 email: updatedUser.email,
-                id: updatedUser.id,
+                _id: updatedUser.id,
             }
         });
     } catch (error) {
