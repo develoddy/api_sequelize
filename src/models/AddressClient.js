@@ -9,12 +9,14 @@ export const AddressClient = sequelize.define('address_clients', {
     pais: { type: DataTypes.STRING(250), allowNull: false },
     address: { type: DataTypes.STRING(250), allowNull: false },
     zipcode: { type: DataTypes.STRING(250), allowNull: false },
-    referencia: { type: DataTypes.STRING(250), allowNull: true },
+    poblacion: { type: DataTypes.STRING(250), allowNull: false },
     ciudad: { type: DataTypes.STRING(250), allowNull: false },
-    region: { type: DataTypes.STRING(250), allowNull: false },
-    telefono: { type: DataTypes.STRING(250), allowNull: false },
     email: { type: DataTypes.STRING(250), allowNull: false },
-    nota: { type: DataTypes.STRING, allowNull: true }
+    phone: { type: DataTypes.STRING(250), allowNull: false },
+    
+    referencia: { type: DataTypes.STRING(250), allowNull: true },
+    nota: { type: DataTypes.STRING, allowNull: true },
+    birthday: { type: DataTypes.STRING(20), allowNull: true },
 }, {
     timestamps: true,
     tableName: 'address_clients'

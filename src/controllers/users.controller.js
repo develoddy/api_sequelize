@@ -254,8 +254,6 @@ export const remove = async( req, res ) => {
 export const detail_user = async( req, res ) => {
   try {
 
-    console.log(req.body);
-
     const user = await User.findOne({
       where: {
           email: req.body.email
