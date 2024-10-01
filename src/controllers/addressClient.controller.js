@@ -98,7 +98,7 @@ export const update = async (req, res) => {
 
             res.status(200).json({
                 status: 200,
-                message: "La dirección de envío ha sido modificado con éxito.",
+                message: "Dirección actualizada",
                 address_client: updatedAddressClient,
             });
         } else {
@@ -109,6 +109,29 @@ export const update = async (req, res) => {
     } catch (error) {
         res.status(500).send({
             message: "debbug: AddressClienteController update OCURRIÓ UN PROBLEMA"
+        });
+        console.log(error);
+    }
+}
+
+export const listone = async (req, res) => {
+    try {
+
+      console.log("listone: ", req.query);
+        const id = req.query.id;
+
+        // Busca las direcciones del cliente del usuario especificado
+        const addressClient = await AddressClient.findOne({
+            where: { id: id },
+            order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
+        });
+
+        res.status(200).json({
+            address_client: addressClient, // Ajusta el nombre de la propiedad según sea necesario
+        });
+    } catch (error) {
+        res.status(500).send({
+            message: "Debug: AddressClienteController list ocurrió un problema",
         });
         console.log(error);
     }
