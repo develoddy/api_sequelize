@@ -171,6 +171,55 @@ export const register = async (req, res) => {
     }
 }
 
+/*
+ * Eliminar todos los elementos del carrito de un usuario basado en el user_id, puedes seguir un enfoque similar al que utilizas en el método remove,
+ * pero en lugar de eliminar un solo registro por su id, eliminarás todos los registros que pertenezcan a ese usuario.
+ **/
+export const removeAll = async (req, res) => {
+    try {
+        // Obtenemos el user_id desde los parámetros de la solicitud
+        let user_id = req.params.user_id;
+
+        // Buscamos todos los productos del carrito del usuario
+        let carts = await Cart.findAll({
+            where: {
+                userId: user_id
+            }
+        });
+
+        // Si no hay productos en el carrito, enviamos una respuesta 404
+        if (carts.length === 0) {
+            return res.status(404).json({
+                message: "No se encontraron productos en el carrito para el usuario especificado."
+            });
+        }
+
+        // Eliminamos todos los productos del carrito del usuario
+        await Cart.destroy({
+            where: {
+                userId: user_id
+            }
+        });
+
+        // Respondemos con un mensaje de éxito
+        res.status(200).json({
+            message_text: "Todos los productos del carrito han sido eliminados correctamente."
+        });
+
+    } catch (error) {
+        // En caso de error, enviamos una respuesta 500 y mostramos el error en consola
+        console.log("---Debbug removeAll cart:", error);
+        res.status(500).send({
+            message: "debug: CartController removeAll OCURRIÓ UN PROBLEMA"
+        });
+    }
+}
+
+/*
+ * Eliminar un solo registro del carrito de compras basado en el id del producto o ítem específico
+ * que se encuentra en el carrito.
+ **/
+
 export const remove = async (req, res) => {
     try {
 
