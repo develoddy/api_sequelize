@@ -244,8 +244,6 @@ export const profile_client = async (req, res) => {
 
     try {
 
-      console.log("Profile_cliente: ", req.body);
-
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario
@@ -277,8 +275,7 @@ export const profile_client = async (req, res) => {
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
-
-              console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
+              //console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
 
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
@@ -342,7 +339,6 @@ export const update_client = async (req, res) => {
     try {
         let updateData = { ...req.body };
 
-
         if (req.files && req.files.length > 0) {
             const avatarFile = req.files.find(file => file.fieldname === 'avatar');
             if (avatarFile) {
@@ -366,7 +362,7 @@ export const update_client = async (req, res) => {
 
         res.status(200).json({
             status:200,
-            message: "Se ha guardado su información correctamente.",
+            message: "Tus datos han sido modificados en nuestra base de datos.",
             user: {
                 name: updatedUser.name,
                 surname: updatedUser.surname,
