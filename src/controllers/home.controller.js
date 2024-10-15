@@ -266,6 +266,9 @@ export const profile_client = async (req, res) => {
                     },
                     {
                         model: Variedad,
+                    },
+                    {
+                        model: Sale,
                     }
                 ]
             });
@@ -282,6 +285,7 @@ export const profile_client = async (req, res) => {
 
                 collection_detail_orders.push({
                     _id: detail_order.id,
+                    sale:order,
                     product: {
                         _id: detail_order.product.id,
                         title: detail_order.product.title,
