@@ -28,14 +28,17 @@ import { CuponeCategorie } from "../models/CuponeCategorie.js";
 import resources from "../resources/index.js";
 import bcrypt from 'bcryptjs';
 
-
-export const list = async (req, res) => {
+/*
+ * El siguiente código toma el carrito local (enviado desde el frontend), lo compara con el carrito en la base de datos y realiza la fusión:
+ **/
+export const mergeCart = async (req, res) => {
     try {
 
-        let user_id = req.query.user_id;
-
-        // Buscar productos en  carrito de compras del usuario
-        let carts = await Cart.findAll({
+        let user_id = req.query.user_id; // Obtenemos el ID del usuario autenticado desde el token de autenticación
+        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
+        
+        // Obtener el carrito del usuario autenticado desde la base de datos
+        let backendCartItems = await Cart.findAll({
             where: {
                 userId: user_id
             },
@@ -45,16 +48,99 @@ export const list = async (req, res) => {
             ]
         });
 
-        // Mapeando los resultados para transformarlos según sea necesario
-        let CARTS = carts.map(cart => {
-            return resources.Cart.cart_list(cart);
+        // Fusionar los carritos
+        for (const localItem of localCartItems) {
+            // Verificar si el producto local ya existe en el carrito del backend
+            const existingItem = backendCartItems.find(
+                backendItem => backendItem.productId === localItem.productId &&
+                               backendItem.variedadId === localItem.variedadId
+            );
+
+            if (existingItem) {
+                // Si existe, actualizar la cantidad (sumarla)
+                existingItem.cantidad += localItem.cantidad;
+                await existingItem.save();  // Guardar los cambios en la base de datos
+            } else {
+                // Si no existe, agregar el artículo al carrito del backend
+                await Cart.create({
+                    userId: user_id,
+                    productId: localItem.product._id , //localItem.productId,
+                    variedadId: localItem.variedad,
+                    type_discount: localItem.type_discount,
+                    discount: localItem.discount,
+                    cantidad: Number(localItem.cantidad),
+                    code_cupon: localItem.code_cupon,
+                    code_discount: localItem.code_discount,
+                    price_unitario: localItem.price_unitario,
+                    subtotal: localItem.subtotal,
+                    total: localItem.total
+                });
+            }
+        }
+
+        // Volver a cargar el carrito actualizado desde la base de datos
+        backendCartItems = await Cart.findAll({
+            where: {
+                userId: user_id
+            },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
         });
 
+        // Transformar los resultados para enviarlos al frontend
+        const CARTS = backendCartItems.map(cart => resources.Cart.cart_list(cart));
 
-        // Enviando la respuesta
+        //res.status(200).json({
+        //    cart: resources.Cart.cart_list(newCartWithAssociations.toJSON()),
+        //    message_text: "La cesta de compra ha sido registrado satisfactoriamente",
+        //});
         res.status(200).json({
             carts: CARTS,
+            message: 'Carrito fusionado exitosamente'
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
+        });
+    }
+};
+
+
+
+export const list = async (req, res) => {
+    try {
+
+        let user_id = req.query.user_id;
+
+        if ( user_id ) {
+            // Buscar productos en  carrito de compras del usuario
+            let carts = await Cart.findAll({
+                where: {
+                    userId: user_id
+                },
+                include: [
+                    { model: Variedad, include: { model: File } },
+                    { model: Product, include: { model: Categorie } }
+                ]
+            });
+
+            // Mapeando los resultados para transformarlos según sea necesario
+            let CARTS = carts.map(cart => {
+                return resources.Cart.cart_list(cart);
+            });
+
+            // Enviando la respuesta
+            res.status(200).json({
+                carts: CARTS,
+            });
+
+        } else {
+            // Si no hay usuario autenticado, devolver un carrito vacío o el carrito desde el frontend
+            res.status(200).json({ carts: [] });
+        }
     } catch (error) {
         console.log(error);
         res.status(500).send({
@@ -121,12 +207,14 @@ export const register = async (req, res) => {
                 return;
             }
         } else {
+            
             // AQUÍ SERÍA PRODUCTO DE INVENTARIO UNITARIO
             let valid_product = await Product.findOne({
                 where: {
                     id: data.product,
                 }
             });
+
             if (valid_product.stock < data.cantidad) {
                 res.status(200).json({
                     message: 403,
@@ -149,7 +237,7 @@ export const register = async (req, res) => {
             price_unitario: data.price_unitario,
             subtotal: data.subtotal,
             total: data.total
-        });
+        });        
 
         // Obtener el carrito con las asociaciones
         let newCartWithAssociations = await Cart.findByPk(newCart.id, {
