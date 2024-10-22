@@ -20,6 +20,7 @@ import { SaleAddress } from "../models/SaleAddress.js";
 import { AddressClient } from "../models/AddressClient.js";
 
 import { Cart } from "../models/Cart.js";
+import { CartCache } from "../models/CartCache.js";
 import { Cupone } from "../models/Cupone.js";
 import { CuponeProduct } from "../models/CuponeProduct.js";
 import { CuponeCategorie } from "../models/CuponeCategorie.js";
@@ -227,7 +228,7 @@ export const remove = async (req, res) => {
         if (cart) {
             //await cart.destroy();
             // Eliminar el carrito específico pasando la condición `where` en el método destroy
-            await CartCache.destroy({ where: { id: _id } });
+            await cart.destroy({ where: { id: _id } });
             res.status(200).json({
                 message_text: "El carrito de compra ha sido eliminado correctamente.",
             });
@@ -392,6 +393,181 @@ export const apllyCupon = async (req, res) => {
     }
 }
 
+
+export const mergeCart = async (req, res) => {
+    try {
+        // Obtener el ID del usuario autenticado desde el token de autenticación
+        const user_id = req.query.user_id;
+        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
+
+        if (!user_id) {
+            return res.status(400).json({ message: "El ID de usuario es necesario." });
+        }
+
+        if (!localCartItems || !Array.isArray(localCartItems) || localCartItems.length === 0) {
+            return res.status(400).json({ message: "No se proporcionaron artículos en el carrito." });
+        }
+        
+        // Obtener el carrito del usuario autenticado desde la base de datos
+        const backendCartItems = await Cart.findAll({
+            where: { userId: user_id },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
+        });
+
+        // Crear un conjunto de claves para los artículos existentes en el carrito del backend
+        const existingKeys = new Set(backendCartItems.map(item => `${item.productId}-${item.variedadId}`));
+       
+        // Fusionar los carritos
+        const newCartItems = [];
+
+        for (const localItem of localCartItems) {
+            const key = `${localItem.product._id}-${localItem.variedad.id}`; // Crear la misma clave
+
+            // Verificar si el producto local ya existe en el carrito del backend
+            if (!existingKeys.has(key)) {
+                newCartItems.push({
+                    userId: user_id,
+                    productId: localItem.product._id,
+                    variedadId: localItem.variedad.id,
+                    type_discount: localItem.type_discount,
+                    discount: localItem.discount,
+                    cantidad: Number(localItem.cantidad),
+                    code_cupon: localItem.code_cupon,
+                    code_discount: localItem.code_discount,
+                    price_unitario: localItem.price_unitario,
+                    subtotal: localItem.subtotal,
+                    total: localItem.total
+                });
+            }
+        }
+
+        // Crear los nuevos artículos en el carrito si hay alguno nuevo
+        if (newCartItems.length > 0) {
+            await Cart.bulkCreate(newCartItems);
+        }
+
+        // Volver a cargar el carrito actualizado desde la base de datos
+        const updatedCartItems = await Cart.findAll({
+            where: { userId: user_id },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
+        });
+
+        // Transformar los resultados para enviarlos al frontend
+        const CARTS = updatedCartItems.map(cart => resources.Cart.cart_list(cart));
+
+        res.status(200).json({
+            carts: CARTS,
+            message: 'Carrito fusionado exitosamente'
+        });
+
+        // Borrar todos los artículos en cartsCache para el usuario autenticado
+        await CartCache.destroy({
+            where: { user_status: "Guest" }  // Asegúrate de que se borren solo los del usuario autenticado
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
+        });
+    }
+};
+
+
+
+/*export const mergeCart = async (req, res) => {
+    try {
+        // Obtener el ID del usuario autenticado desde el token de autenticación
+        const user_id = req.query.user_id;
+        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
+
+        if (!user_id) {
+            return res.status(400).json({ message: "El ID de usuario es necesario." });
+        }
+
+        if (!localCartItems || !Array.isArray(localCartItems) || localCartItems.length === 0) {
+            return res.status(400).json({ message: "No se proporcionaron artículos en el carrito." });
+        }
+        
+        // Obtener el carrito del usuario autenticado desde la base de datos
+        let backendCartItems = await Cart.findAll({
+            where: { userId: user_id },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
+        });
+
+        // Crear un mapa de los artículos en el carrito del backend para búsqueda rápida
+        const backendItemMap = new Map();
+        backendCartItems.forEach(item => {
+            const key = `${item.productId}-${item.variedadId}`; // Crear una clave única
+            backendItemMap.set(key, item);
+        });
+       
+        // Fusionar los carritos
+        for (const localItem of localCartItems) {
+            const key = `${localItem.product._id}-${localItem.variedad.id}`; // Crear la misma clave
+
+            // Verificar si el producto local ya existe en el carrito del backend
+            const existingItem = backendItemMap.get(key);
+
+            if (!existingItem) {
+                // Si no existe, agregar el artículo al carrito del backend
+                await Cart.create({
+                    userId: user_id,
+                    productId: localItem.product._id,
+                    variedadId: localItem.variedad.id,
+                    type_discount: localItem.type_discount,
+                    discount: localItem.discount,
+                    cantidad: Number(localItem.cantidad),
+                    code_cupon: localItem.code_cupon,
+                    code_discount: localItem.code_discount,
+                    price_unitario: localItem.price_unitario,
+                    subtotal: localItem.subtotal,
+                    total: localItem.total
+                });
+            }
+        }
+
+        // Volver a cargar el carrito actualizado desde la base de datos
+        backendCartItems = await Cart.findAll({
+            where: { userId: user_id },
+            include: [
+                { model: Variedad, include: { model: File } },
+                { model: Product, include: { model: Categorie } }
+            ]
+        });
+
+        // Transformar los resultados para enviarlos al frontend
+        const CARTS = backendCartItems.map(cart => resources.Cart.cart_list(cart));
+
+        res.status(200).json({
+            carts: CARTS,
+            message: 'Carrito fusionado exitosamente'
+        });
+
+        // Borrar todos los artículos en cartsCache
+        await CartCache.destroy({
+            where: { user_status: "Guest" }  // Asegúrate de que se borren solo los del usuario autenticado
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
+        });
+    }
+};*/
+
+
+/*
 export const mergeCart = async (req, res) => {
     try {
         // Obtener el ID del usuario autenticado desde el token de autenticación
@@ -476,4 +652,4 @@ export const mergeCart = async (req, res) => {
         });
     }
 };
-
+*/
