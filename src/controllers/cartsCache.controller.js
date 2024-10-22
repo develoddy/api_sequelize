@@ -20,6 +20,7 @@ import { SaleAddress } from "../models/SaleAddress.js";
 import { AddressClient } from "../models/AddressClient.js";
 
 import { Cart } from "../models/Cart.js";
+import { CartCache } from "../models/CartCache.js";
 import { Cupone } from "../models/Cupone.js";
 import { CuponeProduct } from "../models/CuponeProduct.js";
 import { CuponeCategorie } from "../models/CuponeCategorie.js";
@@ -33,13 +34,13 @@ import bcrypt from 'bcryptjs';
 export const list = async (req, res) => {
     try {
 
-        let user_id = req.query.user_id;
+        let isGuest = req.query.isGuest;
 
-        if ( user_id ) {
+        if ( isGuest ) {
             // Buscar productos en  carrito de compras del usuario
-            let carts = await Cart.findAll({
+            let carts = await CartCache.findAll({
                 where: {
-                    userId: user_id
+                    user_status: isGuest
                 },
                 include: [
                     { model: Variedad, include: { model: File } },
@@ -76,7 +77,7 @@ export const register = async (req, res) => {
 
         // PRIMERO VAMOS A VALIDAR SI EL PRODUCTO EXISTE EN EL CARRITO DE COMPRA
         if (data.variedad) {
-            let valid_cart = await Cart.findOne({
+            let valid_cart = await CartCache.findOne({
                 where: {
                     userId: data.user,
                     variedadId: data.variedad,
@@ -92,7 +93,7 @@ export const register = async (req, res) => {
             }
         } else {
             // AQUÍ SERÍA PRODUCTO DE INVENTARIO UNITARIO
-            let valid_cart = await Cart.findOne({
+            let valid_cart = await CartCache.findOne({
                 where: {
                     userId: data.user,
                     productId: data.product,
@@ -127,7 +128,6 @@ export const register = async (req, res) => {
                 return;
             }
         } else {
-            
             // AQUÍ SERÍA PRODUCTO DE INVENTARIO UNITARIO
             let valid_product = await Product.findOne({
                 where: {
@@ -145,8 +145,9 @@ export const register = async (req, res) => {
         }
 
         // Insertar en la tabla Cart
-        let newCart = await Cart.create({
+        let newCart = await CartCache.create({
             userId: data.user,
+            user_status: data.user_status,
             productId: data.product,
             variedadId: data.variedad,
             type_discount: data.type_discount,
@@ -160,7 +161,7 @@ export const register = async (req, res) => {
         });        
 
         // Obtener el carrito con las asociaciones
-        let newCartWithAssociations = await Cart.findByPk(newCart.id, {
+        let newCartWithAssociations = await CartCache.findByPk(newCart.id, {
             include: [
                 { model: Variedad, include: { model: File }  },
                 { model: Product, include: { model: Categorie } }
@@ -181,13 +182,15 @@ export const register = async (req, res) => {
 
 export const removeAll = async (req, res) => {
     try {
+        console.log("Valor de isGuest: ", req.params.isGuest);
         // Obtenemos el user_id desde los parámetros de la solicitud
-        let user_id = req.params.user_id;
+        let isGuest = req.params.isGuest;
+
 
         // Buscamos todos los productos del carrito del usuario
-        let carts = await Cart.findAll({
+        let carts = await CartCache.findAll({
             where: {
-                userId: user_id
+                user_status: isGuest
             }
         });
 
@@ -199,9 +202,9 @@ export const removeAll = async (req, res) => {
         }
 
         // Eliminamos todos los productos del carrito del usuario
-        await Cart.destroy({
+        await CartCache.destroy({
             where: {
-                userId: user_id
+                user_status: isGuest
             }
         });
 
@@ -223,13 +226,13 @@ export const remove = async (req, res) => {
     try {
 
         let _id = req.params.id;
-        let cart = await Cart.findOne({ where: { id: _id } });
+        let cart = await CartCache.findOne({ where: { id: _id } });
         if (cart) {
-            //await cart.destroy();
+            //await CartCache.destroy();
             // Eliminar el carrito específico pasando la condición `where` en el método destroy
             await CartCache.destroy({ where: { id: _id } });
             res.status(200).json({
-                message_text: "El carrito de compra ha sido eliminado correctamente.",
+                message_text: "El carrito de cache ha sido eliminado correctamente",
             });
         } else {
             res.status(404).json({
@@ -276,12 +279,12 @@ export const update = async (req, res) => {
             }
         }
 
-        let cart = await Cart.update(data, {
+        let cart = await CartCache.update(data, {
             where: { id: data._id }
         });
 
         // Volver a buscar el carrito actualizado con las asociaciones necesarias
-        let newCart = await Cart.findOne({
+        let newCart = await CartCache.findOne({
             where: { id: data._id },
             include: [
                 { model: Variedad },
@@ -303,177 +306,4 @@ export const update = async (req, res) => {
         console.log(error);
     }
 }
-
-export const apllyCupon = async (req, res) => {
-    try {
-        let data = req.body;
-
-        // Validar la existencia del cupón
-        let cupon = await Cupone.findOne({
-            where: { code: data.code },
-            include: [
-                { model: CuponeProduct, attributes: ['productId'] },
-                { model: CuponeCategorie, attributes: ['categoryId'] }
-            ]
-        });
-
-        if (!cupon) {
-            res.status(200).json({
-                message: 403,
-                message_text: "El cupón ingresado no es válido. Por favor, inténtelo con otro cupón."
-            });
-            return;
-        }
-
-        // Parte operativa
-        let carts = await Cart.findAll({
-            where: { userId: data.user_id },
-            include: [{ model: Product }]
-        });
-
-
-        let products = cupon.cupones_products.map(cuponeProduct => cuponeProduct.productId);
-        let categories = cupon.cupones_categories.map(cuponeCategorie => cuponeCategorie.categoryId);
-
-        for (const cart of carts) {
-            let subtotal = 0;
-            let total = 0;
-
-            if (products.length > 0 && products.includes(cart.product.id)) {
-                if ( cupon.type_discount == 1 ) { // Por porcentaje
-                    subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
-                } else { // Por moneda
-                    subtotal = cart.price_unitario - cupon.discount;
-                }
-
-                total = subtotal * cart.cantidad;
-
-                await Cart.update({
-                    subtotal: subtotal,
-                    total: total,
-                    type_discount: cupon.type_discount,
-                    discount: cupon.discount,
-                    code_cupon: cupon.code,
-                }, {
-                    where: { id: cart.id }
-                });
-            }
-
-
-            if (categories.length > 0 && categories.includes(cart.product.categoryId)) {
-                if ( cupon.type_discount == 1 ) { // Por porcentaje
-                    subtotal = cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01);
-                } else { // Por moneda
-                    subtotal = cart.price_unitario - cupon.discount;
-                }
-
-                total = subtotal * cart.cantidad;
-                await Cart.update({
-                    subtotal: subtotal,
-                    total: total,
-                    type_discount: cupon.type_discount,
-                    discount: cupon.discount,
-                    code_cupon: cupon.code,
-                }, {
-                    where: { id: cart.id }
-                });
-            }
-        }
-
-        res.status(200).json({
-            message: 200,
-            message_text: "El cupón ha sido aplicado correctamente.",
-        });
-    } catch (error) {
-        res.status(500).send({
-            message: "debug: CartController applyCupon OCURRIÓ UN PROBLEMA"
-        });
-        console.log(error);
-    }
-}
-
-export const mergeCart = async (req, res) => {
-    try {
-        // Obtener el ID del usuario autenticado desde el token de autenticación
-        const user_id = req.query.user_id;
-        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
-
-        if (!user_id) {
-            return res.status(400).json({ message: "El ID de usuario es necesario." });
-        }
-
-        if (!localCartItems || !Array.isArray(localCartItems) || localCartItems.length === 0) {
-            return res.status(400).json({ message: "No se proporcionaron artículos en el carrito." });
-        }
-        
-        // Obtener el carrito del usuario autenticado desde la base de datos
-        let backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Crear un mapa de los artículos en el carrito del backend para búsqueda rápida
-        const backendItemMap = new Map();
-        backendCartItems.forEach(item => {
-            const key = `${item.productId}-${item.variedadId}`; // Crear una clave única
-            backendItemMap.set(key, item);
-        });
-       
-
-        // Fusionar los carritos
-        for (const localItem of localCartItems) {
-            
-            const key = `${localItem.product._id}-${localItem.variedad.id}`; // Crear la misma clave
-
-            // Verificar si el producto local ya existe en el carrito del backend
-            const existingItem = backendItemMap.get(key);
-
-            if (existingItem) {
-                // Si existe, actualizar la cantidad (sumarla)
-                existingItem.cantidad += localItem.cantidad;
-                await existingItem.save();  // Guardar los cambios en la base de datos
-            } else {
-                // Si no existe, agregar el artículo al carrito del backend
-                await Cart.create({
-                    userId: user_id,
-                    productId: localItem.product._id,
-                    variedadId: localItem.variedad.id,
-                    type_discount: localItem.type_discount,
-                    discount: localItem.discount,
-                    cantidad: Number(localItem.cantidad),
-                    code_cupon: localItem.code_cupon,
-                    code_discount: localItem.code_discount,
-                    price_unitario: localItem.price_unitario,
-                    subtotal: localItem.subtotal,
-                    total: localItem.total
-                });
-            }
-        }
-
-        // Volver a cargar el carrito actualizado desde la base de datos
-        backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Transformar los resultados para enviarlos al frontend
-        const CARTS = backendCartItems.map(cart => resources.Cart.cart_list(cart));
-
-        res.status(200).json({
-            carts: CARTS,
-            message: 'Carrito fusionado exitosamente'
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send({
-            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
-        });
-    }
-};
 
