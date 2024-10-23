@@ -20,6 +20,7 @@ import './models/CuponeCategorie.js';
 import './models/CuponeProduct.js';
 import './models/Cupone.js';
 import './models/Cart.js';
+import './models/CartCache.js';
 import './models/Wishlist.js';
 import './models/AddressClient.js';
 import './models/ProductVariants.js';

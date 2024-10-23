@@ -9,7 +9,8 @@ import {
     update,
     remove,
     removeAll,
-    apllyCupon
+    apllyCupon,
+    mergeCart
 } from "../controllers/carts.controller.js";
 
 const router = Router();
@@ -20,5 +21,8 @@ router.put("/update", auth.verifyEcommerce, update);
 router.delete("/delete/:id", auth.verifyEcommerce, remove);
 router.delete('/delete-all/:user_id', auth.verifyEcommerce, removeAll);
 router.post("/aplly_cupon", auth.verifyEcommerce, apllyCupon);
+
+
+router.post("/merge", auth.verifyEcommerce, mergeCart);
 
 export default router;
