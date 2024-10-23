@@ -182,7 +182,6 @@ export const register = async (req, res) => {
 
 export const removeAll = async (req, res) => {
     try {
-        console.log("Valor de isGuest: ", req.params.isGuest);
         // Obtenemos el user_id desde los parámetros de la solicitud
         let isGuest = req.params.isGuest;
 
@@ -226,11 +225,12 @@ export const remove = async (req, res) => {
     try {
 
         let _id = req.params.id;
+        //let isGuest = req.params.isGuest;
         let cart = await CartCache.findOne({ where: { id: _id } });
         if (cart) {
             //await CartCache.destroy();
             // Eliminar el carrito específico pasando la condición `where` en el método destroy
-            await CartCache.destroy({ where: { id: _id } });
+            await CartCache.destroy({ where: { id: _id  } });
             res.status(200).json({
                 message_text: "El carrito de cache ha sido eliminado correctamente",
             });

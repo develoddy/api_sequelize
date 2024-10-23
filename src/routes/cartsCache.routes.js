@@ -15,7 +15,7 @@ const router = Router();
 
 router.get("/list", list);
 router.post("/register", register);
-router.put("/update", auth.verifyEcommerce, update);
+router.put("/update", update);
 router.delete("/delete/:id", remove);
 router.delete('/delete-all/:isGuest', removeAll);
 
