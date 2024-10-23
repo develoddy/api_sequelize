@@ -165,51 +165,76 @@ export const list = async (req, res) => {
 
 export const show_landing_product = async (req, res) => {
     try {
-
-        const SLUG = req.params.slug;
+        const SLUG = req.params.slug || null;
         const DISCOUNT_ID = req.query._id;
 
-        // Buscar producto por slug y estado
-        let product = await Product.findOne({
-            where: {
-                slug: SLUG,
-                state: 2
-            },
-            include: [
-                { model: Galeria },
-                { model: Categorie }
-            ],
-        });
+        let product = null;
+        let relatedProducts = [];
+        let objectRelateProducts = [];
+        
 
-        // Verificar si el producto existe
-        if (!product) {
-            return res.status(404).json({ message: "Producto no encontrado" });
+        // Si se proporciona un slug, buscar el producto
+        if (SLUG !== "null") {
+
+            // Buscar producto por slug y estado
+            product = await Product.findOne({
+                where: {
+                    slug: SLUG,
+                    state: 2
+                },
+                include: [
+                    { model: Galeria },
+                    { model: Categorie }
+                ],
+            });
+
+            // Verificar si el producto existe
+            if (!product) {
+                return res.status(404).json({ message: "Producto no encontrado" });
+            }
+
+            // Obtener variedades del producto
+            let variedades = await Variedad.findAll({
+                where: { productId: product.id }
+            });
+
+            // Obtener reviews del producto junto con los usuarios
+            let reviews = await Review.findAll({
+                where: { productId: product.id },
+                include: [{ model: User }]
+            });
+
+            let avg_review = reviews.length > 0 ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / reviews.length) : 0;
+            let count_review = reviews.length;
+
+            // Obtener productos relacionados por categoría y estado
+            relatedProducts = await Product.findAll({
+                where: {
+                    categoryId: product.categoryId,
+                    state: 2
+                }
+            });
         }
 
-        // Obtener variedades del producto
-        let variedades = await Variedad.findAll({
-            where: { productId: product.id }
-        });
+        // Si no hay slug o no hay productos relacionados, devolver productos de interés
+        if (SLUG === 'null' || !SLUG || relatedProducts.length === 0) {
+            // Devolver productos genéricos o sugeridos
+            relatedProducts = await Product.findAll({
+                where: { state: 2 },
+                limit: 2 // Limitar la cantidad de productos sugeridos
+            });
+        }
+        
+        // Obtener variedades del producto si hay slug
+        let variedades = product ? await Variedad.findAll({ where: { productId: product.id } }) : [];
 
-        // Obtener reviews del producto junto con los usuarios
-        let reviews = await Review.findAll({
-            where: { productId: product.id },
-            include: [{ model: User }]
-        });
-
+        // Obtener reviews del producto si hay slug
+        let reviews = product ? await Review.findAll({ where: { productId: product.id }, include: [{ model: User }] }) : [];
         let avg_review = reviews.length > 0 ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / reviews.length) : 0;
         let count_review = reviews.length;
 
-        // Obtener productos relacionados por categoría y estado
-        let relatedProducts = await Product.findAll({
-            where: {
-                categoryId: product.categoryId,
-                state: 2
-            }
-        });
-
         // Crear lista de productos relacionados con sus variedades y reviews
-        let objectRelateProducts = [];
+        //let objectRelateProducts = [];
         for (const relatedProduct of relatedProducts) {
             let relatedVariedades = await Variedad.findAll({ where: { productId: relatedProduct.id } });
             let relatedReviews = await Review.findAll({ where: { productId: relatedProduct.id } });
