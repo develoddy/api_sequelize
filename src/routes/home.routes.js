@@ -16,7 +16,7 @@ import {
 const router = Router();
 
 router.get("/list", list);
-router.get("/show_landing_product/:slug", show_landing_product);
+router.get("/show_landing_product/:slug?", show_landing_product);
 router.post("/search_product", search_product);
 router.get("/config_initial", config_initial);
 router.post("/profile_client", auth.verifyEcommerce, profile_client);
