@@ -132,7 +132,9 @@ export const login_admin = async( req, res ) => {
                         rol: user.rol,
                     }
                 }
-                await getPrintfulProducts();
+
+                // Sincroniza con printfull
+                //await getPrintfulProducts();
                 res.status(200).json({
                     USER_FRONTED:USER_FRONTED
                 });

@@ -12,12 +12,12 @@ export const Variedad = sequelize.define('variedades', {
   stock: { type: DataTypes.INTEGER, allowNull: false },
   // New properties
 
-  external_id: { type: DataTypes.STRING, allowNull: false },
-  sync_product_id: { type: DataTypes.INTEGER, allowNull: false },
-  name: { type: DataTypes.STRING, allowNull: false },
-  synced: { type: DataTypes.BOOLEAN, allowNull: false },
-  variant_id: { type: DataTypes.INTEGER, allowNull: false },
-  main_category_id: { type: DataTypes.INTEGER, allowNull: false },
+  external_id: { type: DataTypes.STRING, allowNull: true },
+  sync_product_id: { type: DataTypes.INTEGER, allowNull: true },
+  name: { type: DataTypes.STRING, allowNull: true },
+  synced: { type: DataTypes.BOOLEAN, allowNull: true },
+  variant_id: { type: DataTypes.INTEGER, allowNull: true },
+  main_category_id: { type: DataTypes.INTEGER, allowNull: true },
   warehouse_product_id: { type: DataTypes.INTEGER, allowNull: true },
   warehouse_product_variant_id: { type: DataTypes.INTEGER, allowNull: true },
   retail_price: { type: DataTypes.STRING, allowNull: false },
