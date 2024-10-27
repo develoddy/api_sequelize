@@ -7,6 +7,7 @@ export const variedad_register = async (req, res) => {
         // { product: '1', valor: 'XL', stock: 5 }
         
         const data = req.body;
+        console.log("ÇUpdateColor: ", data);
         const variedad_exits = await Variedad.findOne({ where: { valor: data.valor, productId: data.product } });
         let variedad = null;
 
@@ -16,9 +17,22 @@ export const variedad_register = async (req, res) => {
             variedad = await Variedad.findByPk(variedad_exits.id);
         } else {
             variedad = await Variedad.create({
-                valor: data.valor,
-                stock: data.stock,
-                productId: data.product
+                productId                      : data.product,
+                valor                          : data.valor,
+                stock                          : data.stock,
+                color                          : data.color,
+                external_id                    : data.external_id,
+                sync_product_id                : data.sync_product_id,
+                name                           : data.name,
+                synced                         : data.synced,
+                variant_id                     : data.variant_id,
+                main_category_id               : data.main_category_id,
+                warehouse_product_id           : data.warehouse_product_id,
+                warehouse_product_variant_id   : data.warehouse_product_variant_id,
+                retail_price                   : data.retail_price,
+                sku                            : data.sku,
+                currency                       : data.currency,
+                
             });
         }
 
