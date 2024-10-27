@@ -11,6 +11,10 @@ import router from './routes/index.js';
 const app = express();
 app.use(cors());
 
+// Límite para el tamaño de las solicitudes
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Obtener __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
