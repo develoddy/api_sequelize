@@ -9,11 +9,7 @@ import { fileURLToPath } from 'url';
 import router from './routes/index.js';
 
 const app = express();
-app.use(cors({
-    origin: process.env.URL_FRONTEND, // Permite solo este origen específico
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors());
 
 // Límite para el tamaño de las solicitudes
 app.use(express.json({ limit: '10mb' }));
