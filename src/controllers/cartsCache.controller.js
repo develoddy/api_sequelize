@@ -65,7 +65,7 @@ export const list = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(500).send({
-            message: "debug: CartController list OCURRIÓ UN PROBLEMA"
+            message: "debug: CartController list OCURRIÓ UN PROBLEMA " + error
         });
     }
 }
