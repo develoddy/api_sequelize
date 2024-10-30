@@ -12,8 +12,8 @@ const app = express();
 app.use(cors());
 
 // Límite para el tamaño de las solicitudes
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 // Obtener __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
