@@ -33,11 +33,10 @@ app.use(express.static(path.join(__dirname,'public')));
 app.use('/api/', router);
 
 // Ruta para servir el archivo email_sale.html
-//app.set('view engine', 'ejs');
-//app.use('/assets', express.static(path.join(__dirname, 'src/assets')));
-//app.get('/email-sale', (req, res) => {
-//  res.sendFile(path.join(__dirname, 'mails/email_sale.html'));
-//});
+app.use('/assets', express.static(path.join(__dirname, 'src/assets')));
+app.get('/email-resetpassword', (req, res) => {
+  res.sendFile(path.join(__dirname, 'mails/email_resetpassword.html'));
+});
 
 // app.use( '/products', productsRoutes);
 // app.use( '/users' ,usersRoutes);

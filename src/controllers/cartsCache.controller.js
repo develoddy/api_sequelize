@@ -36,6 +36,8 @@ export const list = async (req, res) => {
 
         let isGuest = req.query.isGuest;
 
+        console.log("CartCache: ", isGuest);
+
         if ( isGuest ) {
             // Buscar productos en  carrito de compras del usuario
             let carts = await CartCache.findAll({
@@ -107,6 +109,8 @@ export const register = async (req, res) => {
                 return;
             }
         }
+
+        console.log("--- Register CartCache: ", data);
 
         // SEGUNDO VAMOS A VALIDAR SI EL STOCK ESTÁ DISPONIBLE
         if (data.variedad) {
