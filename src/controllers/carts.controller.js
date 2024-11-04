@@ -108,6 +108,8 @@ export const register = async (req, res) => {
             }
         }
 
+        console.log("--- Register Cart: ", data);
+
         // SEGUNDO VAMOS A VALIDAR SI EL STOCK ESTÁ DISPONIBLE
         if (data.variedad) {
 

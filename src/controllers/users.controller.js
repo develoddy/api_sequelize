@@ -5,6 +5,122 @@ import { AddressClient } from "../models/AddressClient.js";
 import token from "../services/token.js";
 import bcrypt from 'bcryptjs';
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
+import jwt from "jsonwebtoken";
+import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from "path";
+import handlebars from 'handlebars';
+import ejs from 'ejs';
+import smtpTransport from 'nodemailer-smtp-transport';
+
+import dotenv from 'dotenv';
+dotenv.config(); // Cargar las variables de entorno
+
+// ------ Send Email -----
+
+// Función para leer un archivo HTML
+const readHTMLFile = (path) => {
+    return new Promise((resolve, reject) => {
+        fs.readFile(path, { encoding: 'utf-8' }, (err, html) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(html);
+        });
+    });
+};
+
+const { EMAIL_USER, EMAIL_PASS, JWT_SECRET } = process.env;
+
+// Función para enviar el correo de restablecimiento de contraseña
+async function sendEmailResetPassword(email, token) {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: EMAIL_USER,
+            pass: EMAIL_PASS,
+        },
+    });
+
+    const link = `${process.env.URL_BACKEND}/api/users/reset-password?token=${token}`;
+    // Construir el enlace de restablecimiento de contraseña con formato de URL de Mango
+    //const link = `${process.env.URL_BACKEND}/registro/resetPassword/resetPassword.faces?token=${token}&utm_campaign=reset_password&utm_medium=email&utm_source=transactional_email`;
+
+    // Leer el template HTML
+    const htmlTemplate = await readHTMLFile(`${process.cwd()}/src/mails/email_resetpassword.html`);
+
+    // Renderizar el HTML con el enlace de restablecimiento
+    const renderedHTML = ejs.render(htmlTemplate, { 
+        resetLink: link,
+        token: token,
+    });
+
+    const mailOptions = {
+        from: EMAIL_USER,
+        to: email,
+        subject: 'Restablece tu contraseña',
+        html: renderedHTML
+    };
+
+    await transporter.sendMail(mailOptions);
+}
+
+
+// Endpoint para solicitar el restablecimiento de contraseña
+export const requestPasswordReset = async (req, res) => {
+
+    const { email } = req.body;
+
+    // Aquí debes buscar el usuario por su correo electrónico
+    const user = await User.findOne({
+            where: {
+                email: email,
+                state: 1
+            }
+        });
+
+    if (!user) {
+        return res.status(404).send({ message: 'Usuario no encontrado' });
+    }
+
+    // Comprobar si JWT_SECRET tiene un valor
+    if (!JWT_SECRET) {
+        return res.status(500).send({ message: 'Error del servidor: JWT_SECRET no está configurado.' });
+    }
+
+    // Crear un token JWT
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
+
+    // Enviar el correo electrónico con el enlace de restablecimiento
+    try {
+        await sendEmailResetPassword(email, token);
+        res.status(200).send({ message: 'Correo de restablecimiento enviado' });
+    } catch (error) {
+        res.status(500).send({ message: 'Error al enviar el correo: '+ error });
+    }
+};
+
+// Endpoint para restablecer la contraseña
+export const resetPassword = async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.id;
+
+        // Hashear la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Actualizar la contraseña del usuario
+        //await User.findByIdAndUpdate(userId, { password: hashedPassword });
+        await User.update({ password: hashedPassword }, { where: { id: userId } }); // Cambiar a User.update para Sequelize
+        res.status(200).send({ message: 'Contraseña restablecida exitosamente' });
+    } catch (error) {
+        res.status(400).send({ message: 'Token inválido o ha expirado' });
+    }
+};
+
+
 
 export const register_admin = async( req, res ) => {
     try {
