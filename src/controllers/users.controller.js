@@ -12,12 +12,10 @@ import path from "path";
 import handlebars from 'handlebars';
 import ejs from 'ejs';
 import smtpTransport from 'nodemailer-smtp-transport';
-
 import dotenv from 'dotenv';
 dotenv.config(); // Cargar las variables de entorno
 
 // ------ Send Email -----
-
 // Función para leer un archivo HTML
 const readHTMLFile = (path) => {
     return new Promise((resolve, reject) => {
@@ -42,9 +40,7 @@ async function sendEmailResetPassword(email, token) {
         },
     });
 
-    const link = `${process.env.URL_BACKEND}/api/users/reset-password?token=${token}`;
-    // Construir el enlace de restablecimiento de contraseña con formato de URL de Mango
-    //const link = `${process.env.URL_BACKEND}/registro/resetPassword/resetPassword.faces?token=${token}&utm_campaign=reset_password&utm_medium=email&utm_source=transactional_email`;
+    const link = `${process.env.URL_FRONTEND}/auth/updatepassword/${token}/${email}`;
 
     // Leer el template HTML
     const htmlTemplate = await readHTMLFile(`${process.cwd()}/src/mails/email_resetpassword.html`);
@@ -53,6 +49,7 @@ async function sendEmailResetPassword(email, token) {
     const renderedHTML = ejs.render(htmlTemplate, { 
         resetLink: link,
         token: token,
+        email: email
     });
 
     const mailOptions = {
@@ -108,14 +105,18 @@ export const resetPassword = async (req, res) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         const userId = decoded.id;
 
+        // Verificar que newPassword no sea undefined o vacío
+        if (!newPassword) {
+            return res.status(400).send({ message: 'La nueva contraseña no puede estar vacía' });
+        }
+
         // Hashear la nueva contraseña
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Actualizar la contraseña del usuario
-        //await User.findByIdAndUpdate(userId, { password: hashedPassword });
         await User.update({ password: hashedPassword }, { where: { id: userId } }); // Cambiar a User.update para Sequelize
         res.status(200).send({ message: 'Contraseña restablecida exitosamente' });
     } catch (error) {
+        console.error("---- Debbug API Error al restablecer la contraseña:", error);
         res.status(400).send({ message: 'Token inválido o ha expirado' });
     }
 };
