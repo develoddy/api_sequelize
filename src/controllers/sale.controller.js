@@ -273,7 +273,7 @@ const processFile = (file, index) => {
     };
 };
 
-const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
+//const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
     /*let leftPosition = (printAreaWidthPixels - file.width) / 2;
     let topPosition = 0;
     const marginRight = 0.8 * printAreaWidthPixels;
@@ -287,19 +287,43 @@ const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeig
     //const scaledHeight = file.height * scaleFactor;
 
     // Cálculo para centrar el logo
-    const leftPosition = (printAreaWidthPixels - file.width) / 2;
-    const topPosition = (printAreaHeightPixels - file.height) / 2;
+//    const leftPosition = (printAreaWidthPixels - file.width) / 2;
+//    const topPosition = (printAreaHeightPixels - file.height) / 2;
 
-    return {
+//    return {
+//        "area_width": printAreaWidthPixels,
+//        "area_height": printAreaHeightPixels,
+//        "width": file.width,//scaledWidth,
+//        "height": file.height,//scaledHeight,
+//        "top": topPosition,
+//        "left": leftPosition,
+//        "limit_to_print_area": true
+//    };
+//};
+
+const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
+    // Definir márgenes opcionales
+    const marginLeft = 0.05 * printAreaWidthPixels; // Margen izquierdo
+    const marginTop = 0.05 * printAreaHeightPixels; // Margen superior
+
+    // Calcular la posición central
+    const leftPosition = (printAreaWidthPixels - file.width) / 2 + marginLeft;
+    const topPosition = (printAreaHeightPixels - file.height) / 2 + marginTop;
+
+    // Asegurarse de que la posición no salga del área de impresión
+    const position = {
         "area_width": printAreaWidthPixels,
         "area_height": printAreaHeightPixels,
-        "width": file.width,//scaledWidth,
-        "height": file.height,//scaledHeight,
-        "top": topPosition,
-        "left": leftPosition,
+        "width": file.width,
+        "height": file.height,
+        "top": Math.max(topPosition, 0), // Evitar top negativo
+        "left": Math.max(leftPosition, 0), // Evitar left negativo
         "limit_to_print_area": true
     };
+
+    return position;
 };
+
 
 const calculatePositionForSecondFile = (file, printAreaWidthPixels, printAreaHeightPixels) => ({
     "area_width": printAreaWidthPixels,
