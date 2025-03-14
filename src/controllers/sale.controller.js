@@ -175,8 +175,6 @@ const prepareItemsForPrintful = async (carts, sale) => {
 
     for (const cart of carts) {
         const itemFiles = await getItemFiles(cart);
-
-        
         const itemOptions = await getItemOptions(cart);
         const item = await createItem(cart, itemFiles, itemOptions);
         items.push(item);
@@ -197,7 +195,6 @@ const prepareItemsForPrintful = async (carts, sale) => {
         discount += parseFloat(cart.discount);
     }
     
-    //return items;
     return {
         items,
         costs: {
@@ -303,19 +300,32 @@ const processFile = (file, index) => {
 
 const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
     // Definir márgenes opcionales
-    const marginLeft = 0.05 * printAreaWidthPixels; // Margen izquierdo
-    const marginTop = 0.05 * printAreaHeightPixels; // Margen superior
+    //const marginLeft = 0.05 * printAreaWidthPixels; // Margen izquierdo
+    //const marginTop = 0.05 * printAreaHeightPixels; // Margen superior
 
     // Calcular la posición central
-    const leftPosition = (printAreaWidthPixels - file.width) / 2 + marginLeft;
-    const topPosition = (printAreaHeightPixels - file.height) / 2 + marginTop;
+    //const leftPosition = (printAreaWidthPixels - file.width) / 2 + marginLeft;
+    //const topPosition = (printAreaHeightPixels - file.height) / 2 + marginTop;
+
+    // Elimina los márgenes y ve si mejora el centrado:
+    //const leftPosition = (printAreaWidthPixels - file.width) / 2;
+    //const topPosition = (printAreaHeightPixels - file.height) / 2;
+
+    const scaleFactor = Math.min(printAreaWidthPixels / file.width, printAreaHeightPixels / file.height);
+    const scaledWidth = file.width * scaleFactor;
+    const scaledHeight = file.height * scaleFactor;
+
+    const leftPosition = (printAreaWidthPixels - scaledWidth) / 2;
+    const topPosition = (printAreaHeightPixels - scaledHeight) / 2;
+
+
 
     // Asegurarse de que la posición no salga del área de impresión
     const position = {
         "area_width": printAreaWidthPixels,
         "area_height": printAreaHeightPixels,
-        "width": file.width,
-        "height": file.height,
+        "width": scaledWidth,//file.width,
+        "height": scaledHeight,//file.height,
         "top": Math.max(topPosition, 0), // Evitar top negativo
         "left": Math.max(leftPosition, 0), // Evitar left negativo
         "limit_to_print_area": true
