@@ -170,7 +170,7 @@ const prepareItemsForPrintful = async (carts, sale) => {
     const items = [];
     let subtotal = 0;
     let discount = 0;
-    let shipping = 5.00; // Ajusta el costo de envío según tus necesidades
+    let shipping = 0.00; // Ajusta el costo de envío según tus necesidades
     let tax = 0.00; // Ajusta el impuesto según tus necesidades
 
     for (const cart of carts) {
