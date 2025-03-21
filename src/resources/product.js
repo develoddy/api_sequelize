@@ -33,7 +33,7 @@ export default {
             sku: product.sku,
             slug: product.slug,
             imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+product.portada, // Falta completar la ruta
-            categorie:  product.category, // product.categorie,
+            categorie:  product.categoryId, // product.categorie,
             price_soles: product.price_soles,
             price_usd: product.price_usd,
             stock: product.stock,

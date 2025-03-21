@@ -303,7 +303,7 @@ export const profile_client = async (req, res) => {
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
-              //console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
+              console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
 
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
@@ -553,14 +553,24 @@ export const filters_products = async (req, res) => {
             }
         }
 
-        // FILTRO DE VARIEDAD
+        // Estás buscando todas las variedades que tengan la talla seleccionada.
+        // Luego, extraes todos los productIds de esas variedades.
+        // Los agregas al array products_s (que es el que se usa en el filtro de productos).
         if (variedad_selected) {
-            const VAR = await Variedad.findByPk(variedad_selected.id);
-            if ( VAR ) {
-                products_s.push(VAR.productId);
-            }
+            const VARIEDADES = await Variedad.findAll({
+                where: { valor: variedad_selected.valor } // o el campo que coincida con la talla
+            });
+        
+            const productIdsVariedades = VARIEDADES.map(v => v.productId);
+            productIdsVariedades.forEach(id => {
+                if (!products_s.includes(id)) {
+                    products_s.push(id);
+                }
+            });
+            //console.log("Variedades encontradas para la talla:", variedad_selected.valor);
+            //console.log("Product IDs con esa talla:", productIdsVariedades);
         }
-
+        
         if (categories_s.length > 0) {
             filter.categoryId = { [Op.in]: categories_s };
         }
@@ -573,8 +583,15 @@ export const filters_products = async (req, res) => {
             filter.price_usd = { [Op.between]: [price_min, price_max] };
         }
 
-        const OurProducts = await Product.findAll({ where: filter, order: [["createdAt", "ASC"]] });
-
+        let OurProducts = await Product.findAll({
+            where: {
+              [Op.and]: filter
+            },
+            order: [
+              ['createdAt', 'ASC'] // ASC = 1, DESC = -1
+            ]
+        });
+          
         const Products = [];
         for (const product of OurProducts) {
             const variedades = await Variedad.findAll({ where: { productId: product.id } });
@@ -596,12 +613,15 @@ export const filters_products = async (req, res) => {
                     }
                 }
             }
-            Products.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+
+            const finalProduct = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
+            Products.push(finalProduct);
         }
 
         res.status(200).json({
             products: Products,
         });
+
     } catch (error) {
         console.log(error);
         res.status(500).send({
