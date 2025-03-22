@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { sequelize } from '../database/database.js';
 // MODELS
 import { Slider } from "../models/Slider.js";
@@ -482,11 +482,32 @@ export const search_product = async (req, res) => {
 
 export const config_initial = async (req, res) => {
     try {
-        let categories = await Categorie.findAll({ where: { state: 1 } });
+        //let categories = await Categorie.findAll({ where: { state: 1 } });
+        let categories = await Categorie.findAll({
+            where: { state: 1 },
+            attributes: {
+                include: [
+                    // Añadimos un campo adicional con el total de productos
+                    [Sequelize.fn("COUNT", Sequelize.col("products.id")), "total_products"]
+                ]
+            },
+            include: [{
+                model: Product,
+                attributes: [], // No necesitamos traer los productos, solo contarlos
+                required: false // Por si hay categorías sin productos
+            }],
+            group: ['categories.id'] // Agrupamos por categoría
+        });
+
         const variedades = await Variedad.findAll();
 
+        //categories = categories.map((categorie) => {
+        //    return resources.Categorie.categorie_list(categorie);
+        //});
         categories = categories.map((categorie) => {
-            return resources.Categorie.categorie_list(categorie);
+            const formattedCategorie = resources.Categorie.categorie_list(categorie);
+            formattedCategorie.total_products = categorie.dataValues.total_products; // Añadimos el total
+            return formattedCategorie;
         });
 
         res.status(200).json({
@@ -508,6 +529,7 @@ export const filters_products = async (req, res) => {
         const categories_selecteds = req.body.categories_selecteds;
         const is_discount = req.body.is_discount;
         const variedad_selected = req.body.variedad_selected;
+        const selectedColors = req.body.selectedColors;
         const price_min = req.body.price_min;
         const price_max = req.body.price_max;
 
@@ -556,6 +578,8 @@ export const filters_products = async (req, res) => {
         // Estás buscando todas las variedades que tengan la talla seleccionada.
         // Luego, extraes todos los productIds de esas variedades.
         // Los agregas al array products_s (que es el que se usa en el filtro de productos).
+
+        /*console.log("------ variedad_selected: ", variedad_selected, "selectedColors: ", selectedColors);
         if (variedad_selected) {
             const VARIEDADES = await Variedad.findAll({
                 where: { valor: variedad_selected.valor } // o el campo que coincida con la talla
@@ -569,7 +593,33 @@ export const filters_products = async (req, res) => {
             });
             //console.log("Variedades encontradas para la talla:", variedad_selected.valor);
             //console.log("Product IDs con esa talla:", productIdsVariedades);
+        }*/
+
+        let variedadWhere = {};
+
+        if (variedad_selected && variedad_selected.valor) {
+            variedadWhere.valor = variedad_selected.valor;
         }
+
+        // Si hay colores seleccionados, los añadimos al filtro
+        if (selectedColors && selectedColors.length > 0) {
+            variedadWhere.color = { [Op.in]: selectedColors };
+        }
+
+        if (Object.keys(variedadWhere).length > 0) {
+            const VARIEDADES = await Variedad.findAll({
+                where: variedadWhere
+            });
+
+            const productIdsVariedades = VARIEDADES.map(v => v.productId);
+
+            productIdsVariedades.forEach(id => {
+                if (!products_s.includes(id)) {
+                    products_s.push(id);
+                }
+            });
+        }
+
         
         if (categories_s.length > 0) {
             filter.categoryId = { [Op.in]: categories_s };

@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js'; 
+import { Product } from './Product.js';
 
 export const Categorie = sequelize.define('categories', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -11,3 +12,8 @@ export const Categorie = sequelize.define('categories', {
   tableName: 'categories'
 });
 
+// Eelación inversa con Productos:
+/*Categorie.hasMany(Product, {
+  foreignKey: 'categoryId',
+  sourceKey: 'id',
+});*/
