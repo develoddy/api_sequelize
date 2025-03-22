@@ -27,9 +27,13 @@ import './models/ProductVariants.js';
 import './models/File.js';
 import './models/Option.js';
 
+// Importar las asociaciones aquí
+import './models/associations.js';
+
 async function main() {
     try {
         await sequelize.sync({ force: false });
+        //await sequelize.sync({ alter: true });
         app.listen( 3500 )
         console.log("Server running on port 35000");
     } catch (error) {

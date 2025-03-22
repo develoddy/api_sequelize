@@ -29,13 +29,13 @@ export const Product = sequelize.define('products', {
 
 // Define la asociación con el modelo de Categoría
 // En este caso, establece que un producto pertenece a una categoría
-Product.belongsTo( Categorie, { 
+/*Product.belongsTo( Categorie, { 
     foreignKey: 'categoryId',
     sourceKey: 'id',
-});
+});*/
 
 // Define la asociación con el modelo de Galeria
-Product.hasMany(Galeria, { 
+/*Product.hasMany(Galeria, { 
     foreignKey: 'productId',
     sourceKey: 'id',
-});
+});*/
