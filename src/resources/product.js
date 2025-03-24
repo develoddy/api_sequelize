@@ -10,9 +10,6 @@ export default {
         var IMAGEN_TWO = "";
         var GALERIAS = [];
 
-        // console.log(".---resources ver productossss----");
-        // console.log(product);
-
         if (product && product.galerias) { // Verifica que product y product.galerias no sean null
             GALERIAS = product.galerias.map((galeria) => {
                 galeria.imagen = process.env.URL_BACKEND+'/api/products/uploads/product/'+galeria.imagen;
@@ -33,7 +30,7 @@ export default {
             sku: product.sku,
             slug: product.slug,
             imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+product.portada, // Falta completar la ruta
-            categorie:  product.categoryId, // product.categorie,
+            categorie: product.category, // product.categoryId, // product.categorie,
             price_soles: product.price_soles,
             price_usd: product.price_usd,
             stock: product.stock,

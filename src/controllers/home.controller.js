@@ -188,6 +188,8 @@ export const show_landing_product = async (req, res) => {
                 ],
             });
 
+
+
             // Verificar si el producto existe
             if (!product) {
                 return res.status(404).json({ message: "Producto no encontrado" });
@@ -248,6 +250,9 @@ export const show_landing_product = async (req, res) => {
         if (DISCOUNT_ID) {
             saleFlash = await Discount.findByPk(DISCOUNT_ID);
         }
+
+
+            console.log("---- Debbug: Show landing product :", product);
 
         res.status(200).json({
             product: resources.Product.product_list(product, variedades),
