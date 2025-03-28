@@ -10,7 +10,8 @@ import {
     remove,
     detail_user,
     requestPasswordReset,
-    resetPassword
+    resetPassword,
+    refreshToken // Importamos la función para refrescar el token
 } from "../controllers/users.controller.js";
 
 const router = Router();
@@ -30,5 +31,7 @@ router.post('/request-reset-password', requestPasswordReset);
 // Ruta para restablecer la contraseña
 router.post('/reset-password', resetPassword);
 
+// Nueva ruta para refrescar el token
+router.post('/refresh-token', refreshToken);
 
 export default router;

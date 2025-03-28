@@ -117,7 +117,6 @@ export const update = async (req, res) => {
 export const listone = async (req, res) => {
     try {
 
-      console.log("listone: ", req.query);
         const id = req.query.id;
 
         // Busca las direcciones del cliente del usuario especificado
