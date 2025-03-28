@@ -62,7 +62,6 @@ async function sendEmailResetPassword(email, token) {
     await transporter.sendMail(mailOptions);
 }
 
-
 // Endpoint para solicitar el restablecimiento de contraseña
 export const requestPasswordReset = async (req, res) => {
 
@@ -120,8 +119,6 @@ export const resetPassword = async (req, res) => {
         res.status(400).send({ message: 'Token inválido o ha expirado' });
     }
 };
-
-
 
 export const register_admin = async( req, res ) => {
     try {
@@ -192,9 +189,12 @@ export const login = async( req, res ) => {
             // SI ESTÁ REGISTRADO EN EL SISTEMA
             let compare = await bcrypt.compare(req.body.password, user.password);
             if (compare) {
-                let tokenT = await token.encode(user.id, user.rol, user.email);
+                // let tokenT = await token.encode(user.id, user.rol, user.email);
+                let tokens = await token.encode(user.id, user.rol, user.email);
                 const USER_FRONTED = {
-                    token: tokenT,
+                    //token: tokenT,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
                     user: {
                         _id: user.id,
                         name: user.name,
@@ -238,9 +238,12 @@ export const login_admin = async( req, res ) => {
             // SI ESTÁ REGISTRADO EN EL SISTEMA
             let compare = await bcrypt.compare(req.body.password, user.password);
             if (compare) {
-                let tokenT = await token.encode(user.id, user.rol, user.email);
+                //let tokenT = await token.encode(user.id, user.rol, user.email);
+                let tokens = await token.encode(user.id, user.rol, user.email);
                 const USER_FRONTED = {
-                    token: tokenT,
+                    //token: tokenT,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
                     user: {
                         name: user.name,
                         email: user.email,
@@ -272,6 +275,34 @@ export const login_admin = async( req, res ) => {
         console.log(error);
     }
 }
+
+export const refreshToken = async (req, res) => {
+
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+        return res.status(401).json({ message: "No se proporcionó un refresh token" });
+    }
+
+    try {
+        const decoded = await token.decode(refresh_token);
+
+        if (!decoded || decoded.error === "TokenExpired") {
+            return res.status(403).json({ message: "El refresh token ha expirado. Inicia sesión nuevamente." });
+        }
+
+        // Generar un nuevo Access Token
+        const newTokens = await token.encode(decoded.id, decoded.rol, decoded.email);
+
+        res.json({
+            accessToken: newTokens.accessToken,
+            refreshToken: newTokens.refreshToken
+        });
+    } catch (error) {
+        console.error("❌ Error al refrescar el token:", error);
+        res.status(500).json({ message: "Error al renovar el token" });
+    }
+};
 
 export const update = async(req, res) => {
     try {
