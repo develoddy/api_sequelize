@@ -251,7 +251,7 @@ export const remove = async(req, res) => {
         for (const variedad of variedades) {
 
             // ELIMINA LAS VARIANTES DEL PRODUCTO
-            await ProductVariants.destroy({ where: { varietyId: variedad.id } })
+            await ProductVariants.destroy({ where: { varietyId: variedad.id } });
 
             // ELIMINA LOS DETALLE DE LA ORDEN ASOCIADO A CADA VARIEDAD
             await SaleDetail.destroy({ where: { productId: _id, variedadId: variedad.id } });
