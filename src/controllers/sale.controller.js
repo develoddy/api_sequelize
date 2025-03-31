@@ -246,7 +246,7 @@ const processFile = (file, index) => {
         "T-shirts": { width: 12, height: 16 },
         "Long sleeve shirts": { width: 12, height: 16 },
         "Hoodies": { width: 14, height: 14 },
-        "All shirts": { width: 12, height: 12 },
+        "All shirts": { width: 12, height: 16 },
     };
 
     const categoryTitle = file.variedade.product.category.title;
