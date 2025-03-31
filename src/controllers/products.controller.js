@@ -10,14 +10,14 @@ import { Option } from "../models/Option.js";
 import { Cart } from "../models/Cart.js";
 import { Wishlist } from "../models/Wishlist.js";
 import { SaleDetail } from "../models/SaleDetail.js";
-
-
+import { ProductVariants } from "../models/ProductVariants.js";
 import fs from 'fs';
 import path from "path";
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
 import { getGelatoProducts } from './proveedor/gelato/productGelato.controller.js';
 
-//  ----- START PROVEDORES ------
+
+/* ----------------------------- START PROVEDORES ---------------------------- */
 export const syncPrintfulProducts = async (req, res) => {
     try {
         const printfulProducts = await getPrintfulProducts();
@@ -45,11 +45,10 @@ export const syncGelatoProducts = async (req, res) => {
         console.log(error);
     }
 }
-//  ----- END PROVEDORES ------
+/* --------------------------------------------------------------------------- */
 
 
-
-/* ============= ENDPOINTS ============= */
+/* ----------------------------- ENDPOINTS ----------------------------------- */
 export const register = async(req, res) => {
     try {
         let data = req.body;
@@ -231,11 +230,11 @@ export const remove = async(req, res) => {
     try {
         let _id = req.query._id;
 
-        // Encuentra el producto por ID
+        // ENCUENTRA EL PRODUCTO MEDIANTE EL ID
         const product = await Product.findByPk(_id);
         if ( !product ) {
             return res.status(404).json({
-                message: "El producto no se encontró."
+                message: "PRODUCTO NO ENCONTRADP"
             });
         }
 
@@ -245,39 +244,42 @@ export const remove = async(req, res) => {
 
         await Cart.destroy({ where: { productId: _id } });
 
-
-
-        // Obtén todas las variedades del producto
+        // OBTENER TODAS LAS VARIEDADES DEL PRODUCTO
         const variedades = await Variedad.findAll({ where: { productId: _id } });
 
-        // Elimina los archivos asociados a cada variedad
+        // ELIMINA LOS ARCHIVOS ASOCIADOS A CADA VARIEDAD
         for (const variedad of variedades) {
 
+            // ELIMINA LAS VARIANTES DEL PRODUCTO
+            await ProductVariants.destroy({ where: { varietyId: variedad.id } })
+
+            // ELIMINA LOS DETALLE DE LA ORDEN ASOCIADO A CADA VARIEDAD
             await SaleDetail.destroy({ where: { productId: _id, variedadId: variedad.id } });
 
-            // Elimina las opciones asociadas a cada variedad
+            // ELIMINA LAS OPCIONES ASOCIADAS A CADA VARIEDAD
             await Option.destroy({ where: { varietyId: variedad.id } });
 
-            // Elimina los archivos asociados a cada variedad
+            // ELIMNA LOS ARCHIVOS ASOCIADOS A CADA VARIEDAD
             await File.destroy({ where: { varietyId: variedad.id } });
         }
 
+        // ELIMINA POR COMPLETO LAS VARIEDADES
         await Variedad.destroy({ where: { productId: _id } });
 
-        // Guarda el categoryId del producto antes de eliminarlo
+        // GUARDA EL ID DE CATEGORIA DEL PRODUCTO ANTES DE ELIMINARLO
         const categoryId = product.categoryId;
 
-        // Elimina el producto
+        // ELIMINA EL PRODUCTO POR COMPLETO
         await Product.destroy({ where: { id: _id } });
 
-        // Verifica si la categoría no está asociada a otros productos antes de eliminarla
+        // VERIFICA SI LA CATEGORIA NO ESTÁ ASOCIADA A OTROS PRODUCTOS ANTES DE ELIMINARLA
         const categoryInUse = await Product.findOne({ where: { categoryId: categoryId } });
         if (!categoryInUse) {
             await Categorie.destroy({ where: { id: categoryId } });
         }
 
         res.status(200).json({
-            message: "El producto, sus variedades, opciones, archivos y categoría se han eliminado correctamente."
+            message: "EL PRODUCTO, VARIEDADES, OPCIONES, ARCHIVOS Y CATEGORIA SE HAN BORRADO CORRECTAMENTE"
         });
     } catch (error) {
         res.status(500).send({
@@ -408,3 +410,4 @@ export const show = async(req, res) => {
         console.log(error);
     }
 }
+/* --------------------------------------------------------------------------- */

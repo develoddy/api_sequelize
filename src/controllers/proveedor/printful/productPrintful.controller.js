@@ -11,7 +11,8 @@ import { File } from "../../../models/File.js";
 import { Option } from "../../../models/Option.js";
 import { Cart } from "../../../models/Cart.js";
 import { Wishlist } from "../../../models/Wishlist.js";
-
+import fs from 'fs';
+import path from "path";
 import {
   getPrintfulProductsService,
   getPrintfulProductDetail,
@@ -29,8 +30,6 @@ import  {
   processGalleryImage,
 } from "./helper.js";
 
-import fs from 'fs';
-import path from "path";
 
 let idMapping = { products: {}, variedades: {} };
 
@@ -67,13 +66,12 @@ export const show = async( req, res ) => {
   }
 }
 
-
 /*
- * =================================================================
- * =          PROCESAMIENTO DEL PROVEEDOR PRINTFUL                 =
- * =================================================================
- */
-
+ * ==================================================================================================
+ * =                                                                                                =
+ * =                                  PROCESAMIENTO DEL PROVEEDOR PRINTFUL                          =
+ * =                                                                                                =
+ * ================================================================================================= */
 
 /* ----- FUNCION PRINCIPAL ------
  * Obtiene todos los productos actuales de Printful
@@ -100,22 +98,15 @@ export const getPrintfulProducts = async () => {
       // RECORRE LOS PRODUCTOS ACTUALES DE LA BBDD Y ELIMINA LOS QUE NO ESTAN EN PRINTFUL
 
       for (const currentProduct of currentProducts) {
-
         const idProductDB =  String(currentProduct.idProduct);
 
-        /*
-         * VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
-         * SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
-         **/
-
+        // VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
+        // SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
         if ( !printfulProductMap.has( parseInt( idProductDB ) ) ) {
-
           await deleteProductAndRelatedComponents( currentProduct ); // ELIMINAR EL PRODUCTO Y SUS COMPONENTES RELACIONADOS
-
         } else {
 
           // SI EL PRODUCTO ACTUAL DE LA BBDD SI ESTÁ EN PRINTFUL, PUEDES HACER MÁS COSAS CON EL OBJETO COMPLETO SI ES NECESARIO
-
           const printfulProduct = printfulProductMap.get(parseInt(idProductDB));
 
           if ( printfulProduct.is_ignored == true ) {
@@ -137,7 +128,6 @@ export const getPrintfulProducts = async () => {
     throw new Error('Error al traer los productos de Printful');
   }
 };
-
 
 /*
  * Esta función procesa un producto de Printful.
@@ -166,7 +156,6 @@ const processPrintfulProduct = async (product) => {
   }
 };
 
-
 /*
  * Obtiene la categoría asociada a un producto de Printful.
  * Verifica si la categoría ya existe en la base de datos local.
@@ -187,7 +176,6 @@ const getOrCreateCategory = async (productDetail) => {
 
   return existingCategory;
 };
-
 
 /*
  * Crea una nueva categoría en la base de datos local.
@@ -217,7 +205,6 @@ const createCategory = async (category) => {
   });
 };
 
-
 /*
  * Busca un producto en la base de datos local por su ID.
  * Si no existe, crea un nuevo producto.
@@ -245,7 +232,6 @@ const getOrCreateProduct = async (product, productDetail, category) => {
 
   return existingProduct;
 };
-
 
 /*
  * Crea un nuevo producto en la base de datos local.
@@ -326,7 +312,6 @@ const updateProduct = async (existingProduct, product, productDetail, category) 
 
   return existingProduct;
 };
-
 
 /*
  * Crea o actualiza las variantes y galerías de un producto.
@@ -517,7 +502,6 @@ const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   }
 };
 
-
 /*
  * Limpia la base de datos local eliminando productos que no están presentes en Printful.
  * Elimina las variantes y galerías asociadas a esos productos.
@@ -548,10 +532,10 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
 
 };
 
-
 /*
  * Busca todas las variedades (Variedad) asociadas al producto (product.id).
- * Itera sobre cada variedad encontrada y llama a deleteVarietyAndRelatedFiles(variety) para eliminar la variedad y todos los archivos (File) asociados a esa variedad.
+ * Itera sobre cada variedad encontrada y llama a deleteVarietyAndRelatedFiles(variety) para eliminar la variedad y todos 
+ * los archivos (File) asociados a esa variedad.
  * También llama a deleteOptionsForVariant(variety.id) para eliminar todas las opciones (Option) asociadas a esa variedad.
 */
 const deleteProductAndRelatedComponents = async (product) => {
@@ -648,7 +632,6 @@ const deleteVarietyAndRelatedFiles = async (variety) => {
 
 };
 
-
 /*
  * Este método elimina todas las opciones (Option) asociadas a una variante específica
  */
@@ -672,7 +655,6 @@ const deleteOptionsForVariant = async (variety) => {
     throw new Error(`Error deleting options for variant ${variantId}`);
   }
 };
-
 
 /*
  * Crea una orden en Printful con los datos proporcionados.
