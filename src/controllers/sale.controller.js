@@ -120,12 +120,12 @@ export const register = async (req, res) => {
         //console.log("Items: ", JSON.stringify(printfulOrderData, null, 2));
 
         // Crear la orden en Printful
-        let data = await prepareCreatePrintfulOrder(printfulOrderData);
+        let result = await prepareCreatePrintfulOrder(printfulOrderData);
 
-        if (data === "error_order") {
-            return res.status(200).json({
+        if (result.error) {
+            return res.status(403).json({
                 code: 403,
-                message: "Ups! Hubo un problema al generar la orden",
+                message: result.message,
             });
         }
 
@@ -475,18 +475,18 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 });
 
 // Crear la orden en Printful
-const prepareCreatePrintfulOrder = async (orderData) => {
+const prepareCreatePrintfulOrder = async (orderData, res) => {
     // Implementar la llamada a la API de Printful
     // Ejemplo: return await axios.post('https://api.printful.com/orders', orderData);
     let data = await createPrintfulOrder(orderData);
 
-        if (data == "error_order") {
-            res.status( 200 ).json({
-                code: 403,
-                message: "Ups! Hubo un problema al generar la orden",
-            });
-            return;
-        }
+    if (data === "error_order") {
+        return { error: true, message: "Ups! Hubo un problema al generar la orden" };
+    }
+
+    return { error: false, data };
+
+
 };
 
 // Enviar correo electrónico de confirmación
