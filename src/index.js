@@ -20,9 +20,10 @@ import './models/CuponeCategorie.js';
 import './models/CuponeProduct.js';
 import './models/Cupone.js';
 import './models/Cart.js';
-import './models/CartCache.js';
+import './models/CartCache.js'; // Cart Guest
 import './models/Wishlist.js';
 import './models/AddressClient.js';
+import './models/AddressGuest.js'; // Address Guest
 import './models/ProductVariants.js';
 import './models/File.js';
 import './models/Option.js';

@@ -36,8 +36,6 @@ export const list = async (req, res) => {
 
         let isGuest = req.query.isGuest;
 
-        console.log("CartCache: ", isGuest);
-
         if ( isGuest ) {
             // Buscar productos en  carrito de compras del usuario
             let carts = await CartCache.findAll({

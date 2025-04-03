@@ -1,8 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
-import { User } from './User.js';
 
-export const AddressClient = sequelize.define('address_clients', {
+export const AddressGuest = sequelize.define('address_guests', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: { type: DataTypes.STRING(250), allowNull: false },
     surname: { type: DataTypes.STRING(250), allowNull: false },
@@ -15,11 +14,8 @@ export const AddressClient = sequelize.define('address_clients', {
     phone: { type: DataTypes.STRING(250), allowNull: false },
     referencia: { type: DataTypes.STRING(250), allowNull: true },
     nota: { type: DataTypes.STRING, allowNull: true },
-    birthday: { type: DataTypes.STRING(20), allowNull: true },
+    birthday: { type: DataTypes.STRING(20), allowNull: true }
 }, {
     timestamps: true,
-    tableName: 'address_clients'
+    tableName: 'address_guests'
 });
-
-// Define la asociación con el modelo de Usuario
-AddressClient.belongsTo(User, { foreignKey: 'userId' });
