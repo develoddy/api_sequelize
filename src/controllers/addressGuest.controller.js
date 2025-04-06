@@ -1,15 +1,16 @@
 import { Op } from 'sequelize';
 import { AddressGuest } from "../models/AddressGuest.js";
-import { User } from "../models/User.js";
+import { Guest } from "../models/Guest.js";
 
 
 export const register = async (req, res) => {
     try {
         // Extraer los datos de la dirección del body
-        const { name, surname, pais, address, zipcode, poblacion, ciudad, email, phone, referencia, nota, birthday } = req.body;
+        const { guest_id, name, surname, pais, address, zipcode, poblacion, ciudad, email, phone, referencia, nota, birthday } = req.body;
 
         // Crear la dirección en la base de datos
         const newGuestAddress = await AddressGuest.create({
+            guest_id,
             name,
             surname,
             pais,
@@ -23,6 +24,14 @@ export const register = async (req, res) => {
             nota,
             birthday
         });
+
+         // Verificar que guest_id esté presente
+        if (!guest_id) {
+          return res.status(400).json({
+            status: 400,
+            message: "El ID del invitado (guest_id) es obligatorio",
+          });
+        }
 
         res.status(201).json({
             status: 201,
@@ -75,17 +84,27 @@ export const update = async (req, res) => {
         const id = req.body._id;
 
         // Actualizar el registro
-        //const [updated] = await AddressClient.update(data, {where: { id: id }});
         const [updatedRows] = await AddressGuest.update(data, { where: { id } });
 
         if (!updatedRows) {
-            return res.status(404).json({ message: "Dirección no encontrada o sin cambios." });
+            return res.status(404).json({ 
+                status: 400,
+                message: "Dirección no encontrada o sin cambios" 
+            });
         }
 
-        res.status(200).json({ message: "Dirección actualizada con éxito." });
+        // Recuperar el registro actualizado
+        const updatedAddressGuest = await AddressGuest.findByPk(id);
+
+        res.status(200).json({
+            status: 200,
+            message: "Dirección actualizada con éxito",
+            address_client: updatedAddressGuest,
+        });
     } catch (error) {
         res.status(500).send({
-            message: "debbug: AddressClienteController update OCURRIÓ UN PROBLEMA"
+            status: 500,
+            message: "¡Oops! No se pudo actualizar la dirección"
         });
         console.log(error);
     }
@@ -93,16 +112,43 @@ export const update = async (req, res) => {
 
 export const listone = async (req, res) => {
     try {
-        const { id } = req.query;
-        const address = await AddressGuest.findByPk(id);
+        const { guest_id } = req.query;
 
-        if (!address) {
-            return res.status(404).json({ message: "Dirección no encontrada." });
+        if (!guest_id) {
+          return res.status(400).json({ message: "El parámetro guest_id es requerido" });
         }
 
-        res.status(200).json({ status: 200, address });
+        const guestIdNumber = Number(guest_id);
+
+        if (isNaN(guestIdNumber)) {
+          return res.status(400).json({ message: "guest_id debe ser un número válido." });
+        }
+
+        const addresses = await AddressGuest.findAll({
+          where: { guest_id: guestIdNumber }
+        });
+
+        res.status(200).json({ status: 200, addresses });
     } catch (error) {
         console.error("Error al obtener dirección de invitado:", error);
         res.status(500).json({ message: "Error al obtener dirección." });
     }
 }
+
+export const removeAll = async (req, res) => {
+    try {
+        const { guest_id } = req.params;
+
+        // Eliminar todas las direcciones asociadas al guest_id
+        const deletedRows = await AddressGuest.destroy({ where: { guest_id } });
+
+        if (!deletedRows) {
+            return res.status(404).json({ message: "No se encontraron direcciones para eliminar." });
+        }
+
+        res.status(200).json({ message: "Todas las direcciones del invitado fueron eliminadas." });
+    } catch (error) {
+        console.error("Error al eliminar direcciones de invitado:", error);
+        res.status(500).json({ message: "Error al eliminar direcciones de invitado." });
+    }
+};

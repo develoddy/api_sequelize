@@ -10,15 +10,12 @@ import { File } from "../models/File.js";
 import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
 import { Galeria } from "../models/Galeria.js";
-
 import { DiscountProduct } from "../models/DiscountProduct.js";
 import { DiscountCategorie } from "../models/DiscountCategorie.js";
-
 import { SaleDetail } from '../models/SaleDetail.js';
 import { Sale } from '../models/Sale.js';
 import { SaleAddress } from "../models/SaleAddress.js";
 import { AddressClient } from "../models/AddressClient.js";
-
 import { Cart } from "../models/Cart.js";
 import { CartCache } from "../models/CartCache.js";
 import { Cupone } from "../models/Cupone.js";

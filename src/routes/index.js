@@ -1,6 +1,7 @@
 import express from "express";
 import productsRoutes from './products.routes.js';
 import usersRoutes from './users.routes.js';
+import guestsRoutes from './guests.routes.js';
 import categoriesRoutes from "./categories.routes.js";
 import slidersRoutes from "./sliders.routes.js";
 import cuponesRoutes from "./cupone.routes.js";
@@ -20,6 +21,7 @@ import wishlistRoutes from "./wishlist.routes.js";
 const app = express();
 
 app.use("/users", usersRoutes);
+app.use("/guests", guestsRoutes);
 app.use("/products", productsRoutes);
 app.use("/categories", categoriesRoutes);
 app.use("/sliders", slidersRoutes);

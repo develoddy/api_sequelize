@@ -8,6 +8,7 @@ import {
     list,
     listone,
     remove,
+    removeAll,
     update,
 } from "../controllers/addressGuest.controller.js";
 
@@ -17,6 +18,7 @@ router.post("/register", register);
 router.put("/update", update);
 router.get("/list", list);
 router.delete("/delete/:id", remove);
+router.delete("/delete/:guest_id", removeAll);
 router.get("/listone", listone);
 
 
