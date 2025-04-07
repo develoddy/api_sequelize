@@ -74,7 +74,7 @@ export const remove = async( req, res ) => {
 
 export const removeAll = async (req, res) => {
 
-    consol.log("----> En guets.controller.js, ejecuta removeAll");
+    console.log("----> En guets.controller.js, ejecuta removeAll");
     try {
         // Paso 1: Eliminar todas las direcciones de la tabla AddressGuest
         const deletedAddresses = await AddressGuest.destroy({
