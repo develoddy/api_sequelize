@@ -26,47 +26,6 @@ import { CuponeCategorie } from "../models/CuponeCategorie.js";
 import resources from "../resources/index.js";
 import bcrypt from 'bcryptjs';
 
-
-
-export const list = async (req, res) => {
-    try {
-
-        let isGuest = req.query.isGuest;
-
-        if ( isGuest ) {
-            // Buscar productos en  carrito de compras del usuario
-            let carts = await CartCache.findAll({
-                where: {
-                    user_status: isGuest
-                },
-                include: [
-                    { model: Variedad, include: { model: File } },
-                    { model: Product, include: { model: Categorie } }
-                ]
-            });
-
-            // Mapeando los resultados para transformarlos según sea necesario
-            let CARTS = carts.map(cart => {
-                return resources.Cart.cart_list(cart);
-            });
-
-            // Enviando la respuesta
-            res.status(200).json({
-                carts: CARTS,
-            });
-
-        } else {
-            // Si no hay usuario autenticado, devolver un carrito vacío o el carrito desde el frontend
-            res.status(200).json({ carts: [] });
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({
-            message: "debug: CartController list OCURRIÓ UN PROBLEMA " + error
-        });
-    }
-}
-
 export const register = async (req, res) => {
     try {
 
@@ -76,7 +35,7 @@ export const register = async (req, res) => {
         if (data.variedad) {
             let valid_cart = await CartCache.findOne({
                 where: {
-                    userId: data.user,
+                    guest_id: data.user,
                     variedadId: data.variedad,
                     productId: data.product,
                 }
@@ -92,7 +51,7 @@ export const register = async (req, res) => {
             // AQUÍ SERÍA PRODUCTO DE INVENTARIO UNITARIO
             let valid_cart = await CartCache.findOne({
                 where: {
-                    userId: data.user,
+                    guest_id: data.user,
                     productId: data.product,
                 }
             });
@@ -145,7 +104,7 @@ export const register = async (req, res) => {
 
         // Insertar en la tabla Cart
         let newCart = await CartCache.create({
-            userId: data.user,
+            guest_id: data.user,
             user_status: data.user_status,
             productId: data.product,
             variedadId: data.variedad,
@@ -176,6 +135,45 @@ export const register = async (req, res) => {
             message: "debug: CartController register: OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
+    }
+}
+
+export const list = async (req, res) => {
+    try {
+
+        let isGuest = req.query.isGuest;
+
+        if ( isGuest ) {
+            // Buscar productos en  carrito de compras del usuario
+            let carts = await CartCache.findAll({
+                where: {
+                    user_status: isGuest
+                },
+                include: [
+                    { model: Variedad, include: { model: File } },
+                    { model: Product, include: { model: Categorie } }
+                ]
+            });
+
+            // Mapeando los resultados para transformarlos según sea necesario
+            let CARTS = carts.map(cart => {
+                return resources.Cart.cart_list(cart);
+            });
+
+            // Enviando la respuesta
+            res.status(200).json({
+                carts: CARTS,
+            });
+
+        } else {
+            // Si no hay usuario autenticado, devolver un carrito vacío o el carrito desde el frontend
+            res.status(200).json({ carts: [] });
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            message: "debug: CartController list OCURRIÓ UN PROBLEMA " + error
+        });
     }
 }
 
