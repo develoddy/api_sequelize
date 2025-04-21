@@ -4,9 +4,11 @@ import { Product } from './Product.js';
 import { Categorie } from './Categorie.js';
 import { Galeria } from './Galeria.js';
 import { Guest } from './Guest.js';
+import { User } from './User.js';
 import { AddressGuest } from './AddressGuest.js';
 import { CartCache } from './CartCache.js';
 import { Variedad } from './Variedad.js';
+import { Sale } from './Sale.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE
@@ -30,7 +32,17 @@ AddressGuest.belongsTo(Guest, { foreignKey: 'guest_id' });
  * RELACION CARTCACHE -> PRODUCT
  * RELACION CARTCACHE -> VARIEDAD
  */
+//Guest.hasMany(CartCache, { foreignKey: 'guest_id', onDelete: 'CASCADE' });
 Guest.hasMany(CartCache, { foreignKey: 'guest_id', onDelete: 'CASCADE' });
 CartCache.belongsTo(Guest, { foreignKey: 'guest_id' });
 CartCache.belongsTo(Product, { foreignKey: 'productId' });
 CartCache.belongsTo(Variedad, { foreignKey: 'variedadId', allowNull: true });
+
+/*
+ * SALE
+ * RELACION SALE -> USER
+ * RELACION SALE -> GUEST
+ *
+ */
+Sale.belongsTo(User, { foreignKey: 'userId' });
+Sale.belongsTo(Guest, { foreignKey: 'guestId' });

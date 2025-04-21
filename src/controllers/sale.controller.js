@@ -1,7 +1,9 @@
 import { Op } from 'sequelize';
 import { User } from "../models/User.js";
+import { Guest } from "../models/Guest.js";
 import { Sale } from "../models/Sale.js";
 import { Cart } from "../models/Cart.js";
+import { CartCache } from "../models/CartCache.js";
 import { Variedad } from "../models/Variedad.js";
 import { Categorie } from "../models/Categorie.js";
 import { Product } from "../models/Product.js";
@@ -35,9 +37,15 @@ async function send_email(sale_id) {
             });
         };
 
+        // - Comprobar si es Guest o Autenticated
+
         const order = await Sale.findByPk(sale_id, {
-            include: [{ model: User }]
+            include: [
+                { model: User },
+                { model: Guest }
+            ]
         });
+
 
         const orderDetails = await SaleDetail.findAll({
             where: { saleId: order.id },
@@ -78,9 +86,25 @@ async function send_email(sale_id) {
             const template = handlebars.compile(rest_html);
             const htmlToSend = template({ op: true });
 
+            console.log("--> Genear ORder::::", order);
+
+            // 👇 Determinar el email según si es user o guest
+            let emailDestino = null;
+
+            if (order.user) {
+                emailDestino = order.user.email;
+            } else if (order.guest) {
+                emailDestino = order.guest.email;
+            }
+
+            if (!emailDestino) {
+                console.warn("No se encontró email del usuario ni del invitado.");
+                return;
+            }
+
             const mailOptions = {
                 from: 'eddylujann@gmail.com',
-                to: order.user.email,
+                to: emailDestino,
                 subject: `Finaliza tu compra ${order.id}`,
                 html: htmlToSend
             };
@@ -99,10 +123,70 @@ async function send_email(sale_id) {
     }
 }
 
+// Register de sale para usuarios Invitados (Guest)
+export const registerGuest = async (req, res) => {
+    try {
+        const saleData = req.body.sale;
+       
+        const saleAddressData = req.body.sale_address;
+
+        // Validación mínima
+        if (!saleData || !saleAddressData) {
+            return res.status(400).json({ message: "Faltan datos para procesar la venta" });
+        }
+
+        // Asignar userId null si es invitado
+        saleData.user = null;
+
+        // Crear la venta y la dirección asociada
+        const sale = await createSale(saleData);
+        const saleAddress = await createSaleAddress(saleAddressData, sale.id);
+
+        // Aquí NO se puede obtener carritos por userId, así que esperamos que se pase directamente o ignoramos esa parte
+        // Opciones:
+        // 1. Preparas los items desde el frontend (más trabajo).
+        // 2. Guardas un carrito temporal en DB antes de pagar (más persistencia).
+        // 3. O simplemente pasas los productos en la venta (opción rápida para invitados).
+       
+        // Obtener todos los carritos del usuario
+        const cartsCache = await getUserCartsCache(saleData.guestId);
+       
+        // Suponiendo que mandas `items` desde frontend:
+        const { items, costs } = await prepareItemsForPrintful(cartsCache, sale); // items esperado en req.body
+
+        const printfulOrderData = createPrintfulOrderData(saleAddress, items, costs);
+        let result = await prepareCreatePrintfulOrder(printfulOrderData);
+
+        if (result.error) {
+            return res.status(403).json({
+                code: 403,
+                message: result.message,
+            });
+        }
+
+        await sendEmail(sale.id);
+        const saleDetails = await getSaleDetails(sale.id);
+
+        return res.status(200).json({
+            message: "Muy bien! La orden se generó correctamente (invitado)",
+            sale: sale,
+            saleDetails: saleDetails,
+        });
+    } catch (error) {
+        console.error("Error en venta invitado:", error);
+        return res.status(500).send({
+            message: "Debug: SaleController registerGuest - OCURRIÓ UN PROBLEMA",
+        });
+    }
+};
+
+
 // Registrar una venta y asociar dirección
+// Register de sale para usuarios Autenticados
 export const register = async (req, res) => {
     try {
         const saleData = req.body.sale;
+
         const saleAddressData = req.body.sale_address;
 
         // Crear una venta y asociar la dirección
@@ -163,6 +247,11 @@ const createSaleAddress = async (saleAddressData, saleId) => {
 // Obtener todos los carritos del usuario
 const getUserCarts = async (userId) => {
     return await Cart.findAll({ where: { userId } });
+};
+
+// Obtener todos los carritos del usuario
+const getUserCartsCache = async (guest_id) => {
+    return await CartCache.findAll({ where: { guest_id } });
 };
 
 // Preparar los datos de los items para enviar a Printful
@@ -485,10 +574,7 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
     if (data === "error_order") {
         return { error: true, message: "Ups! Hubo un problema al generar la orden" };
     }
-
     return { error: false, data };
-
-
 };
 
 // Enviar correo electrónico de confirmación

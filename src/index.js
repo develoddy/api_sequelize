@@ -29,7 +29,7 @@ import './models/File.js';
 import './models/Option.js';
 
 // Importar las asociaciones aquí
-import './models/associations.js';
+import './models/Associations.js';
 
 async function main() {
     try {
