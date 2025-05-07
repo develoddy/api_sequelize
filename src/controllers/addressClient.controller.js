@@ -88,9 +88,7 @@ export const update = async (req, res) => {
         const id = req.body._id;
 
         // Actualizar el registro
-        const [updated] = await AddressClient.update(data, {
-            where: { id: id }
-        });
+        const [updated] = await AddressClient.update(data, {where: { id: id }});
 
         if (updated) {
             // Recuperar el registro actualizado
@@ -98,17 +96,19 @@ export const update = async (req, res) => {
 
             res.status(200).json({
                 status: 200,
-                message: "Dirección actualizada",
+                message: "Dirección actualizada con éxito",
                 address_client: updatedAddressClient,
             });
         } else {
             res.status(404).json({
+                status: 400,
                 message: "La dirección del cliente no fue encontrada"
             });
         }
     } catch (error) {
         res.status(500).send({
-            message: "debbug: AddressClienteController update OCURRIÓ UN PROBLEMA"
+            status: 500,
+            message: "¡Oops! No se pudo actualizar la dirección"
         });
         console.log(error);
     }

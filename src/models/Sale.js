@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
-import { User } from './User.js'; 
+//import { User } from './User.js'; 
+//import { User } from './Guest.js'; 
 
 export const Sale = sequelize.define('sales', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -16,4 +17,5 @@ export const Sale = sequelize.define('sales', {
 });
 
 // Define la asociación con el modelo de Usuario
-Sale.belongsTo(User, { foreignKey: 'userId' });
+//Sale.belongsTo(User, { foreignKey: 'userId' });
+//Sale.belongsTo(Guest, { foreignKey: 'guestId' });

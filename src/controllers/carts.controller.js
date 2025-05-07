@@ -398,9 +398,15 @@ export const apllyCupon = async (req, res) => {
 
 export const mergeCart = async (req, res) => {
     try {
+        console.log("---> Bakend req.query: ", req.query);
+        console.log("---> Bakend req.body: ", req.body);
+
         // Obtener el ID del usuario autenticado desde el token de autenticación
         const user_id = req.query.user_id;
         const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
+
+        console.log("---> Bakend MergeCart user_id: ", user_id);
+        console.log("---> Bakend MergeCart localCartItems: ", localCartItems);
 
         if (!user_id) {
             return res.status(400).json({ message: "El ID de usuario es necesario." });

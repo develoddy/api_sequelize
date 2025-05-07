@@ -1,8 +1,8 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
-import { User } from './User.js';
-import { Product } from './Product.js';
-import { Variedad } from './Variedad.js';
+//import { User } from './User.js';
+//import { Product } from './Product.js';
+//import { Variedad } from './Variedad.js';
 
 export const CartCache = sequelize.define('cartsCache', {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -21,6 +21,5 @@ export const CartCache = sequelize.define('cartsCache', {
 });
 
 // Define las asociaciones con los modelos de Usuario, Producto, y Variedad
-CartCache.belongsTo(User, { foreignKey: 'userId' });
-CartCache.belongsTo(Product, { foreignKey: 'productId' });
-CartCache.belongsTo(Variedad, { foreignKey: 'variedadId', allowNull: true });
+//CartCache.belongsTo(User, { foreignKey: 'userId' });
+

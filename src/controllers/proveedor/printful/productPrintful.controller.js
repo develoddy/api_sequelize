@@ -453,6 +453,7 @@ const handleProductImage = async (imageUrl, existingImageName = null) => {
  * Maneja las variantes del producto (agrega nuevas y actualiza las existentes).
  * Maneja las galerías de imágenes asociadas a las variantes del producto.
  */
+
 /**const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
   // OBTENER VARIANTES
   const existingVariants = await Variedad.findAll({ where: { productId } });
@@ -819,7 +820,6 @@ const deleteProductAndRelatedComponents = async (product) => {
   });
 
   for ( const variety of varieties ) {
-
     await deleteVarietyAndRelatedFiles( variety );
     await deleteOptionsForVariant( variety );
     await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id } });
