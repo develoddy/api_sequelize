@@ -46,6 +46,8 @@ async function send_email(sale_id) {
             ]
         });
 
+        console.log("--> Debbug Verify ORder::::", order);
+
 
         const orderDetails = await SaleDetail.findAll({
             where: { saleId: order.id },
@@ -86,7 +88,11 @@ async function send_email(sale_id) {
             const template = handlebars.compile(rest_html);
             const htmlToSend = template({ op: true });
 
+            // COMPROBAR PORQUE ORDER ES NULL
+            // LA COMPRA NO FUNCIONA EN MODO GUEST
+
             console.log("--> Genear ORder::::", order);
+            
 
             // 👇 Determinar el email según si es user o guest
             let emailDestino = null;

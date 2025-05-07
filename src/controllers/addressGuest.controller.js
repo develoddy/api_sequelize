@@ -33,9 +33,18 @@ export const register = async (req, res) => {
           });
         }
 
+      
+        // Actualizar el campo email en la tabla Guest si se ha proporcionado
+        if (email) {
+            await Guest.update(
+                { email }, // campos a actualizar
+                { where: { id: guest_id } } // condición
+            );
+        }
+
         res.status(201).json({
             status: 201,
-            message: "La dirección del invitado ha sido registrada con éxito.",
+            message: "La dirección del invitado ha sido registrada con éxito",
             address_guest: newGuestAddress,
         });
 
