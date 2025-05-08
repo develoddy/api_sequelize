@@ -68,63 +68,8 @@ export const show = async( req, res ) => {
 
 /*
  * ==================================================================================================
- * =                                                                                                =
  * =                                  PROCESAMIENTO DEL PROVEEDOR PRINTFUL                          =
- * =                                                                                                =
- * ================================================================================================= */
-
-/* ----- FUNCION PRINCIPAL ------
- * Obtiene todos los productos actuales de Printful
- * Limpia la base de datos local eliminando productos locales que ya no existen en Printful
- * Procesa cada producto de Printful utilizando la función processPrintfulProduct
- */
-/*export const getPrintfulProducts = async () => {
-  try {
-
-    const printfulProducts = await getPrintfulProductsService();
-
-    // CREA UN CONJUNTO DE IDS DE PRODUCTOS QUE EXISTEN EN PRINTFUL
-    const printfulProductMap = new Map( printfulProducts.map( product => [ product.id, product ]));
-
-    // SE OBTIENE LOS PRODUCTOS ACTUALES DE LA BBDD
-    const currentProducts = await Product.findAll();
-
-    if ( currentProducts.length > 0 ) {
-
-      // RECORRE LOS PRODUCTOS ACTUALES DE LA BBDD Y ELIMINA LOS QUE NO ESTAN EN PRINTFUL
-
-      for (const currentProduct of currentProducts) {
-        const idProductDB =  String(currentProduct.idProduct);
-
-        // VERIFICA SI EL ID DEL PRODUCTO ACTUAL DE LA BBDD NO ESTÁ EN EL CONJUNTO DE IDS MAP
-        // SI NO ESTÁ, SE PROCEDE A ELIMINARLO DE LA BBDD
-        if ( !printfulProductMap.has( parseInt( idProductDB ) ) ) {
-          await deleteProductAndRelatedComponents( currentProduct ); // ELIMINAR EL PRODUCTO Y SUS COMPONENTES RELACIONADOS
-        } else {
-
-          // SI EL PRODUCTO ACTUAL DE LA BBDD SI ESTÁ EN PRINTFUL, PUEDES HACER MÁS COSAS CON EL OBJETO COMPLETO SI ES NECESARIO
-          const printfulProduct = printfulProductMap.get(parseInt(idProductDB));
-
-          if ( printfulProduct.is_ignored == true ) {
-             await deleteProductAndRelatedComponents(currentProduct);
-          } else {
-            //console.log("API 112 Producto actual tiene el is_inore a FALSE de DB ", JSON.stringify(printfulProduct, null, 2));
-          }
-        }
-      }
-    }
-
-    for ( const product of printfulProducts ) {
-      await processPrintfulProduct( product );
-    }
-
-
-  } catch ( error ) {
-    console.error('Error al traer los productos de Printful:', error);
-    throw new Error('Error al traer los productos de Printful');
-  }
-};*/
-
+ * =================================================================================================*/
 
 
 export const getPrintfulProducts = async () => {
@@ -148,8 +93,7 @@ export const getPrintfulProducts = async () => {
 
     // Recorremos cada producto obtenido de Printful
     for (const product of printfulProducts) {
-      //console.log("------- printfulProducts: ", JSON.stringify(product, null, 2));
-      // Buscamos el producto en la base de datos local
+      
       const existingProduct = await Product.findOne({ where: { idProduct: product.id } });
 
       if (!existingProduct) {
@@ -159,12 +103,11 @@ export const getPrintfulProducts = async () => {
       } else if ( existingProduct.title !== product.name                  || 
                   existingProduct.state !== productCompareState(product)  || 
                   existingProduct.price_soles !== productDetailSyncPrice(product) ) {
-        console.log("--> entro por el elseif");
+       
         // Si ya existe, podemos comparar campos críticos para ver si hubo cambios.
         // Por ejemplo, si Printful provee un campo "updated" o "modified", lo compararíamos.
         // Aquí mostramos una comparación simple con el título y el precio (puedes ampliarla según tus necesidades)
-        console.log(`----> Actualizando producto ${product.id} por cambios detectados`, JSON.stringify(product, null, 2), );
-        // console.log(`Actualizando producto ${product.id} por cambios detectados`);
+       
         // Si detectamos diferencias, procesamos el producto para actualizarlo
         await processPrintfulProduct(product);
       } else {
@@ -184,8 +127,6 @@ const productCompareState = (product) => {
 
 // Función auxiliar para extraer el precio de sincronización (ejemplo)
 const productDetailSyncPrice = (product) => {
-  // Suponiendo que el precio se toma del primer sync_variant
-  // (puedes ajustarlo según la estructura de datos)
   return product.sync_variants && product.sync_variants[0] ? product.sync_variants[0].retail_price : null;
 };
 
@@ -204,7 +145,7 @@ const processPrintfulProduct = async (product) => {
     const productDetail = await getPrintfulProductDetail(product.id);
     const category = await getOrCreateCategory( productDetail );
     const existingProduct = await getOrCreateProduct( product, productDetail, category );
-    console.log("------- existingProduct: ", JSON.stringify(existingProduct, null, 2));
+    //console.log("------- existingProduct: ", JSON.stringify(existingProduct, null, 2));
 
     if ( existingProduct ) {
       await createOrUpdateVariants( existingProduct.id, productDetail.sync_variants );
@@ -265,24 +206,7 @@ const createCategory = async (category) => {
   });
 };
 
-/*
- * Busca un producto en la base de datos local por su ID.
- * Si no existe, crea un nuevo producto.
- * Si existe, actualiza la información del producto.
- */
-/**const getOrCreateProduct = async (product, productDetail, category) => {
-  let existingProduct = await Product.findOne({where: { idProduct: product.id }});
-  let oldProductId = existingProduct ? existingProduct.id : null;
-  if ( !existingProduct ) {
-    existingProduct = await createProduct( product, productDetail, category );
-  }
-  else {
-    existingProduct = await updateProduct( existingProduct, product, productDetail, category );
-  }
-  // SIEMPRE SE DEBE ACTUALIZAR LAS VARIANTES Y GALERIAS SI EL PRODYCTO YA EXISGTE
-  await createOrUpdateVariantsAndGalleries( existingProduct.id, productDetail.sync_variants );
-  return existingProduct;
-};**/
+
 // Obtiene o crea un producto solo si es necesario
 const getOrCreateProduct = async (product, productDetail, category) => {
   let existingProduct = await Product.findOne({ where: { idProduct: product.id } });
@@ -294,49 +218,7 @@ const getOrCreateProduct = async (product, productDetail, category) => {
   return await updateProductIfNeeded(existingProduct, product, productDetail, category);
 };
 
-/*
- * Crea un nuevo producto en la base de datos local.
- * Descarga y guarda la imagen del producto si está disponible.
- */
-/*const createProduct = async (product, productDetail, category) => {
 
-  let portada_name = '';
-  let tags = [];
-
-  let data = {
-    idProduct: product.id,
-    title: product.name,
-    categoryId: category.id,
-    price_soles: productDetail.sync_variants[0].retail_price,
-    price_usd: productDetail.sync_variants[0].retail_price,
-    portada: '',
-    resumen: 'tu_resumen',
-    description: 'tu_descripcion',
-    sku: await extractSKU(productDetail.sync_variants[0].sku),
-    slug: await generateSlug(product.name),
-    state: product.is_ignored == true ? 1 : 2, //2,
-    imagen: 'tu_imagen',
-    type_inventario: 2,
-    tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
-  };
-
-  if ( product.thumbnail_url ) {
-    var img_path = product.thumbnail_url;
-    var name = img_path.split('/');
-    portada_name = name[5];
-    data.portada = portada_name;
-
-    const uploadDir = path.resolve('./src/uploads/product');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const imagePath = path.join(uploadDir, portada_name);
-    await downloadImage(img_path, imagePath);
-    //await convertWhiteToTransparent(imagePath);
-  }
-  return await Product.create(data);
-};****/
 // Crea un producto si no existe
 const createProduct = async (product, productDetail, category) => {
   const portada_name = await handleProductImage(product.thumbnail_url);
@@ -359,40 +241,8 @@ const createProduct = async (product, productDetail, category) => {
   });
 };
 
-/*
- * Actualiza un producto existente en la base de datos local con la información más reciente.
- */
-/***const updateProduct = async (existingProduct, product, productDetail, category) => {
-  existingProduct.title       = product.name;
-  existingProduct.state       = product.is_ignored == true ? 1 : 2;
-  existingProduct.categoryId  = category.id;
-  existingProduct.price_soles = productDetail.sync_variants[0].retail_price;
-  existingProduct.price_usd   = productDetail.sync_variants[0].retail_price;
-  existingProduct.sku         = await extractSKU(productDetail.sync_variants[0].sku);
-  existingProduct.slug        = await generateSlug(product.name);
-  existingProduct.tags        = JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean)));
 
-  if ( product.thumbnail_url ) {
-    var img_path            = product.thumbnail_url;
-    var name                = img_path.split('/');
-    var portada_name        = name[ 5 ];
-    existingProduct.portada = portada_name;
 
-    const uploadDir = path.resolve('./src/uploads/product');
-    if ( !fs.existsSync(uploadDir) ) {
-      fs.mkdirSync(
-        uploadDir, { recursive: true }
-      );
-    }
-
-    const imagePath = path.join( uploadDir, portada_name );
-    await downloadImage(img_path, imagePath);
-  }
-
-  await existingProduct.save();
-
-  return existingProduct;
-};****** */
 // Actualiza un producto solo si hay cambios
 const updateProductIfNeeded = async (existingProduct, product, productDetail, category) => {
   let updates = {};
@@ -448,195 +298,6 @@ const handleProductImage = async (imageUrl, existingImageName = null) => {
   return newImageName;
 };
 
-/*
- * Crea o actualiza las variantes y galerías de un producto.
- * Maneja las variantes del producto (agrega nuevas y actualiza las existentes).
- * Maneja las galerías de imágenes asociadas a las variantes del producto.
- */
-
-/**const createOrUpdateVariantsAndGalleries = async (productId, syncVariants) => {
-  // OBTENER VARIANTES
-  const existingVariants = await Variedad.findAll({ where: { productId } });
-  const existingGalleries = await Galeria.findAll({ where: { productId } });
-
-  const newVariants = syncVariants.map(variant => ({
-    valor                        : variant.size,
-    color                        : variant.color,
-    external_id                  : variant.external_id,
-    sync_product_id              : variant.sync_product_id,
-    name                         : variant.name,
-    synced                       : variant.synced,
-    variant_id                   : variant.variant_id,
-    main_category_id             : variant.main_category_id,
-    warehouse_product_id         : variant.warehouse_product_id,
-    warehouse_product_variant_id : variant.warehouse_product_variant_id,
-    retail_price                 : variant.retail_price,
-    sku                          : variant.sku,
-    currency                     : variant.currency,
-    productId                    ,
-    product                      : { image: variant.product.image },
-    files                        : variant.files,
-    options                      : variant.options,
-  }));
-
-  const newVariantValues = newVariants.map( variant => variant.valor );
-  const existingVariantValues = existingVariants.map( variant => variant.valor );
-
-
-  // ACTUALIZAR VARIANTES EXISTENTES
-  for ( const variant of existingVariants ) {
-    // VERIFICA SI VARIANT.VALOR NO ESTÁ INCLUIDO EN  newVariantValues
-    if ( !newVariantValues.includes(variant.valor) ) {
-      await variant.destroy();
-    }
-  }
-
-  // AÑADIR NUEVAS VARIANTES Y ACTUALIZAR LAS EXISTENTES
-  for ( const variant of newVariants ) {
-
-    const existingVariant = existingVariants.find(
-      v => v.sku === variant.sku
-    );
-
-    let oldVariedadId = existingVariant ? existingVariant.id : null;
-
-    if ( !existingVariant ) {
-
-      // CREAR VARIEDADES
-      let newVariant = await Variedad.create({
-        valor                          : variant.valor,
-        stock                          : 10,
-        color                          : variant.color || 'no hay color',
-        productId                      : variant.productId,
-        external_id                    : variant.external_id,
-        sync_product_id                : variant.sync_product_id,
-        name                           : variant.name,
-        synced                         : variant.synced,
-        variant_id                     : variant.variant_id,
-        main_category_id               : variant.main_category_id,
-        warehouse_product_id           : variant.warehouse_product_id,
-        warehouse_product_variant_id   : variant.warehouse_product_variant_id,
-        retail_price                   : variant.retail_price,
-        sku                            : variant.sku,
-        currency                       : variant.currency,
-      });
-
-      if ( oldVariedadId && oldVariedadId !== existingVariant.id ) {
-        idMapping.variedades[oldVariedadId] = existingVariant.id;
-      }
-
-
-      // CREAR PRODUCRO
-      await ProductVariants.create({
-          variant_id  : newVariant.variant_id,
-          product_id  : newVariant.productId,
-          image       : variant.product.image,
-          name        : newVariant.name,
-          varietyId   : newVariant.id
-      });
-
-
-      // CREAR FILES O ARCHIVOS
-      for ( const file of variant.files ) {
-        try {
-            await File.create({
-              idFile          : file.id,
-              type            : file.type,
-              hash            : file.hash || '',
-              url             : file.url,
-              filename        : file.filename,
-              mime_type       : file.mime_type,
-              size            : file.size,
-              width           : file.width,
-              height          : file.height,
-              dpi             : file.dpi,
-              status          : file.status,
-              created         : file.created,
-              thumbnail_url   : file.thumbnail_url,
-              preview_url     : file.preview_url,
-              visible         : file.visible,
-              is_temporary    : file.is_temporary,
-              message         : file.message,
-              varietyId       : newVariant.id,
-              optionVarietyId : newVariant.variant_id,
-            });
-        } catch ( error ) {
-          console.error('Error creating file record:', error, file);
-        }
-      }
-
-
-      // DESTRUYE Y CREA LAS OPTIONES DE CADA VARIEDA DEL PRODUCTO
-      await Option.destroy({
-        where: {
-          varietyId: newVariant.id
-        }
-      });
-
-      for ( const option of variant.options ) {
-        await Option.create({
-          idOption  : option.id     ,
-          value     : option.value  ,
-          varietyId : newVariant.id ,
-        });
-      }
-
-    } else {
-
-      // ELIMINAR LAS OPCIONES EXISRTENTES PARA LA VARIANTE EXISTENTE
-      await Option.destroy({
-        where: {
-          varietyId: existingVariant.id
-        }
-      });
-
-      for (const option of variant.options) {
-        await Option.create({
-          idOption  : option.id          ,
-          value     : option.value       ,
-          varietyId : existingVariant.id ,
-        });
-      }
-
-    }
-  }
-
-  // PROCESAR Y ACTUALIZAR LAS GALERIAS
-  const newGalleryImages = new Set(); // CONJUNTO PARAA ALMACENAR NUEVAS IMAGENES DE GALERIAS
-
-  for ( const variant of newVariants ) {
-    for ( const file of variant.files ) {
-      if ( file.type === 'preview' && file.preview_url ) {
-
-        const galleryImageUrl = file.preview_url;
-        let galleryName       = await processGalleryImage(galleryImageUrl);
-
-        newGalleryImages.add(galleryName);
-
-        const existingGallery = existingGalleries.find(
-          gallery => gallery.imagen === galleryName
-        );
-
-        if ( !existingGallery ) {
-          await Galeria.create({
-            imagen    : galleryName                     ,
-            color     : variant.color || 'no hay color' ,
-            productId                                   ,
-          });
-        }
-      }
-    }
-
-  }
-
-
-  // ELIMINAR GALERIAS QUE YA NO ESTÁN ASOCIADAS A NINGUNA VARIANTE
-  for ( const existingGallery of existingGalleries ) {
-    if ( !newGalleryImages.has( existingGallery.imagen ) ) { // VERIFICAR SI LA IMAGEN NO ESTÁ EN EL CONJUNTO DE NUEVAS IMAGENES
-      await existingGallery.destroy();
-    }
-  }
-};**** */
 
 /**
   Mejoras aplicadas:
