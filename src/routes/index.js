@@ -17,6 +17,9 @@ import productsPrintfulRoutes from "./productsPrintful.routes.js";
 import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
 import wishlistRoutes from "./wishlist.routes.js";
+import shippingratesRoutes from "./shippingrates.route.js";
+
+
 
 const app = express();
 
@@ -37,5 +40,6 @@ app.use("/review", review);
 app.use("/printful", productsPrintfulRoutes);
 app.use("/gelato", productsGelatoRoutes);
 app.use("/wishlist", wishlistRoutes);
+app.use("/shipping", shippingratesRoutes);
 
 export default app;

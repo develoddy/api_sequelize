@@ -46,9 +46,6 @@ async function send_email(sale_id) {
             ]
         });
 
-        console.log("--> Debbug Verify ORder::::", order);
-
-
         const orderDetails = await SaleDetail.findAll({
             where: { saleId: order.id },
             include: [
@@ -61,6 +58,7 @@ async function send_email(sale_id) {
             where: { saleId: order.id }
         });
 
+        
         if ( orderDetails ) {
             orderDetails.forEach(orderDetail => {
                 orderDetail.product.portada = `${process.env.URL_BACKEND}/api/products/uploads/product/${orderDetail.product.portada}`;
@@ -91,9 +89,6 @@ async function send_email(sale_id) {
             // COMPROBAR PORQUE ORDER ES NULL
             // LA COMPRA NO FUNCIONA EN MODO GUEST
 
-            console.log("--> Genear ORder::::", order);
-            
-
             // 👇 Determinar el email según si es user o guest
             let emailDestino = null;
 
@@ -123,6 +118,8 @@ async function send_email(sale_id) {
                 }
             });
         });
+
+        console.log("------- orderDetails: ", JSON.stringify(orderDetails, null, 2));
 
     } catch (error) {
         console.log(error);
@@ -273,8 +270,6 @@ const prepareItemsForPrintful = async (carts, sale) => {
         const itemOptions = await getItemOptions(cart);
         const item = await createItem(cart, itemFiles, itemOptions);
         items.push(item);
-
-        console.log("API 185 > prepareItemsForPrintful > items: ", JSON.stringify(items, null, 2));
 
         // Reducir el stock del producto o variante
         await updateStock(cart);

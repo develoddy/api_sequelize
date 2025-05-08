@@ -9,6 +9,17 @@ const printfulApi = axios.create({
     }
 });
 
+export const getPrintfulShippingRatesService = async (payload) => {
+    try {
+
+        const response = await printfulApi.post('/shipping/rates', payload);
+        return response.data.result;
+    } catch (error) {
+        console.error('Error fetching Printful Shipping Rates:', error);
+        throw new Error('Error fetching Printful Shipping Rates');
+    }
+};
+
 export const getPrintfulProductsService = async () => {
     try {
         const response = await printfulApi.get('/store/products');
@@ -56,13 +67,11 @@ export const createPrintfulOrderService = async ( orderData ) => {
 
 export const getPrintfulCategory = async ( categoryId ) => {
     try {
-
         const response = await axios.get(`https://api.printful.com/categories/${categoryId}`, {
             headers: {
                 'Authorization': `Bearer ${PRINTFUL_API_TOKEN}`
             }
         });
-
         return response.data.result;
 
     } catch (error) {
