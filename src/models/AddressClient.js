@@ -16,6 +16,7 @@ export const AddressClient = sequelize.define('address_clients', {
     referencia: { type: DataTypes.STRING(250), allowNull: true },
     nota: { type: DataTypes.STRING, allowNull: true },
     birthday: { type: DataTypes.STRING(20), allowNull: true },
+    usual_shipping_address: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false,},
 }, {
     timestamps: true,
     tableName: 'address_clients'
