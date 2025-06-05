@@ -65,14 +65,25 @@ async function send_email(sale_id) {
             });
         }
 
-        const transporter = nodemailer.createTransport(smtpTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT),
+            secure: true, // true para puerto 465
             auth: {
-                user: 'eddylujann@gmail.com',
-                pass: 'xueibcvxrsgapjhh'
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
             }
-        }));
+        });
+
+
+        //const transporter = nodemailer.createTransport(smtpTransport({
+        //    service: 'gmail',
+        //    host: 'smtp.gmail.com',
+        //    auth: {
+        //        user: 'eddylujann@gmail.com',
+        //        pass: 'xueibcvxrsgapjhh'
+        //    }
+        //}));
 
         readHTMLFile(`${process.cwd()}/src/mails/email_sale.html`, (err, html) => {
             if (err) throw err;
@@ -103,10 +114,20 @@ async function send_email(sale_id) {
                 return;
             }
 
+            let subject = '';
+
+            if (orderDetails.length === 1) {
+              subject = `Pedido Nº ${order.id} - ${orderDetails[0].product.title}`;
+            } else if (orderDetails.length > 1) {
+              subject = `Pedido Nº ${order.id} - ${orderDetails[0].product.title} y ${orderDetails.length - 1} productos más`;
+            } else {
+              subject = `Pedido Nº ${order.id} procesado correctamente`;
+            }
+
             const mailOptions = {
-                from: 'eddylujann@gmail.com',
+                from: `"tienda.lujandev.com" <${process.env.EMAIL_USER}>`,
                 to: emailDestino,
-                subject: `Finaliza tu compra ${order.id}`,
+                subject: subject,
                 html: htmlToSend
             };
 
