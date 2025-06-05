@@ -70,7 +70,7 @@ async function send_email(sale_id) {
             host: 'smtp.gmail.com',
             auth: {
                 user: 'eddylujann@gmail.com',
-                pass: 'ignfrlipfginoieb'
+                pass: 'xueibcvxrsgapjhh'
             }
         }));
 
