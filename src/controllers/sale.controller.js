@@ -341,18 +341,16 @@ const getItemFiles = async (cart) => {
         }],
     });
 
-
-
     if (!files || files.length === 0) {
         throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
     }
 
-    console.log("API 238 > getItemFiles > files: ", JSON.stringify(files, null, 2));
-    return files.map((file, index) => processFile(file, index));
+    //console.log("API Coontroller SALE 348 > getItemFiles > files: ", JSON.stringify(files, null, 2));
+    return files.map((file, index) => processFile(file, index, product.logo_position));
 };
 
 // Procesar cada archivo
-const processFile = (file, index) => {
+const processFile = (file, index, logoPosition = 'center') => {
     const printAreas = {
         "T-shirts": { width: 12, height: 16 },
         "Long sleeve shirts": { width: 12, height: 16 },
@@ -372,7 +370,7 @@ const processFile = (file, index) => {
     const printAreaHeightPixels = printArea.height * file.dpi;
 
     const position = index === 0 
-        ? calculatePositionForFirstFile(file, printAreaWidthPixels, printAreaHeightPixels) 
+        ? calculatePositionForFirstFile(file, printAreaWidthPixels, printAreaHeightPixels, logoPosition) 
         : calculatePositionForSecondFile(file, printAreaWidthPixels, printAreaHeightPixels);
 
     return {
@@ -383,68 +381,77 @@ const processFile = (file, index) => {
     };
 };
 
-//const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
-    /*let leftPosition = (printAreaWidthPixels - file.width) / 2;
-    let topPosition = 0;
-    const marginRight = 0.8 * printAreaWidthPixels;
-    const marginTop = 0.2 * printAreaWidthPixels;
-    leftPosition = Math.min(leftPosition + marginRight, printAreaWidthPixels - (file.width / 2));
-    topPosition = Math.max(topPosition, +marginTop);*/
 
+// CALCULA LA POSICION DE LA IMPRESION DEPENDIENDO COMO ESTÁ CONFIGURADO EN EL ADMIN
+const calculatePositionForFirstFile = (
+  file,
+  printAreaWidthPixels,
+  printAreaHeightPixels,
+  logoPosition
+) => {
+  const ORIGINAL_ASPECT_RATIO = 4 / 3;
 
-    //const scaleFactor = 0.5; // Esta constante se utiliza para reducir el tamaño del logo o la imagen a la mitad (50% de su tamaño original).
-    //const scaledWidth = file.width * scaleFactor;
-    //const scaledHeight = file.height * scaleFactor;
+  // DPI estándar de Printful
+  const DPI = 150;
 
-    // Cálculo para centrar el logo
-//    const leftPosition = (printAreaWidthPixels - file.width) / 2;
-//    const topPosition = (printAreaHeightPixels - file.height) / 2;
+  // Offsets personalizados
+  const offsets = {
+    right_top: { top: 60, left: 0 },
+    left_top: { top: 60, left: 0 },
+    center: { top: 0, left: 0 },
+    back_center: { top: 40, left: 0 },
+  };
 
-//    return {
-//        "area_width": printAreaWidthPixels,
-//        "area_height": printAreaHeightPixels,
-//        "width": file.width,//scaledWidth,
-//        "height": file.height,//scaledHeight,
-//        "top": topPosition,
-//        "left": leftPosition,
-//        "limit_to_print_area": true
-//    };
-//};
+  const offset = offsets[logoPosition] || offsets.center;
 
-const calculatePositionForFirstFile = (file, printAreaWidthPixels, printAreaHeightPixels) => {
-    // Definir márgenes opcionales
-    //const marginLeft = 0.05 * printAreaWidthPixels; // Margen izquierdo
-    //const marginTop = 0.05 * printAreaHeightPixels; // Margen superior
+  let scaledWidth, scaledHeight;
 
-    // Calcular la posición central
-    //const leftPosition = (printAreaWidthPixels - file.width) / 2 + marginLeft;
-    //const topPosition = (printAreaHeightPixels - file.height) / 2 + marginTop;
+  if (logoPosition === 'center' || logoPosition === 'back_center') {
+    const maxWidth = printAreaWidthPixels;
+    const desiredWidth = 12 * DPI;
 
-    // Elimina los márgenes y ve si mejora el centrado:
-    //const leftPosition = (printAreaWidthPixels - file.width) / 2;
-    //const topPosition = (printAreaHeightPixels - file.height) / 2;
+    scaledWidth = Math.min(desiredWidth, maxWidth);
+    scaledHeight = scaledWidth / ORIGINAL_ASPECT_RATIO;
 
-    const scaleFactor = Math.min(printAreaWidthPixels / file.width, printAreaHeightPixels / file.height);
-    const scaledWidth = file.width * scaleFactor;
-    const scaledHeight = file.height * scaleFactor;
+  } else {
+    // Escalado proporcional para esquinas: 30% del ancho
+    const WIDTH_RATIO = 0.3;
+    scaledWidth = printAreaWidthPixels * WIDTH_RATIO;
+    scaledHeight = scaledWidth / ORIGINAL_ASPECT_RATIO;
+  }
 
-    const leftPosition = (printAreaWidthPixels - scaledWidth) / 2;
-    const topPosition = (printAreaHeightPixels - scaledHeight) / 2;
+  let leftPosition = 0;
+  let topPosition = 0;
 
+  switch (logoPosition) {
+    case 'right_top':
+      leftPosition = printAreaWidthPixels - scaledWidth + offset.left;
+      topPosition = offset.top;
+      break;
 
+    case 'left_top':
+      leftPosition = offset.left;
+      topPosition = offset.top;
+      break;
 
-    // Asegurarse de que la posición no salga del área de impresión
-    const position = {
-        "area_width": printAreaWidthPixels,
-        "area_height": printAreaHeightPixels,
-        "width": scaledWidth,//file.width,
-        "height": scaledHeight,//file.height,
-        "top": Math.max(topPosition, 0), // Evitar top negativo
-        "left": Math.max(leftPosition, 0), // Evitar left negativo
-        "limit_to_print_area": true
-    };
+    case 'center':
+    case 'back_center':
+    default:
+      leftPosition = (printAreaWidthPixels - scaledWidth) / 2 + offset.left;
+      topPosition = (printAreaHeightPixels - scaledHeight) / 2 + offset.top;
 
-    return position;
+      break;
+  }
+
+  return {
+    area_width: printAreaWidthPixels,
+    area_height: printAreaHeightPixels,
+    width: scaledWidth,
+    height: scaledHeight,
+    top: Math.max(topPosition, 0),
+    left: Math.max(leftPosition, 0),
+    limit_to_print_area: true,
+  };
 };
 
 

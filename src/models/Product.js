@@ -19,8 +19,8 @@ export const Product = sequelize.define('products', {
     description: { type: DataTypes.TEXT, allowNull: false },
     resumen: { type: DataTypes.TEXT, allowNull: false },
     tags: { type: DataTypes.STRING, allowNull: false },
-    type_inventario: { type: DataTypes.INTEGER, defaultValue: 1 }
-    // New propierties
+    type_inventario: { type: DataTypes.INTEGER, defaultValue: 1 },
+    logo_position: { type: DataTypes.STRING, allowNull: true, defaultValue: 'center', validate: { isIn: [['center', 'right_top', 'left_top', 'back_center']]}}
     
 }, {
     timestamps: true,

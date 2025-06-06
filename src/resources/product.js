@@ -39,6 +39,7 @@ export default {
             tags: product.tags ? JSON.parse(product.tags) : [],
             type_inventario: product.type_inventario,
             state: product.state,
+            logo_position: product.logo_position,
             variedades: variedades,
             imagen_two: IMAGEN_TWO,
             galerias: GALERIAS,
