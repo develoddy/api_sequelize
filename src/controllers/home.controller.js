@@ -537,6 +537,9 @@ export const filters_products = async (req, res) => {
         const selectedColors = req.body.selectedColors;
         const price_min = req.body.price_min;
         const price_max = req.body.price_max;
+        const logo_position_selected = req.body.logo_position_selected; // new filter logo center or lateral
+
+        console.log("=======================> DEBBUG: Home.controller > filter_product: ", logo_position_selected);
 
         const filter = {
             state: 2,
@@ -580,33 +583,13 @@ export const filters_products = async (req, res) => {
             }
         }
 
-        // Estás buscando todas las variedades que tengan la talla seleccionada.
-        // Luego, extraes todos los productIds de esas variedades.
-        // Los agregas al array products_s (que es el que se usa en el filtro de productos).
-
-        /*console.log("------ variedad_selected: ", variedad_selected, "selectedColors: ", selectedColors);
-        if (variedad_selected) {
-            const VARIEDADES = await Variedad.findAll({
-                where: { valor: variedad_selected.valor } // o el campo que coincida con la talla
-            });
-        
-            const productIdsVariedades = VARIEDADES.map(v => v.productId);
-            productIdsVariedades.forEach(id => {
-                if (!products_s.includes(id)) {
-                    products_s.push(id);
-                }
-            });
-            //console.log("Variedades encontradas para la talla:", variedad_selected.valor);
-            //console.log("Product IDs con esa talla:", productIdsVariedades);
-        }*/
-
         let variedadWhere = {};
 
         if (variedad_selected && variedad_selected.valor) {
             variedadWhere.valor = variedad_selected.valor;
         }
 
-        // Si hay colores seleccionados, los añadimos al filtro
+        // -- SI HAY COLORES SELECCIONADO, SE AÑADRE AL FILTRO
         if (selectedColors && selectedColors.length > 0) {
             variedadWhere.color = { [Op.in]: selectedColors };
         }
@@ -625,7 +608,6 @@ export const filters_products = async (req, res) => {
             });
         }
 
-        
         if (categories_s.length > 0) {
             filter.categoryId = { [Op.in]: categories_s };
         }
@@ -637,6 +619,11 @@ export const filters_products = async (req, res) => {
         if (price_min > 0 && price_max > 0) {
             filter.price_usd = { [Op.between]: [price_min, price_max] };
         }
+
+        if (logo_position_selected && logo_position_selected !== '') {
+            filter.logo_position = logo_position_selected;
+        }
+
 
         let OurProducts = await Product.findAll({
             where: {

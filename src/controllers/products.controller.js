@@ -210,10 +210,6 @@ export const list = async ( req, res ) => {
             });
         }
 
-        // Obtener productos de Printful
-        // const printfulProducts = await getPrintfulProducts();
-        //await getPrintfulProducts();
-
         res.status( 200 ).json({
             products: products,
         });

@@ -74,21 +74,16 @@ export const remove = async( req, res ) => {
 
 export const removeAll = async (req, res) => {
 
-    console.log("----> En guets.controller.js, ejecuta removeAll");
     try {
         // Paso 1: Eliminar todas las direcciones de la tabla AddressGuest
         const deletedAddresses = await AddressGuest.destroy({
             where: {} // Borra todos los registros sin filtrar por guest_id
         });
 
-        console.log(`${deletedAddresses} direcciones eliminadas de AddressGuest.`);
-
         // Paso 2: Eliminar todos los registros de la tabla Guest
         const deletedGuests = await Guest.destroy({
             where: {} // Borra todos los registros de la tabla Guest
         });
-
-        console.log(`${deletedGuests} registros eliminados de Guest.`);
 
         res.status(200).json({
             message: "¡Éxito! Todos los datos de los invitados y direcciones han sido eliminados correctamente."
