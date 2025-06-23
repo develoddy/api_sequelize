@@ -539,8 +539,6 @@ export const filters_products = async (req, res) => {
         const price_max = req.body.price_max;
         const logo_position_selected = req.body.logo_position_selected; // new filter logo center or lateral
 
-        console.log("=======================> DEBBUG: Home.controller > filter_product: ", logo_position_selected);
-
         const filter = {
             state: 2,
         };
@@ -629,6 +627,10 @@ export const filters_products = async (req, res) => {
             where: {
               [Op.and]: filter
             },
+            include: [
+                { model: Galeria },
+                { model: Categorie }
+            ],
             order: [
               ['createdAt', 'ASC'] // ASC = 1, DESC = -1
             ]
@@ -659,6 +661,8 @@ export const filters_products = async (req, res) => {
             const finalProduct = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
             Products.push(finalProduct);
         }
+
+        console.log("----> Get All filter products!: ", Products);
 
         res.status(200).json({
             products: Products,
