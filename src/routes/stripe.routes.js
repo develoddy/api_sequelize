@@ -1,0 +1,12 @@
+import { Router } from "express";
+import auth from '../middlewares/auth.js';
+import {
+    createCheckoutSession,
+} from "../controllers/stripe.controller.js";
+
+const router = Router();
+
+//router.post("/create-checkout-session", auth.verifyEcommerce, create);
+router.post("/create-checkout-session", auth.verifyEcommerce, createCheckoutSession);
+
+export default router;
