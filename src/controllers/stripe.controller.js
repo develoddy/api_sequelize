@@ -18,6 +18,9 @@ export const createCheckoutSession = async (req, res) => {
     }
 
     const lineItems = cart.map((item) => ({
+
+
+        
       price_data: {
         currency: "eur",
         product_data: {
@@ -33,7 +36,7 @@ export const createCheckoutSession = async (req, res) => {
       mode: "payment",
       line_items: lineItems,
       success_url: `${process.env.URL_FRONTEND}/es/es/account/checkout/successfull`,
-      cancel_url: `${process.env.URL_FRONTEND}/checkout/cancel`,
+      cancel_url: `${process.env.URL_FRONTEND}/es/es/checkout/cancel`,
       metadata: {
         userId: user || "",
         guestId: guestId || "",
