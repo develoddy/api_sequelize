@@ -15,6 +15,8 @@ import smtpTransport from 'nodemailer-smtp-transport';
 import dotenv from 'dotenv';
 dotenv.config(); // Cargar las variables de entorno
 
+import { verifyRecaptcha } from '../devtools/utils/verifyRecaptcha.js';
+
 // ------ Send Email -----
 // Función para leer un archivo HTML
 const readHTMLFile = (path) => {
@@ -151,6 +153,18 @@ export const register_admin = async( req, res ) => {
 }
 
 export const register = async ( req, res ) => {
+    const { recaptchaToken } = req.body;
+
+    // ✅ 1. Verificar reCAPTCHA
+    const { success, score } = await verifyRecaptcha(recaptchaToken);
+
+    if (!success || score < 0.5) {
+        return res.status(403).json({
+          message: 'Falló la verificación de reCAPTCHA. Intenta de nuevo.',
+        });
+    }
+
+    // ✅ 2. Continuar con el registro
     try {
         req.body.password = await bcrypt.hash( req.body.password, 10 );
         const user = await User.create( req.body );
@@ -159,10 +173,7 @@ export const register = async ( req, res ) => {
             message: "Usuario registrado correctamente.",
             data: user
         });
-        //res.status( 200 ).json( user );
-        //res.send('register user:' + req.body.password );
     } catch ( error ) {
-        // Verificar si el error es una violación de la restricción única
         if (error instanceof Sequelize.UniqueConstraintError) {
             return res.status(400).send({
                 message: "Este correo electrónico ya está registrado en nuestro sistema."
