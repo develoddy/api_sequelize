@@ -32,7 +32,7 @@ export const createCheckoutSession = async (req, res) => {
       payment_method_types: ["card"],
       mode: "payment",
       line_items: lineItems,
-      success_url: `${process.env.URL_FRONTEND}/es/es/account/checkout/successfull`,
+      success_url: `${process.env.URL_FRONTEND}/es/es/account/checkout/successfull?initialized=true&from=step4&fromStripe=1`,
       cancel_url: `${process.env.URL_FRONTEND}/es/es/checkout/cancel`,
       metadata: {
         userId: user || "",
