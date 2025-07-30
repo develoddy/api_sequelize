@@ -75,6 +75,14 @@ async function send_email(sale_id) {
             }
         });
 
+        transporter.verify(function(error, success) {
+            if (error) {
+                console.log('SMTP connection error:', error);
+            } else {
+                console.log('SMTP server is ready to take messages');
+            }
+        });
+
 
         //const transporter = nodemailer.createTransport(smtpTransport({
         //    service: 'gmail',
@@ -86,7 +94,11 @@ async function send_email(sale_id) {
         //}));
 
         readHTMLFile(`${process.cwd()}/src/mails/email_sale.html`, (err, html) => {
-            if (err) throw err;
+            //if (err) throw err;
+
+            if (err) {
+                return callback(err);
+            }
 
             const rest_html = ejs.render(html, {
                 order,
