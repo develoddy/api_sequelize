@@ -5,54 +5,46 @@ import { Guest } from "../models/Guest.js";
 
 export const register = async (req, res) => {
     try {
-        // Extraer los datos de la dirección del body
-        const { guest_id, name, surname, pais, address, zipcode, poblacion, ciudad, email, phone, referencia, nota, birthday } = req.body;
 
-        // Crear la dirección en la base de datos
-        const newGuestAddress = await AddressGuest.create({
-            guest_id,
-            name,
-            surname,
-            pais,
-            address,
-            zipcode,
-            poblacion,
-            ciudad,
-            email,
-            phone,
-            referencia,
-            nota,
-            birthday
-        });
+        const { guest: guest_id, usual_shipping_address, email, ...addressData } = req.body;
 
-         // Verificar que guest_id esté presente
-        if (!guest_id) {
-          return res.status(400).json({
-            status: 400,
-            message: "El ID del invitado (guest_id) es obligatorio",
-          });
+        const guest = await Guest.findByPk(req.body.guest);
+
+        if ( !guest ) {
+            return res.status(404).json({message: "Guest no encontrado"});
         }
 
-      
-        // Actualizar el campo email en la tabla Guest si se ha proporcionado
-        if (email) {
-            await Guest.update(
-                { email }, // campos a actualizar
-                { where: { id: guest_id } } // condición
+        // ACTUALIZAR EL EMAIL DEL GUEST SI SE PROPORCIONA
+        if ( email && !guest.email ) {
+            await guest.update({ email });
+        }
+
+        // Si la nueva dirección es marcada como habitual, actualiza las anteriores a false
+        if ( usual_shipping_address === true ) {
+            await AddressGuest.update(
+                { usual_shipping_address: false },
+                { where: { guest_id, usual_shipping_address: true } }
             );
         }
 
-        res.status(201).json({
-            status: 201,
-            message: "La dirección del invitado ha sido registrada con éxito",
-            address_guest: newGuestAddress,
+        // Si la nueva dirección es marcada como habitual, actualiza las anteriores a false
+        const addressGuest = await AddressGuest.create({ 
+            ...addressData, 
+            email,
+            usual_shipping_address: usual_shipping_address || false,
+            guest_id ,
         });
 
+        res.status(200).json({
+            status: 200,
+            message: "La dirección de envío ha sido registrado con éxito",
+            address_client: addressGuest,
+        });
     } catch (error) {
 
-        console.error("Error en registrar la dirección del invitado:", error);
-        res.status(500).json({
-            message: "Ocurrió un problema al registrar la dirección del invitado.",
+        console.log("Error en registrar la direccion:", error);
+        res.status(500).send({
+            message: "Debug: AddressClientController register ocurrió un problema",
         });
 
     }

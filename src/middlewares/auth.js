@@ -47,4 +47,23 @@ export default {
             console.log(error);
         }
     },
+    optionalAuth: async (req, res, next) => {
+        const rawToken = req.headers.token;
+
+        console.log("🔍 Token recibido en backend:", rawToken);
+
+        if (!rawToken) return next();
+
+        const response = await token.decode(rawToken);
+
+        if (!response || response.error === "TokenExpired") return next();
+
+        if (response.rol === "cliente" || response.rol === "admin") {
+            req.user = response; // inyectamos user decodificado
+        }
+
+        next();
+    },
 }
+
+

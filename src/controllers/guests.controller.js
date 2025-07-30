@@ -47,7 +47,7 @@ export const register = async (req, res) => {
 export const remove = async( req, res ) => {
     try {
 
-        const deletedUser = await User.destroy({
+        const deletedUser = await Guest.destroy({
             where: {
                 id: req.query._id
             }
