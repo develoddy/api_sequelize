@@ -28,10 +28,14 @@ async function send_email(sale_id) {
     try {
         const readHTMLFile = (path, callback) => {
             fs.readFile( path, { encoding: 'utf-8' }, ( err, html ) => {
-                if ( err ) {
-                    throw err;
-                    callback( err );
-                } else {
+                //if ( err ) {
+                //    throw err;
+                //    callback( err );
+                //} 
+                if (err) {
+                    return callback(err);
+                }
+                else {
                     callback(null, html);
                 }
             });
@@ -72,26 +76,22 @@ async function send_email(sale_id) {
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
-            }
+            },
+            tls: {
+                // Para depurar problemas TLS, puede ser útil:
+                rejectUnauthorized: false
+            },
+            logger: true,    // Para logging detallado de SMTP
+            debug: true      // Mostrar detalles en consola
         });
 
         transporter.verify(function(error, success) {
             if (error) {
-                console.log('SMTP connection error:', error);
+                console.log('----> D E B U G: SMTP connection error:', error);
             } else {
                 console.log('SMTP server is ready to take messages');
             }
         });
-
-
-        //const transporter = nodemailer.createTransport(smtpTransport({
-        //    service: 'gmail',
-        //    host: 'smtp.gmail.com',
-        //    auth: {
-        //        user: 'eddylujann@gmail.com',
-        //        pass: 'xueibcvxrsgapjhh'
-        //    }
-        //}));
 
         readHTMLFile(`${process.cwd()}/src/mails/email_sale.html`, (err, html) => {
             //if (err) throw err;
