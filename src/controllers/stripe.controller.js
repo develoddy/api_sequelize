@@ -38,12 +38,13 @@ export const createCheckoutSession = async (req, res) => {
       quantity: item.cantidad,
     }));
 
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode        : "payment",
       line_items  : lineItems,
       success_url : `${process.env.URL_FRONTEND}/es/es/account/checkout/successfull?initialized=true&from=step4&fromStripe=1`,
-      cancel_url  : `${process.env.URL_FRONTEND}/es/es/checkout/cancel`,
+      cancel_url  : `${process.env.URL_FRONTEND}/es/es/account/checkout/payment?initialized=true&from=step3`,
       metadata    : {
         userId  : userId || "",
         guestId : guestId || "",

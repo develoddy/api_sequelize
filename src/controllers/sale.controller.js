@@ -24,14 +24,9 @@ import { createPrintfulOrder } from './proveedor/printful/productPrintful.contro
 
 
 async function send_email(sale_id) {
-
     try {
         const readHTMLFile = (path, callback) => {
             fs.readFile( path, { encoding: 'utf-8' }, ( err, html ) => {
-                //if ( err ) {
-                //    throw err;
-                //    callback( err );
-                //} 
                 if (err) {
                     return callback(err);
                 }
@@ -40,8 +35,6 @@ async function send_email(sale_id) {
                 }
             });
         };
-
-        // - Comprobar si es Guest o Autenticated
 
         const order = await Sale.findByPk(sale_id, {
             include: [
@@ -87,15 +80,13 @@ async function send_email(sale_id) {
 
         transporter.verify(function(error, success) {
             if (error) {
-                console.log('----> D E B U G: SMTP connection error:', error);
+                console.log('SMTP connection error:', error);
             } else {
                 console.log('SMTP server is ready to take messages');
             }
         });
 
         readHTMLFile(`${process.cwd()}/src/mails/email_sale.html`, (err, html) => {
-            //if (err) throw err;
-
             if (err) {
                 return callback(err);
             }
@@ -152,8 +143,6 @@ async function send_email(sale_id) {
             });
         });
 
-        console.log("------- orderDetails: ", JSON.stringify(orderDetails, null, 2));
-
     } catch (error) {
         console.log(error);
     }
@@ -177,12 +166,6 @@ export const registerGuest = async (req, res) => {
         // Crear la venta y la dirección asociada
         const sale = await createSale(saleData);
         const saleAddress = await createSaleAddress(saleAddressData, sale.id);
-
-        // Aquí NO se puede obtener carritos por userId, así que esperamos que se pase directamente o ignoramos esa parte
-        // Opciones:
-        // 1. Preparas los items desde el frontend (más trabajo).
-        // 2. Guardas un carrito temporal en DB antes de pagar (más persistencia).
-        // 3. O simplemente pasas los productos en la venta (opción rápida para invitados).
        
         // Obtener todos los carritos del usuario
         const cartsCache = await getUserCartsCache(saleData.guestId);
@@ -237,7 +220,6 @@ export const register = async (req, res) => {
 
         // Crear datos de la orden para Printful
         const printfulOrderData = createPrintfulOrderData(saleAddress, items, costs);
-        //console.log("Items: ", JSON.stringify(printfulOrderData, null, 2));
 
         // Crear la orden en Printful
         let result = await prepareCreatePrintfulOrder(printfulOrderData);
@@ -357,7 +339,6 @@ const getItemFiles = async (cart) => {
         throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
     }
 
-    //console.log("API Coontroller SALE 348 > getItemFiles > files: ", JSON.stringify(files, null, 2));
     return files.map((file, index) => processFile(file, index, product.logo_position));
 };
 
