@@ -4,10 +4,7 @@ import { Variedad } from "../models/Variedad.js";
 
 export const variedad_register = async (req, res) => {
     try {
-        // { product: '1', valor: 'XL', stock: 5 }
-        
         const data = req.body;
-        console.log("ÇUpdateColor: ", data);
         const variedad_exits = await Variedad.findOne({ where: { valor: data.valor, productId: data.product } });
         let variedad = null;
 
@@ -32,13 +29,13 @@ export const variedad_register = async (req, res) => {
                 retail_price                   : data.retail_price,
                 sku                            : data.sku,
                 currency                       : data.currency,
-                
             });
         }
 
         res.status(200).json({
             variedad: variedad,
         });
+        
     } catch (error) {
         res.status(500).send({
             message: "Debug - VariedadController: An error occurred in the register method"

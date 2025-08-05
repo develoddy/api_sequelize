@@ -64,8 +64,6 @@ export const register = async (req, res) => {
             }
         }
 
-        console.log("--- Register CartCache: ", data);
-
         // SEGUNDO VAMOS A VALIDAR SI EL STOCK ESTÁ DISPONIBLE
         if (data.variedad) {
 
@@ -210,8 +208,6 @@ export const removeAll = async (req, res) => {
         });
 
     } catch (error) {
-        // En caso de error, enviamos una respuesta 500 y mostramos el error en consola
-        console.log("---Debbug removeAll cart:", error);
         res.status(500).send({
             message: "debug: CartController removeAll OCURRIÓ UN PROBLEMA"
         });

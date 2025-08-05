@@ -75,7 +75,7 @@ async function send_email(sale_id) {
                 rejectUnauthorized: false
             },
             logger: true,    // Para logging detallado de SMTP
-            debug: true      // Mostrar detalles en consola
+            debug: false      // Mostrar detalles en consola
         });
 
         transporter.verify(function(error, success) {
@@ -231,6 +231,12 @@ export const register = async (req, res) => {
             });
         }
 
+        // ✅ Guardar fechas de entrega en la venta
+        await sale.update({
+            minDeliveryDate: result.data.minDeliveryDate,
+            maxDeliveryDate: result.data.maxDeliveryDate
+        });
+
         // Enviar email de confirmación
         await sendEmail(sale.id);
 
@@ -241,6 +247,10 @@ export const register = async (req, res) => {
             message: "Muy bien! La orden se generó correctamente",
             sale: sale,
             saleDetails: saleDetails,
+            deliveryEstimate: {
+                min: sale.minDeliveryDate,
+                max: sale.maxDeliveryDate
+            }
         });
     } catch (error) {
         console.error("Error en el proceso de registro de venta:", error);
@@ -590,7 +600,6 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 // Crear la orden en Printful
 const prepareCreatePrintfulOrder = async (orderData, res) => {
     // Implementar la llamada a la API de Printful
-    // Ejemplo: return await axios.post('https://api.printful.com/orders', orderData);
     let data = await createPrintfulOrder(orderData);
 
     if (data === "error_order") {

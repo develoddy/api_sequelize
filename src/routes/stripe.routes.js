@@ -6,7 +6,6 @@ import {
 
 const router = Router();
 
-//router.post("/create-checkout-session", auth.verifyEcommerce, createCheckoutSession);
 router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession);
 
 export default router;

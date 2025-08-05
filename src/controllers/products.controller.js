@@ -128,16 +128,10 @@ export const update = async(req, res) => {
         for (let cart of carts) {
             // Verifica si el producto ha sido eliminado o está en estado ignorado
             if (cart.product.state == 1) {
-                console.log(`Simulacion de Producto con ID ${cart.productId} ha sido eliminado. Se eliminará del carrito :(.`);
                 // Eliminar el item del carrito
                 await Cart.destroy({ where: { id: cart.id } });
-            } else {
-                //console.log(`API 59 Simulacion de Producto con ID ${cart.productId} aun puede estar en carrito. porque existe en la DB :)`);
-                console.log("API 136 > update else: ", JSON.stringify(cart, null, 2));
             }
         }
-
-
 
         data.slug = data.title.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
 
@@ -150,8 +144,6 @@ export const update = async(req, res) => {
                 data.portada = portada_name;
             }
         }
-
-
 
         await Product.update(data, { where: { id: data._id } });
 

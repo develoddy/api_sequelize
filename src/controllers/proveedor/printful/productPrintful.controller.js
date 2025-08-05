@@ -131,7 +131,6 @@ const productDetailSyncPrice = (product) => {
 };
 
 
-
 /*
  * Esta función procesa un producto de Printful.
  * Obtiene detalles del producto desde Printful usando su ID.
@@ -145,7 +144,6 @@ const processPrintfulProduct = async (product) => {
     const productDetail = await getPrintfulProductDetail(product.id);
     const category = await getOrCreateCategory( productDetail );
     const existingProduct = await getOrCreateProduct( product, productDetail, category );
-    //console.log("------- existingProduct: ", JSON.stringify(existingProduct, null, 2));
 
     if ( existingProduct ) {
       await createOrUpdateVariants( existingProduct.id, productDetail.sync_variants );
@@ -267,7 +265,6 @@ const updateProductIfNeeded = async (existingProduct, product, productDetail, ca
   if (portada_name && existingProduct.portada !== portada_name) updates.portada = portada_name;
 
   if (Object.keys(updates).length > 0) {
-    console.log(`Actualizando producto ${existingProduct.id} con cambios:`, updates);
     await existingProduct.update(updates);
   }
 
@@ -582,9 +579,6 @@ export const createPrintfulOrder = async( orderData ) => {
   try {
     let data = await createPrintfulOrderService( orderData );
     return data;
-    /*res.status(200).json({
-      message: "Muy bien! La orden se generó correctamente",
-    });*/
   } catch ( error ) {
     console.error('DEBUG createPrintfulOrder: No response received:', error.request);
     return "error_order"

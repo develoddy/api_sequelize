@@ -108,8 +108,6 @@ export const register = async (req, res) => {
             }
         }
 
-        console.log("--- Register Cart: ", data);
-
         // SEGUNDO VAMOS A VALIDAR SI EL STOCK ESTÁ DISPONIBLE
         if (data.variedad) {
 
@@ -214,8 +212,6 @@ export const removeAll = async (req, res) => {
         });
 
     } catch (error) {
-        // En caso de error, enviamos una respuesta 500 y mostramos el error en consola
-        console.log("---Debbug removeAll cart:", error);
         res.status(500).send({
             message: "debug: CartController removeAll OCURRIÓ UN PROBLEMA"
         });
@@ -398,15 +394,10 @@ export const apllyCupon = async (req, res) => {
 
 export const mergeCart = async (req, res) => {
     try {
-        console.log("---> Bakend req.query: ", req.query);
-        console.log("---> Bakend req.body: ", req.body);
 
         // Obtener el ID del usuario autenticado desde el token de autenticación
         const user_id = req.query.user_id;
         const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
-
-        console.log("---> Bakend MergeCart user_id: ", user_id);
-        console.log("---> Bakend MergeCart localCartItems: ", localCartItems);
 
         if (!user_id) {
             return res.status(400).json({ message: "El ID de usuario es necesario." });

@@ -103,8 +103,6 @@ const getOrCreateCategory = async ( product ) => {
 
 	try {
 		for ( const categorie of product.categories ) {
-
-			//console.log("Debugg : Las categorias son: ", categorie);
 			let existingCategory = await Categorie.findOne({
 		    where: { title: categorie.name }
 		  });
@@ -147,7 +145,6 @@ const getOrCreateProduct = async (product, category) => {
 		if ( !existingProduct ) {
 			// Create product
 			existingProduct = await createProduct(product, category);
-			//console.log("Debugg: getOrCreateProduct create: ", existingProduct);
 		} else {
 			// Update product
 			// existingProduct = await updateProduct(existingProduct, product, category);
@@ -220,9 +217,6 @@ const createProduct = async (product, category) => {
 
 	    //const imagePath = path.join( uploadDir, portada_name );
 	    const imagePath = path.join(uploadDir, path.basename(portada_name));
-
-	    //console.log("Debugg: fullImageUrl: ", fullImageUrl);
-      //console.log("Debugg: imagePath: ", imagePath);
 
 	    await downloadImage(fullImageUrl, imagePath);
 		}

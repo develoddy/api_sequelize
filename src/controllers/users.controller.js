@@ -123,6 +123,21 @@ export const resetPassword = async (req, res) => {
 };
 
 export const register_admin = async( req, res ) => {
+
+    const { recaptchaToken } = req.body;
+
+    // ✅ 1. Verificar reCAPTCHA
+    // Solo verificar reCAPTCHA si no estamos en entorno de desarrollo
+    if (process.env.NODE_ENV !== 'development') {
+        const { success, score } = await verifyRecaptcha(recaptchaToken);
+
+        if (!success || score < 0.5) {
+            return res.status(403).json({
+              message: 'Falló la verificación de reCAPTCHA. Intenta de nuevo.',
+            });
+        }
+    }
+
     try {
         const userV = await User.findOne({
             where: {
@@ -156,12 +171,15 @@ export const register = async ( req, res ) => {
     const { recaptchaToken } = req.body;
 
     // ✅ 1. Verificar reCAPTCHA
-    const { success, score } = await verifyRecaptcha(recaptchaToken);
+    // Solo verificar reCAPTCHA si no estamos en entorno de desarrollo
+    if (process.env.NODE_ENV !== 'development') {
+        const { success, score } = await verifyRecaptcha(recaptchaToken);
 
-    if (!success || score < 0.5) {
-        return res.status(403).json({
-          message: 'Falló la verificación de reCAPTCHA. Intenta de nuevo.',
-        });
+        if (!success || score < 0.5) {
+            return res.status(403).json({
+              message: 'Falló la verificación de reCAPTCHA. Intenta de nuevo.',
+            });
+        }
     }
 
     // ✅ 2. Continuar con el registro
@@ -321,7 +339,6 @@ export const update = async(req, res) => {
             var img_path = req.files.avatar.path;
             var name = img_path.split('\\');
             var avatar_name = name[2];
-            console.log(avatar_name);
         }
 
         if ( req.body.password ) {

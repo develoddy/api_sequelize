@@ -29,8 +29,6 @@ export default {
 
 
     product_list: (wishlist, product, variedades = [], avg_review = 0, count_review = 0, CampaingDiscount = null) => {
-
-      console.log("respurce get data wishlist: ", wishlist);
         if (!product) {
             // Si product es null, retornar un objeto vacío o lanzar un error según sea necesario
             return {}; // O lanzar un error o manejar la situación de otra manera
@@ -38,9 +36,6 @@ export default {
 
         var IMAGEN_TWO = "";
         var GALERIAS = [];
-
-        // console.log(".---resources ver productossss----");
-        // console.log(product);
 
         if (product && product.galerias) { // Verifica que product y product.galerias no sean null
             GALERIAS = product.galerias.map((galeria) => {

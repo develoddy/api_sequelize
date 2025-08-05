@@ -179,7 +179,40 @@ a[x-apple-data-detectors],
                       <td align="left" style="padding:0;Margin:0"><h6 style="Margin:0;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:16px;font-style:normal;font-weight:normal;line-height:19.2px;color:#000"><strong>LLegada estimada:</strong></h6></td>
                      </tr>
                      <tr>
-                      <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;line-height:21px;letter-spacing:0;color:#000;font-size:14px">Su pedido está previsto que llegue entre el 10 y el 15 de julio de 2024.</p></td>
+                      <!-- <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;line-height:21px;letter-spacing:0;color:#000;font-size:14px">Su pedido está previsto que llegue entre el 10 y el 15 de julio de 2024.</p></td> -->
+                      
+                      <% if (order.minDeliveryDate && order.maxDeliveryDate) { %>
+                        <td align="left" style="padding:0;Margin:0">
+                          <p style="Margin:0;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;line-height:21px;letter-spacing:0;color:#000;font-size:14px">
+                            <% if (order.minDeliveryDate === order.maxDeliveryDate) { %>
+                              Su pedido está previsto que llegue el 
+                              <strong>
+                                <%= new Date(order.minDeliveryDate).toLocaleDateString('es-ES', {
+                                  weekday: 'long',
+                                  day: '2-digit',
+                                  month: 'long'
+                                }) %>
+                              </strong>.
+                            <% } else { %>
+                              Su pedido está previsto que llegue entre el 
+                              <strong>
+                                <%= new Date(order.minDeliveryDate).toLocaleDateString('es-ES', {
+                                  weekday: 'long',
+                                  day: '2-digit',
+                                  month: 'long'
+                                }) %>
+                              </strong> y el 
+                              <strong>
+                                <%= new Date(order.maxDeliveryDate).toLocaleDateString('es-ES', {
+                                  weekday: 'long',
+                                  day: '2-digit',
+                                  month: 'long'
+                                }) %>
+                              </strong>.
+                            <% } %>
+                          </p>
+                        </td>
+                      <% } %>
                      </tr>
                    </table></td>
                  </tr>

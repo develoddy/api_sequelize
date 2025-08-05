@@ -11,7 +11,6 @@ const printfulApi = axios.create({
 
 export const getPrintfulShippingRatesService = async (payload) => {
     try {
-
         const response = await printfulApi.post('/shipping/rates', payload);
         return response.data.result;
     } catch (error) {
@@ -46,19 +45,49 @@ export const getPrintfulProductDetail = async ( productId ) => {
 
 export const createPrintfulOrderService = async ( orderData ) => {
     try {
-        const response = await printfulApi.post('/orders', orderData);
-        return response.data.result;
+
+        // 1. Obtener la estimación real de entrega desde Printful antes de crear la orden
+        const shippingRatesRes = await printfulApi.post('/shipping/rates', {
+            recipient: orderData.recipient,
+            items: orderData.items,
+            currency: "EUR",
+            locale: "es_ES"
+        });
+
+        //console.log("---> API createPrintfulOrderService > shippingRatesRes: " , shippingRatesRes.data.result);
+        //return;
+
+        const selectedRate = shippingRatesRes.data.result[0];
+        const minDeliveryDate = selectedRate.minDeliveryDate; // ya formateado YYYY-MM-DD
+        const maxDeliveryDate = selectedRate.maxDeliveryDate;
+
+        // 2. Crear pedido en modo borrador
+        const createOrderRes = await printfulApi.post('/orders', orderData);
+        const createdOrder = createOrderRes.data.result;
+
+        // 3. Obtener detalles (opcional pero útil para dashboard_url, costos, etc.)
+        const detailsRes = await printfulApi.get(`/orders/${createdOrder.id}`);
+        const orderDetails = detailsRes.data.result;
+
+        // 4. Devolver todos los datos necesarios al controller
+        return {
+            orderId: orderDetails.id,
+            shippingServiceName: orderDetails.shipping_service_name,
+            shippingCost: parseFloat(orderDetails.costs.shipping),
+            minDeliveryDate,
+            maxDeliveryDate,
+            dashboardUrl: orderDetails.dashboard_url,
+            raw: orderDetails
+        };
+
     } catch ( error ) {
         if (error.response) {
-            // El servidor respondió con un estado que no está en el rango de 2xx
             console.error('DEBUG createPrintfulOrder: Error al crear la orden en Printful:', error.response.data);
             throw new Error(`DEBUG createPrintfulOrder: ${error.response.data.error.message}`);
         } else if (error.request) {
-            // La solicitud se hizo pero no se recibió respuesta
             console.error('DEBUG createPrintfulOrder: No response received:', error.request);
             throw new Error('DEBUG createPrintfulOrder: No response received from Printful');
         } else {
-            // Algo pasó al preparar la solicitud
             console.error('DEBUG createPrintfulOrder: Error al preparar la solicitud:', error.message);
             throw new Error('DEBUG createPrintfulOrder: Error al preparar la solicitud a Printful');
         }

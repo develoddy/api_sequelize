@@ -7,8 +7,6 @@ export const register = async (req, res) => {
     try {
     	const { product, sale_detail, user, cantidad, title, description } = req.body;
 
-    	console.log("----- API: Review register", req.body);
-
         // Verifica si todos los campos necesarios están presentes
         if (!product || !sale_detail || !user) {
             return res.status(400).send({
@@ -42,8 +40,6 @@ export const register = async (req, res) => {
 
 export const update = async (req, res) => {
     try {
-
-    	console.log("-------- API: rupdate review ", req.body);
 
         const { _id, ...updateData } = req.body;
 

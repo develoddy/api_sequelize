@@ -251,9 +251,6 @@ export const show_landing_product = async (req, res) => {
             saleFlash = await Discount.findByPk(DISCOUNT_ID);
         }
 
-
-            console.log("---- Debbug: Show landing product :", product);
-
         res.status(200).json({
             product: resources.Product.product_list(product, variedades),
             related_products: objectRelateProducts,
@@ -308,8 +305,7 @@ export const profile_client = async (req, res) => {
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
-              console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
-
+              //console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
 
@@ -661,8 +657,6 @@ export const filters_products = async (req, res) => {
             const finalProduct = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
             Products.push(finalProduct);
         }
-
-        console.log("----> Get All filter products!: ", Products);
 
         res.status(200).json({
             products: Products,

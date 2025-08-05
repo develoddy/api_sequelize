@@ -53,8 +53,6 @@ export const list = async (req, res) => {
             order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
         });
 
-         console.log("Mostrar address all: ", addressClients);
-
         res.status(200).json({
             address_client: addressClients, // Ajusta el nombre de la propiedad según sea necesario
         });

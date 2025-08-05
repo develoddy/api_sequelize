@@ -126,9 +126,6 @@ export const update = async (req, res) => {
         let filter_a = [];
         let filter_b = [];
 
-        console.log("API: update discount");
-        console.log(data);
-
         // Validar que start_date_num y end_date_num estén dentro del rango permitido para BIGINT
         const bigintMin = BigInt(-9223372036854775808);
         const bigintMax = BigInt(9223372036854775807);

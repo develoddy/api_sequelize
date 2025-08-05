@@ -41,8 +41,6 @@ export const register = async (req, res) => {
             address_client: addressGuest,
         });
     } catch (error) {
-
-        console.log("Error en registrar la direccion:", error);
         res.status(500).send({
             message: "Debug: AddressClientController register ocurrió un problema",
         });

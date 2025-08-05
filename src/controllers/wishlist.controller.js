@@ -37,8 +37,6 @@ export const list = async (req, res) => {
                 ]
             });
 
-            //console.log("wishlist", JSON.stringify(wishlist, null, 2));
-
             // Obtener descuentos de campaña con sus productos y categorías
             let CampaingDiscount = await Discount.findOne({
                 where: {
@@ -80,9 +78,8 @@ export const list = async (req, res) => {
                          }
                     }
 
-                    //console.log("API; campaingDiscount: ", JSON.stringify(campaingDiscount, null, 2));
-
                     return resources.Wishlist.product_list(item, product, variedades, avg_review, count_review, campaingDiscount);
+                    
                 } catch (error) {
                     console.error("Error fetching details for product", item.product.id, error);
                     return null; // O maneja el error según sea necesario

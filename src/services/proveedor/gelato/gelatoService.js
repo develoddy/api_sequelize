@@ -42,7 +42,6 @@ export const getGelatoProductDetail = async ( productId ) => {
 export const getGelatoPriceProduct = async ( productId ) => {
     try {
         const response = await gelatoGeneralApi.get(`/products/${productId}/prices`);
-        //console.log('______API > GelatoService > getGelatoPriceProduct :', response.data);
         return response.data;
     } catch (error) {
         if (error.response) {

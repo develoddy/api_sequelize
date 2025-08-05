@@ -1,7 +1,5 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
-//import { User } from './User.js'; 
-//import { User } from './Guest.js'; 
 
 export const Sale = sequelize.define('sales', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -10,12 +8,11 @@ export const Sale = sequelize.define('sales', {
   n_transaction: { type: DataTypes.STRING(200), allowNull: false },
   total: { type: DataTypes.FLOAT, allowNull: false },
   curreny_total: { type: DataTypes.STRING(50), defaultValue: 'EUR' },
-  price_dolar: { type: DataTypes.FLOAT, defaultValue: 0 }
+  price_dolar: { type: DataTypes.FLOAT, defaultValue: 0 },
+  minDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
+  maxDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
 }, {
   timestamps: true,
   tableName: 'sales'
 });
 
-// Define la asociación con el modelo de Usuario
-//Sale.belongsTo(User, { foreignKey: 'userId' });
-//Sale.belongsTo(Guest, { foreignKey: 'guestId' });
