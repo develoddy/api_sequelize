@@ -123,7 +123,6 @@ export const resetPassword = async (req, res) => {
 };
 
 export const register_admin = async( req, res ) => {
-
     const { recaptchaToken } = req.body;
 
     // ✅ 1. Verificar reCAPTCHA
@@ -139,6 +138,7 @@ export const register_admin = async( req, res ) => {
     }
 
     try {
+        
         const userV = await User.findOne({
             where: {
                 email: req.body.email
@@ -168,6 +168,7 @@ export const register_admin = async( req, res ) => {
 }
 
 export const register = async ( req, res ) => {
+
     const { recaptchaToken } = req.body;
 
     // ✅ 1. Verificar reCAPTCHA
