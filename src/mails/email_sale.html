@@ -190,7 +190,7 @@ a[x-apple-data-detectors],
                                 <%= new Date(order.minDeliveryDate).toLocaleDateString('es-ES', {
                                   weekday: 'long',
                                   day: '2-digit',
-                                  month: 'long'
+                                  month: 'short'
                                 }) %>
                               </strong>.
                             <% } else { %>
@@ -199,14 +199,14 @@ a[x-apple-data-detectors],
                                 <%= new Date(order.minDeliveryDate).toLocaleDateString('es-ES', {
                                   weekday: 'long',
                                   day: '2-digit',
-                                  month: 'long'
+                                  month: 'short'
                                 }) %>
                               </strong> y el 
                               <strong>
                                 <%= new Date(order.maxDeliveryDate).toLocaleDateString('es-ES', {
                                   weekday: 'long',
                                   day: '2-digit',
-                                  month: 'long'
+                                  month: 'short'
                                 }) %>
                               </strong>.
                             <% } %>

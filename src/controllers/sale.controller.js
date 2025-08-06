@@ -231,11 +231,24 @@ export const register = async (req, res) => {
             });
         }
 
-        // ✅ Guardar fechas de entrega en la venta
+        // Obtener la fecha mínima desde la respuesta de Printful
+        const minDeliveryDate = new Date(result.data.minDeliveryDate);
+
+        // Generar la fecha máxima añadiendo 9 días
+        const maxDeliveryDate = new Date(minDeliveryDate);
+        maxDeliveryDate.setDate(maxDeliveryDate.getDate() + 7);
+
+        // Guardar ambas fechas en la venta
         await sale.update({
-            minDeliveryDate: result.data.minDeliveryDate,
-            maxDeliveryDate: result.data.maxDeliveryDate
+            minDeliveryDate,
+            maxDeliveryDate
         });
+
+        // Guardar fechas de entrega en la venta
+        //await sale.update({
+        //    minDeliveryDate: result.data.minDeliveryDate,
+        //    maxDeliveryDate: result.data.maxDeliveryDate
+        //});
 
         // Enviar email de confirmación
         await sendEmail(sale.id);
