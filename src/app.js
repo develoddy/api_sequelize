@@ -13,7 +13,7 @@ app.use(cors());
 
 // Límite para el tamaño de las solicitudes
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Obtener __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
@@ -24,6 +24,12 @@ app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
+    next();
+});
+
+// Establecer un timeout mayor (ej. 5 minutos)
+app.use((req, res, next) => {
+    req.setTimeout(5 * 60 * 1000); // 5 minutos (en milisegundos)
     next();
 });
 
