@@ -19,6 +19,7 @@ export const getPrintfulShippingRatesService = async (payload) => {
     }
 };
 
+/** STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV */
 export const getPrintfulProductsService = async () => {
     try {
         const response = await printfulApi.get('/store/products');
@@ -29,9 +30,25 @@ export const getPrintfulProductsService = async () => {
     }
 };
 
+/** STORE: SE OBTIENE EL DETALLE DEL PRODUCTO SELECCIONADO */
 export const getPrintfulProductDetail = async ( productId ) => {
     try {
         const response = await axios.get(`https://api.printful.com/store/products/${productId}`, {
+            headers: {
+                'Authorization': `Bearer ${PRINTFUL_API_TOKEN}`
+            }
+        });
+        return response.data.result;
+    } catch (error) {
+        console.error('DEBUG getProductPrintful: Error al obtener la lista de productos de Printful:', error);
+        throw new Error('Error al obtener la lista de productos de Printful');
+    }
+};
+
+/** CATALOG: SE OBTIENE EL DETALLE DEL PRODUCTO + VARIANTE */
+export const getPrintfulCatalogProductDetail = async ( productId ) => {
+    try {
+        const response = await axios.get(`https://api.printful.com/products/${productId}`, {
             headers: {
                 'Authorization': `Bearer ${PRINTFUL_API_TOKEN}`
             }

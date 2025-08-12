@@ -16,6 +16,7 @@ import path from "path";
 import {
   getPrintfulProductsService,
   getPrintfulProductDetail,
+  getPrintfulCatalogProductDetail,
   getPrintfulCategory,
   createPrintfulOrderService,
 } from '../../../services/proveedor/printful/printfulService.js';
@@ -77,21 +78,22 @@ export const getPrintfulProducts = async () => {
   try {
 
     const printfulProducts = await getPrintfulProductsService();
+    //console.log("-----> debbuf printfulProducts", JSON.stringify(printfulProducts, null, 2));
 
-    // Creamos un arreglo de IDs de productos de Printful
+    /** CREA UN ARREGLO DE IDS DE PRODUCTOS DE PRINTFUL */
     const printfulProductIds = printfulProducts.map(product => product.id);
 
-    // Obtener los productos locales que no están en Printful
+    /** OBTENIENE LOS PRODUCTOS LOCAL QUE NO ESTÁN EN PRINTFUL */
     const productsToDelete = await Product.findAll({
       where: { idProduct: { [Op.notIn]: printfulProductIds } }
     });
 
-    // Eliminar productos con sus relaciones
+    /** ELIMINA LOS PRODUCTOS CON SUS RELACIONES */
     for (const product of productsToDelete) {
       await deleteProductAndRelatedComponents(product);
     }
 
-    // Recorremos cada producto obtenido de Printful
+    /** SE RECCORRE CADA PRODUCTO DE PRINTFUL*/
     for (const product of printfulProducts) {
       
       const existingProduct = await Product.findOne({ where: { idProduct: product.id } });
@@ -219,8 +221,21 @@ const getOrCreateProduct = async (product, productDetail, category) => {
 
 // Crea un producto si no existe
 const createProduct = async (product, productDetail, category) => {
+  console.log("-----> debbug: processPrintfulProduct > productDetail: ", productDetail);
   const portada_name = await handleProductImage(product.thumbnail_url);
 
+  // Tomamos el variant_id de la primera variante
+  const productId = productDetail.sync_variants[0].product.product_id;
+
+  // Llamada extra al catálogo para obtener la descripción
+  const catalogResponse = await getPrintfulCatalogProductDetail(productId);
+
+  console.log("-----> debbug: createProduct > catalogResponse: ", catalogResponse);
+
+   // Traduce aquí con tu función de traducción (Google, DeepL, etc)
+  const description_en = catalogResponse.product?.description || "Descripción no disponible";
+  const description_es = catalogResponse.product?.description || "Descripción no disponible"; //await translateText(description_en, "es");
+  
   return await Product.create({
     idProduct: product.id,
     title: product.name,
@@ -229,7 +244,8 @@ const createProduct = async (product, productDetail, category) => {
     price_usd: productDetail.sync_variants[0].retail_price,
     portada: portada_name,
     resumen: "tu_resumen",
-    description: "tu_descripcion",
+    description_en,
+    description_es,
     sku: await extractSKU(productDetail.sync_variants[0].sku),
     slug: await generateSlug(product.name),
     state: product.is_ignored ? 1 : 2,

@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/translate": "^9.2.0",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
     "connect-multiparty": "^2.2.0",

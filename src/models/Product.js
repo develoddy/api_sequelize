@@ -16,7 +16,9 @@ export const Product = sequelize.define('products', {
     //galerias: { type: DataTypes.JSON, allowNull: true },
     state: { type: DataTypes.INTEGER, defaultValue: 1 },
     stock: { type: DataTypes.INTEGER, defaultValue: 0 },
-    description: { type: DataTypes.TEXT, allowNull: false },
+    // Descripciones multilenguaje
+    description_en: { type: DataTypes.TEXT, allowNull: false },  // Inglés original
+    description_es: { type: DataTypes.TEXT, allowNull: false },  // Traducción español
     resumen: { type: DataTypes.TEXT, allowNull: false },
     tags: { type: DataTypes.STRING, allowNull: false },
     type_inventario: { type: DataTypes.INTEGER, defaultValue: 1 },
@@ -27,15 +29,3 @@ export const Product = sequelize.define('products', {
     tableName: 'products'
 });
 
-// Define la asociación con el modelo de Categoría
-// En este caso, establece que un producto pertenece a una categoría
-/*Product.belongsTo( Categorie, { 
-    foreignKey: 'categoryId',
-    sourceKey: 'id',
-});*/
-
-// Define la asociación con el modelo de Galeria
-/*Product.hasMany(Galeria, { 
-    foreignKey: 'productId',
-    sourceKey: 'id',
-});*/
