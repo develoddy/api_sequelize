@@ -7,17 +7,27 @@ import path from "path";
 
 export const register = async(req, res) => {
     try {
-        if ( req.files && req.files.length > 0 ) {
-            const portadaFile = req.files.find(file => file.fieldname === 'portada');
-            if ( portadaFile ) {
-                var img_path = portadaFile.path;
-                var name = img_path.split('/');
-                var portada_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
-                req.body.imagen = portada_name;
+        if (req.files) {
+            const mobileFile = req.files['imagen_mobile'] && req.files['imagen_mobile'][0];
+            const desktopFile = req.files['imagen_desktop'] && req.files['imagen_desktop'][0];
+            if (mobileFile) {
+                req.body.imagen_mobile = mobileFile.filename;
+            }
+            if (desktopFile) {
+                req.body.imagen_desktop = desktopFile.filename;
             }
         }
 
-        const slider = await Slider.create(req.body);
+        const slider = await Slider.create({
+            title: req.body.title,
+            subtitle: req.body.subtitle,
+            description: req.body.description,
+            position: req.body.position || 'middle-left',
+            link: req.body.link,
+            imagen_mobile: req.body.imagen_mobile,
+            imagen_desktop: req.body.imagen_desktop,
+            state: req.body.state
+        });
         res.status(200).json(slider);
     } catch (error) {
         res.status(500).send({
@@ -67,18 +77,29 @@ export const list = async(req, res) => {
 
 export const update = async(req, res) => {
     try {
-        if ( req.files && req.files.length > 0 ) {
-            const portadaFile = req.files.find(file => file.fieldname === 'portada');
-            if ( portadaFile ) {
-                var img_path = portadaFile.path;
-                var name = img_path.split('/');
-                var portada_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
-                req.body.imagen = portada_name;
+        if (req.files) {
+            const mobileFile = req.files['imagen_mobile'] && req.files['imagen_mobile'][0];
+            const desktopFile = req.files['imagen_desktop'] && req.files['imagen_desktop'][0];
+            if (mobileFile) {
+                req.body.imagen_mobile = mobileFile.filename;
+            }
+            if (desktopFile) {
+                req.body.imagen_desktop = desktopFile.filename;
             }
         }
 
-        await Slider.update(req.body, { where: { id: req.body._id } });
-        const SliderT = await Slider.findOne({ where: { id: req.body._id } });
+        const sliderId = req.body._id || req.body.id;
+        await Slider.update({
+            title: req.body.title,
+            subtitle: req.body.subtitle,
+            description: req.body.description,
+            position: req.body.position || 'middle-left',
+            link: req.body.link,
+            imagen_mobile: req.body.imagen_mobile,
+            imagen_desktop: req.body.imagen_desktop,
+            state: req.body.state
+        }, { where: { id: sliderId } });
+        const SliderT = await Slider.findOne({ where: { id: sliderId } });
 
         res.status(200).json({
             message: "¡Success! La categoria se ha modificado correctamente",

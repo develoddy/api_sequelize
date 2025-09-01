@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
+import fs from 'fs';
 import path from "path";
+import dotenv from 'dotenv';
 // import productsRoutes from './routes/products.routes.js';
 // import usersRoutes from './routes/users.routes.js';
 
@@ -8,6 +10,8 @@ import { fileURLToPath } from 'url';
 
 import router from './routes/index.js';
 
+//const app = express();
+dotenv.config();
 const app = express();
 app.use(cors());
 
@@ -31,6 +35,16 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     req.setTimeout(5 * 60 * 1000); // 5 minutos (en milisegundos)
     next();
+});
+
+// Ruta para servir el index.html dinámico
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  let html = fs.readFileSync(indexPath, 'utf8');
+
+  html = html.replace(/{{URL_BACKEND}}/g, process.env.URL_BACKEND);
+
+  res.send(html);
 });
 
 // middlwares

@@ -32,6 +32,7 @@ import  {
 } from "./helper.js";
 
 
+
 let idMapping = { products: {}, variedades: {} };
 
 export const list = async( req, res ) => {
@@ -221,7 +222,6 @@ const getOrCreateProduct = async (product, productDetail, category) => {
 
 // Crea un producto si no existe
 const createProduct = async (product, productDetail, category) => {
-  console.log("-----> debbug: processPrintfulProduct > productDetail: ", productDetail);
   const portada_name = await handleProductImage(product.thumbnail_url);
 
   // Tomamos el variant_id de la primera variante
@@ -230,11 +230,14 @@ const createProduct = async (product, productDetail, category) => {
   // Llamada extra al catálogo para obtener la descripción
   const catalogResponse = await getPrintfulCatalogProductDetail(productId);
 
-  console.log("-----> debbug: createProduct > catalogResponse: ", catalogResponse);
+  
 
    // Traduce aquí con tu función de traducción (Google, DeepL, etc)
   const description_en = catalogResponse.product?.description || "Descripción no disponible";
-  const description_es = catalogResponse.product?.description || "Descripción no disponible"; //await translateText(description_en, "es");
+  const description_es = "Descripción no disponible";
+
+  
+
   
   return await Product.create({
     idProduct: product.id,

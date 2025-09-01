@@ -25,9 +25,15 @@ const upload = multer({ storage: storage });
 
 const router = Router();
 
-router.post("/register", [auth.verifyAdmin, upload.array('portada')], register);
+router.post("/register", [auth.verifyAdmin, upload.fields([
+    { name: 'imagen_mobile', maxCount: 1 },
+    { name: 'imagen_desktop', maxCount: 1 }
+])], register);
 router.get("/list", auth.verifyAdmin, list);
-router.put("/update", [auth.verifyAdmin, upload.array('portada')], update);
+router.put("/update", [auth.verifyAdmin, upload.fields([
+    { name: 'imagen_mobile', maxCount: 1 },
+    { name: 'imagen_desktop', maxCount: 1 }
+])], update);
 router.delete("/delete", auth.verifyAdmin, remove);
 router.get("/uploads/slider/:img", getImage);
 
