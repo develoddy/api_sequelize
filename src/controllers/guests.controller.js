@@ -1,7 +1,24 @@
+
 import { Op, Sequelize } from 'sequelize';
 import resources from "../resources/index.js";
 import { Guest } from "../models/Guest.js";
 import { AddressGuest } from "../models/AddressGuest.js";
+
+// Valida si un guest existe por session_id
+export const validateGuest = async (req, res) => {
+    try {
+        const { session_id } = req.params;
+        const guest = await Guest.findOne({ where: { session_id } });
+        if (guest) {
+            return res.json({ exists: true });
+        } else {
+            return res.json({ exists: false });
+        }
+    } catch (error) {
+        console.error('Error al validar el invitado:', error);
+        res.status(500).json({ exists: false, error: 'Error interno del servidor' });
+    }
+};
 
 export const register = async (req, res) => {
     try {

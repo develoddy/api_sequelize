@@ -1,35 +1,41 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../database/database.js';
 // MODELS
-import { Slider } from "../models/Slider.js";
 import { Categorie } from "../models/Categorie.js";
-import { Discount } from "../models/Discount.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
 import { File } from "../models/File.js";
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
-import { Galeria } from "../models/Galeria.js";
-import { DiscountProduct } from "../models/DiscountProduct.js";
-import { DiscountCategorie } from "../models/DiscountCategorie.js";
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Sale } from '../models/Sale.js';
-import { SaleAddress } from "../models/SaleAddress.js";
-import { AddressClient } from "../models/AddressClient.js";
-import { Cart } from "../models/Cart.js";
+import { Guest } from "../models/Guest.js";
 import { CartCache } from "../models/CartCache.js";
-import { Cupone } from "../models/Cupone.js";
-import { CuponeProduct } from "../models/CuponeProduct.js";
-import { CuponeCategorie } from "../models/CuponeCategorie.js";
-
 // RESOURCES
 import resources from "../resources/index.js";
-import bcrypt from 'bcryptjs';
+
 
 export const register = async (req, res) => {
     try {
 
         let data = req.body;
+
+        // VALIDAR QUE EL GUEST EXISTA
+        const guestId = data.user;
+        console.log("=======> Guest ID:", guestId); // Depuración: Verificar el valor de guestId
+        // const guestExists = await sequelize.models.Guest?.findOne?.({ where: { id: guestId } });
+        let guestExists = await Guest.findOne({
+            where: {
+                id: guestId,
+            }
+        });
+        console.log("=======> Guest Exists:", guestExists); // Depuración: Verificar si guestExists tiene un valor
+        
+        if (!guestExists) {
+            console.log(" ========> El invitado (guest) no existe o la sesión ha expirado. Por favor, recarga la página o inicia una nueva sesión.");
+            
+            res.status(400).json({
+                message: 400,
+                message_text: "El invitado (guest) no existe o la sesión ha expirado. Por favor, recarga la página o inicia una nueva sesión."
+            });
+            return;
+        }
 
         // PRIMERO VAMOS A VALIDAR SI EL PRODUCTO EXISTE EN EL CARRITO DE COMPRA
         if (data.variedad) {
