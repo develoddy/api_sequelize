@@ -9,7 +9,7 @@ import {
     listone,
     remove,
     update,
-    setAsUsualShippingAddress,
+    setAsUserAuthenticatedUsualShippingAddress
 } from "../controllers/addressClient.controller.js";
 
 const router = Router();
@@ -19,7 +19,7 @@ router.put("/update", auth.verifyEcommerce, update);
 router.get("/list", auth.verifyEcommerce, list);
 router.delete("/delete/:id", auth.verifyEcommerce, remove);
 router.get("/listone", auth.verifyEcommerce, listone);
-router.post("/set-usual-shipping-address", auth.verifyEcommerce, setAsUsualShippingAddress);
+router.post("/set-user-authenticated-usual-shipping-address", auth.verifyEcommerce, setAsUserAuthenticatedUsualShippingAddress);
 
 
 export default router;

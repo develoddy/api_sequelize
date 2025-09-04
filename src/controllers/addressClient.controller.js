@@ -149,8 +149,6 @@ export const listone = async (req, res) => {
             order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
         });
 
-        console.log("Mostrar address one: ", addressClient);
-
         res.status(200).json({
             address_client: addressClient, // Ajusta el nombre de la propiedad según sea necesario
         });
@@ -162,7 +160,7 @@ export const listone = async (req, res) => {
     }
 }
 
-export const setAsUsualShippingAddress = async (req, res) => {
+export const setAsUserAuthenticatedUsualShippingAddress = async (req, res) => {
   try {
     const { addressId, userId } = req.body;
 
@@ -185,8 +183,9 @@ export const setAsUsualShippingAddress = async (req, res) => {
     const updated = await AddressClient.findByPk(addressId);
 
     res.status(200).json({
-      message: "Dirección habitual actualizada",
-      address_client: updated,
+        status: 200,
+        message: "Dirección habitual actualizada",
+        address_client: updated,
     });
   } catch (error) {
     console.error("Error al actualizar dirección habitual:", error);

@@ -151,3 +151,36 @@ export const removeAll = async (req, res) => {
         res.status(500).json({ message: "Error al eliminar direcciones de invitado." });
     }
 };
+
+export const setGuestUsualShippingAddress = async (req, res) => {
+  try {
+    const { addressId, guestId } = req.body;
+
+    if (!addressId || !guestId) {
+      return res.status(400).json({ message: 'Faltan parámetros' });
+    }
+
+    // 1) Poner todas las direcciones del usuario como NO habituales
+    await AddressGuest.update(
+      { usual_shipping_address: false },
+      { where: { guest_id: guestId } }
+    );
+
+    // 2) Poner la seleccionada como habitual
+    await AddressGuest.update(
+      { usual_shipping_address: true },
+      { where: { id: addressId } }
+    );
+
+    const updated = await AddressGuest.findByPk(addressId);
+
+    res.status(200).json({
+    status: 200,
+      message: "Dirección habitual actualizada",
+      address_client: updated,
+    });
+  } catch (error) {
+    console.error("Error al actualizar dirección habitual:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};

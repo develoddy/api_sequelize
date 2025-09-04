@@ -10,6 +10,7 @@ import {
     remove,
     removeAll,
     update,
+    setGuestUsualShippingAddress
 } from "../controllers/addressGuest.controller.js";
 
 const router = Router();
@@ -20,6 +21,8 @@ router.get("/list", list);
 router.delete("/delete/:id", remove);
 router.delete("/delete/:guest_id", removeAll);
 router.get("/listone", listone);
+router.post("/set-guest-usual-shipping-address", setGuestUsualShippingAddress);
+
 
 
 export default router;
