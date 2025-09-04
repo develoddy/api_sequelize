@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 divider="========================================================="
 
-# ===================== BANNER PRINCIPAL =====================
+# ===================== BANNER =====================
 echo -e "${MAGENTA}$divider${NC}"
 echo -e "${MAGENTA}##                                                 ##${NC}"
 echo -e "${MAGENTA}##       🚀🚀🚀 DEPLOY API 🚀🚀🚀                ##${NC}"
@@ -28,7 +28,7 @@ git push origin main
 if [ $? -eq 0 ]; then
   echo -e "${GREEN}✅ Cambios guardados y enviados a GitHub correctamente${NC}"
 else
-  echo -e "${RED}❌ Error al hacer push a GitHub. Se detiene la ejecución${NC}"
+  echo -e "${RED}❌ Error al guardar/enviar cambios a GitHub${NC}"
   exit 1
 fi
 
@@ -37,21 +37,19 @@ echo -e "\n${CYAN}2️⃣ PASO 2: Actualizar en el servidor remoto${NC}"
 ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 << EOF
   cd /var/www/api_sequelize
   git pull origin main
-  pm2 restart api_sequelize
+  # 👉 Sustituye la ruta de pm2 por la que devuelva "which pm2"
+  /usr/bin/pm2 restart api_sequelize
 EOF
 
 if [ $? -eq 0 ]; then
-  echo -e "${GREEN}✅ API actualizada y reiniciada en el servidor${NC}"
+  echo -e "${GREEN}✅ Servidor remoto actualizado y API reiniciada correctamente${NC}"
 else
   echo -e "${RED}❌ Error al actualizar o reiniciar API en el servidor${NC}"
   exit 1
 fi
 
 # ================= FIN =================
-echo -e "${MAGENTA}=========================================================${NC}"
-echo -e "${MAGENTA}##                                                 ##${NC}"
+echo -e "${MAGENTA}$divider${NC}"
 echo -e "${MAGENTA}##    🎉🎉🎉 DEPLOY API COMPLETADO 🎉🎉🎉         ##${NC}"
-echo -e "${MAGENTA}##       ✅ API actualizada y funcionando ✅      ##${NC}"
-echo -e "${MAGENTA}##          🥳🚀🎊 FELICIDADES 🚀🎊🥳         ##${NC}"
-echo -e "${MAGENTA}##                                                 ##${NC}"
-echo -e "${MAGENTA}=========================================================${NC}\n"
+echo -e "${MAGENTA}##       ✅ API actualizada y en producción ✅     ##${NC}"
+echo -e "${MAGENTA}$divider${NC}\n"
