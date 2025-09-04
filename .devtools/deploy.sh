@@ -37,14 +37,12 @@ echo -e "\n${CYAN}2️⃣ PASO 2: Actualizar en el servidor remoto${NC}"
 ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 << EOF
   cd /var/www/api_sequelize
   git pull origin main
-  /root/.nvm/versions/node/v14.21.3/bin/pm2 restart api_sequelize
-
 EOF
 
 if [ $? -eq 0 ]; then
-  echo -e "${GREEN}✅ Servidor remoto actualizado y API reiniciada correctamente${NC}"
+  echo -e "${GREEN}✅ Servidor remoto actualizado correctamente${NC}"
 else
-  echo -e "${RED}❌ Error al actualizar o reiniciar API en el servidor${NC}"
+  echo -e "${RED}❌ Error al actualizar API en el servidor${NC}"
   exit 1
 fi
 
