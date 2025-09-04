@@ -138,7 +138,7 @@ export const register = async (req, res) => {
         res.status(500).send({
             message: "debug: CartController register: OCURRIÓ UN PROBLEMA"
         });
-        console.log(error);
+        console.log("------> register cache error: ", error);
     }
 }
 
@@ -147,7 +147,8 @@ export const list = async (req, res) => {
 
         let isGuest = req.query.isGuest;
 
-        if ( isGuest ) {
+        if ( isGuest) {
+            
             // Buscar productos en  carrito de compras del usuario
             let carts = await CartCache.findAll({
                 where: {
@@ -164,7 +165,7 @@ export const list = async (req, res) => {
                 return resources.Cart.cart_list(cart);
             });
 
-            // Enviando la respuesta
+            // Enviando la respuesta.
             res.status(200).json({
                 carts: CARTS,
             });
