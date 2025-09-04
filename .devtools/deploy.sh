@@ -37,8 +37,8 @@ echo -e "\n${CYAN}2️⃣ PASO 2: Actualizar en el servidor remoto${NC}"
 ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 << EOF
   cd /var/www/api_sequelize
   git pull origin main
-  # 👉 Sustituye la ruta de pm2 por la que devuelva "which pm2"
-  /usr/bin/pm2 restart api_sequelize
+  /root/.nvm/versions/node/v14.21.3/bin/pm2 restart api_sequelize
+
 EOF
 
 if [ $? -eq 0 ]; then
