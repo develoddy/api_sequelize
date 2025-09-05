@@ -89,6 +89,10 @@ export const update = async(req, res) => {
         }
 
         const sliderId = req.body._id || req.body.id;
+        if (!sliderId) {
+          return res.status(400).json({ message: "Slider ID no proporcionado" });
+        }
+
         await Slider.update({
             title: req.body.title,
             subtitle: req.body.subtitle,
@@ -99,7 +103,11 @@ export const update = async(req, res) => {
             imagen_desktop: req.body.imagen_desktop,
             state: req.body.state
         }, { where: { id: sliderId } });
+
         const SliderT = await Slider.findOne({ where: { id: sliderId } });
+        if (!SliderT) {
+          return res.status(404).json({ message: "Slider no encontrado" });
+        }
 
         res.status(200).json({
             message: "¡Success! La categoria se ha modificado correctamente",
