@@ -143,16 +143,16 @@ export const remove = async(req, res) => {
     }
 }
 
-export const getImage = async(req, res) => {
+export const getImage = async(req, res) => {    
     try {
-        var img = req.params['img'];
-
+        
+        var img = req.params['img'];       
         fs.stat('./src/uploads/slider/'+img, function(err){
             if(!err){
                 let path_img = './src/uploads/slider/'+img;
                 res.status(200).sendFile(path.resolve(path_img));
             }else{
-                let path_img = './src/uploads/default.jpg';
+                let path_img = './src/uploads/slider/default.png';
                 res.status(200).sendFile(path.resolve(path_img));
             }
         })

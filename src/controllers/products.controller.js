@@ -283,7 +283,7 @@ export const getImage = async(req, res) => {
         const img = req.params['img'];
 
         const imgPath = path.resolve('./src/uploads/product', img);
-        const defaultPath = path.resolve('./src/uploads', 'default.jpg');
+        const defaultPath = path.resolve('./src/uploads', 'default.png');
 
         fs.stat(imgPath, function(err) {
             if (!err) {
