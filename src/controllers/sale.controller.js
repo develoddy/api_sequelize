@@ -15,7 +15,7 @@ import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
 import fs from 'fs';
 import path from "path";
-import handlebars from 'handlebars';
+import Handlebars from 'handlebars';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
@@ -97,7 +97,7 @@ async function send_email(sale_id) {
                 order_detail: orderDetails
             });
 
-            const template = handlebars.compile(rest_html);
+            const template = Handlebars.compile(rest_html);
             const htmlToSend = template({ op: true });
 
             // COMPROBAR PORQUE ORDER ES NULL
@@ -343,6 +343,9 @@ const prepareItemsForPrintful = async (carts, sale) => {
 
 // Obtener archivos de un ítem (solo archivos que se van a imprimir, no previews)
 const getItemFiles = async (cart) => {
+    console.log("------------> getItemFiles : Obteniendo archivos para la variedadId:");
+    console.log(JSON.stringify(cart, null, 2));
+    
     let varietyId = cart.variedadId;
     const files = await File.findAll({ where: { varietyId } });
 
@@ -518,13 +521,13 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
     console.log("=====================================================");
 
     // 🚨 Mientras pruebas puedes devolver solo el debug
-    // return { error: false, data: cleanOrder };
+    //return { error: false, data: cleanOrder };
 
     // ✅ Cuando lo quieras enviar de verdad:
     let data = await createPrintfulOrder(cleanOrder);
 
     if (data === "error_order") {
-         return { error: true, message: "Ups! Hubo un problema al generar la orden" };
+        return { error: true, message: "Ups! Hubo un problema al generar la orden" };
     }
     return { error: false, data };
  };
