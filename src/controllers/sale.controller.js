@@ -232,16 +232,23 @@ export const register = async (req, res) => {
         }
 
         // Obtener la fecha mínima desde la respuesta de Printful
-        const minDeliveryDate = new Date(result.data.minDeliveryDate);
+        //const minDeliveryDate = new Date(result.data.minDeliveryDate);
+        // Obtener la fecha mínima desde la respuesta de Printful
+        let minDeliveryDate = result.data.minDeliveryDate ? new Date(result.data.minDeliveryDate) : null;
 
-        // Generar la fecha máxima añadiendo 9 días
+        // Verificar que sea válida
+        if (!minDeliveryDate || isNaN(minDeliveryDate.getTime())) {
+            minDeliveryDate = new Date(); // o null si prefieres
+        }
+
+        // Generar la fecha máxima añadiendo 7 días
         const maxDeliveryDate = new Date(minDeliveryDate);
         maxDeliveryDate.setDate(maxDeliveryDate.getDate() + 7);
 
         // Guardar ambas fechas en la venta
         await sale.update({
-            minDeliveryDate,
-            maxDeliveryDate
+            minDeliveryDate: minDeliveryDate.toISOString().split('T')[0], // YYYY-MM-DD
+            maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
         });
 
         // Guardar fechas de entrega en la venta
@@ -304,8 +311,8 @@ const prepareItemsForPrintful = async (carts, sale) => {
     let tax = 0.00; // Ajusta el impuesto según tus necesidades
 
     for (const cart of carts) {
-        const itemFiles = await getItemFiles(cart);
-        const itemOptions = await getItemOptions(cart);
+        const itemFiles = await getItemFiles(cart); // Solo url de imagen
+        const itemOptions = await getItemOptions(cart); // Color, talla, etc.
         const item = await createItem(cart, itemFiles, itemOptions);
         items.push(item);
 
@@ -334,152 +341,25 @@ const prepareItemsForPrintful = async (carts, sale) => {
     }
 };
 
-// Obtener los archivos asociados a un ítem
+// Obtener archivos de un ítem (solo archivos que se van a imprimir, no previews)
 const getItemFiles = async (cart) => {
-    let variantId = null;
-    let productId = cart.productId;
     let varietyId = cart.variedadId;
-
-    if (varietyId) {
-        const variety = await Variedad.findByPk(varietyId);
-        variantId = variety.variant_id;
-        productId = variety.productId;
-    }
-
-    const product = await Product.findByPk(productId);
-    const files = await File.findAll({
-        where: { varietyId },
-        include: [{
-            model: Variedad,
-            include: [{
-                model: Product,
-                include: [Categorie],
-            }]
-        }],
-    });
+    const files = await File.findAll({ where: { varietyId } });
 
     if (!files || files.length === 0) {
-        throw new Error(`No se encontraron archivos para la variedad con ID ${varietyId}`);
+        throw new Error(`No se encontraron archivos para la variedad ${varietyId}`);
     }
 
-    return files.map((file, index) => processFile(file, index, product.logo_position));
-};
+    // Filtrar archivos que no sean tipo "preview"
+    const printFiles = files.filter(file => file.type !== "preview");
 
-// Procesar cada archivo
-const processFile = (file, index, logoPosition = 'center') => {
-    const printAreas = {
-        "T-shirts": { width: 12, height: 16 },
-        "Long sleeve shirts": { width: 12, height: 16 },
-        "Hoodies": { width: 14, height: 14 },
-        "All shirts": { width: 12, height: 16 },
-        "Snapbacks": { width: 6.3, height: 2.56 },
-        //"Snapbacks": { width: 3.4, height: 2.5 },
-    };
-
-    const categoryTitle = file.variedade.product.category.title;
-    const printArea = printAreas[categoryTitle];
-    if (!printArea) {
-        throw new Error(`Área de impresión no definida para el producto tipo: ${categoryTitle}`);
-    }
-
-    const printAreaWidthPixels = printArea.width * file.dpi;
-    const printAreaHeightPixels = printArea.height * file.dpi;
-
-    const position = index === 0 
-        ? calculatePositionForFirstFile(file, printAreaWidthPixels, printAreaHeightPixels, logoPosition) 
-        : calculatePositionForSecondFile(file, printAreaWidthPixels, printAreaHeightPixels);
-
-    return {
-        url: file.preview_url,
-        filename: file.filename,
+    return printFiles.map(file => ({
+        url: file.preview_url, // si quieres mandar otro campo para Printful, cámbialo aquí
         type: file.type,
-        position: position
-    };
+        filename: file.filename
+    }));
 };
 
-
-// CALCULA LA POSICION DE LA IMPRESION DEPENDIENDO COMO ESTÁ CONFIGURADO EN EL ADMIN
-const calculatePositionForFirstFile = (
-  file,
-  printAreaWidthPixels,
-  printAreaHeightPixels,
-  logoPosition
-) => {
-  const ORIGINAL_ASPECT_RATIO = 4 / 3;
-
-  // DPI estándar de Printful
-  const DPI = 150;
-
-  // Offsets personalizados
-  const offsets = {
-    right_top: { top: 60, left: 0 },
-    left_top: { top: 60, left: 0 },
-    center: { top: 0, left: 0 },
-    back_center: { top: 40, left: 0 },
-  };
-
-  const offset = offsets[logoPosition] || offsets.center;
-
-  let scaledWidth, scaledHeight;
-
-  if (logoPosition === 'center' || logoPosition === 'back_center') {
-    const maxWidth = printAreaWidthPixels;
-    const desiredWidth = 12 * DPI;
-
-    scaledWidth = Math.min(desiredWidth, maxWidth);
-    scaledHeight = scaledWidth / ORIGINAL_ASPECT_RATIO;
-
-  } else {
-    // Escalado proporcional para esquinas: 30% del ancho
-    const WIDTH_RATIO = 0.3;
-    scaledWidth = printAreaWidthPixels * WIDTH_RATIO;
-    scaledHeight = scaledWidth / ORIGINAL_ASPECT_RATIO;
-  }
-
-  let leftPosition = 0;
-  let topPosition = 0;
-
-  switch (logoPosition) {
-    case 'right_top':
-      leftPosition = printAreaWidthPixels - scaledWidth + offset.left;
-      topPosition = offset.top;
-      break;
-
-    case 'left_top':
-      leftPosition = offset.left;
-      topPosition = offset.top;
-      break;
-
-    case 'center':
-    case 'back_center':
-    default:
-      leftPosition = (printAreaWidthPixels - scaledWidth) / 2 + offset.left;
-      topPosition = (printAreaHeightPixels - scaledHeight) / 2 + offset.top;
-
-      break;
-  }
-
-  return {
-    area_width: printAreaWidthPixels,
-    area_height: printAreaHeightPixels,
-    width: scaledWidth,
-    height: scaledHeight,
-    top: Math.max(topPosition, 0),
-    left: Math.max(leftPosition, 0),
-    limit_to_print_area: true,
-  };
-};
-
-
-const calculatePositionForSecondFile = (file, printAreaWidthPixels, printAreaHeightPixels) => ({
-    "area_width": printAreaWidthPixels,
-    "area_height": printAreaHeightPixels,
-    "width": file.width,
-    "height": file.height,
-    "top": 0,
-    "left": 0,
-    "limit_to_print_area": true
-});
 
 // Obtener opciones asociadas a la variante
 const getItemOptions = async (cart) => {
@@ -530,7 +410,7 @@ const createItem = async (cart, itemFiles, itemOptions) => {
     }
 
     return {
-        variant_id: variantId, // Asegúrate de que variant_id sea un número
+        variant_id: variantId, // Asegúrate de que variant_id sea un número & Obligatorio: número
         quantity: cart.cantidad,
         name: await getProductTitle(cart.productId),
         price: cart.price_unitario.toString(),
@@ -610,16 +490,55 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
     },
 });
 
-// Crear la orden en Printful
-const prepareCreatePrintfulOrder = async (orderData, res) => {
-    // Implementar la llamada a la API de Printful
-    let data = await createPrintfulOrder(orderData);
+// Crear la orden en Printful (modo debug, no enviar realmente)
+ const prepareCreatePrintfulOrder = async (orderData, res) => {
+
+     // Limpiar cada item antes de enviarlo a Printful
+    const cleanItems = orderData.items.map(item => ({
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+        name: item.name,
+        retail_price: item.retail_price, // opcional, pero ok si lo quieres llevar
+        files: item.files.map(f => ({
+            url: f.url,
+            type: f.type,
+            filename: f.filename
+        }))
+    }));
+
+    const cleanOrder = {
+        recipient: orderData.recipient,
+        items: cleanItems,
+        retail_costs: orderData.retail_costs
+    };
+
+
+    console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
+    console.log(JSON.stringify(cleanOrder, null, 2)); // Formato legible
+    console.log("=====================================================");
+
+    // 🚨 Mientras pruebas puedes devolver solo el debug
+    // return { error: false, data: cleanOrder };
+
+    // ✅ Cuando lo quieras enviar de verdad:
+    let data = await createPrintfulOrder(cleanOrder);
 
     if (data === "error_order") {
-        return { error: true, message: "Ups! Hubo un problema al generar la orden" };
+         return { error: true, message: "Ups! Hubo un problema al generar la orden" };
     }
     return { error: false, data };
-};
+ };
+
+// Crear la orden en Printful
+//  const prepareCreatePrintfulOrder = async (orderData, res) => {
+//      // Implementar la llamada a la API de Printful
+//      let data = await createPrintfulOrder(orderData);
+
+//      if (data === "error_order") {
+//          return { error: true, message: "Ups! Hubo un problema al generar la orden" };
+//      }
+//      return { error: false, data };
+//  };
 
 // Enviar correo electrónico de confirmación
 const sendEmail = async (saleId) => {
