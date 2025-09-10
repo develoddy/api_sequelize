@@ -160,7 +160,7 @@ a[x-apple-data-detectors],
                   <td align="left" class="es-m-p30b" style="padding:0;Margin:0;width:240px">
                    <table width="100%" cellspacing="0" cellpadding="0" role="presentation" style="mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px">
                      <tr>
-                      <td align="left" style="padding:0;Margin:0"><h6 style="Margin:0;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:16px;font-style:normal;font-weight:normal;line-height:19.2px;color:#000"><strong>Detalles de envío:</strong></h6></td>
+                        <td align="left" style="padding:0;Margin:0"><h6 style="Margin:0;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:16px;font-style:normal;font-weight:normal;line-height:19.2px;color:#000"><strong>Detalles de envío:</strong></h6></td>
                      </tr>
                      <tr>
                       <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:roboto, 'helvetica neue', helvetica, arial, sans-serif;line-height:21px;letter-spacing:0;color:#000;font-size:14px"><%= address_sale.address %>, <%= address_sale.region %>, <%= address_sale.ciudad %></p></td>
@@ -289,7 +289,10 @@ a[x-apple-data-detectors],
                        </tr>
                        <% } %>
                        <tr>
-                        <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px"><strong>Precio: </strong><%= order_detail[i].total %> €<strong> </strong></p></td>
+                        <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px"><strong>Precio unitario:</strong> <%= order_detail[i].unitPrice.toFixed(2) %> €</p></td>
+                       </tr>
+                       <tr>
+                        <td align="left" style="padding:0;Margin:0"><p style="Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px"><strong>Total:</strong> <%= order_detail[i].total.toFixed(2) %> €</p></td>
                        </tr>
                      </table></td>
                    </tr>
@@ -470,7 +473,7 @@ a[x-apple-data-detectors],
                           <td align="center" valign="top" class="es-m-p16r" style="padding:0;Margin:0;padding-right:20px"><img width="22" height="22" title="Facebook" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/facebook-logo-black.png" alt="Fb" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>
                           <!--<td valign="top" align="center" class="es-m-p16r" style="padding:0;Margin:0;padding-right:20px"><img title="YouTube" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/youtube-logo-black.png" alt="Yt" width="22" height="22" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>-->
                           <td align="center" valign="top" class="es-m-p16r" style="padding:0;Margin:0;padding-right:20px"><img title="TikTok" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/tiktok-logo-black.png" alt="Tt" width="22" height="22" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>
-                          <!--<td align="center" valign="top" class="es-m-p16r" style="padding:0;Margin:0;padding-right:20px"><img height="22" title="Spotify" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/spotify-logo-black.png" alt="Sp" width="22" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>-->
+                          <!--<td align="center" valign="top" style="padding:0;Margin:0;padding-right:20px"><img height="22" title="Spotify" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/spotify-logo-black.png" alt="Sp" width="22" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>-->
                           <td align="center" valign="top" class="es-m-p16r" style="padding:0;Margin:0;padding-right:20px"><img alt="X" width="22" height="22" title="X" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/x-logo-black.png" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>
                           <!--<td align="center" valign="top" style="padding:0;Margin:0"><img title="LinkedIn" src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-black/linkedin-logo-black.png" alt="In" width="22" height="22" style="display:block;font-size:14px;border:0;outline:none;text-decoration:none"></td>-->
                          </tr>

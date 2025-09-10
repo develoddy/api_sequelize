@@ -91,10 +91,30 @@ async function send_email(sale_id) {
                 return callback(err);
             }
 
+            // Enriquecer detalles con precio unitario y total según variedad o precio de base
+            const enrichedOrderDetails = orderDetails.map(detail => {
+                const d = detail.toJSON();
+                d.product = d.product; // conservar producto
+                // Sequelize toJSON devuelve la variedad en d.variedade, renombramos a d.variedad
+                d.variedad = d.variedad ?? d.variedade ?? null;
+                // fallback a retail_price de la variedad o price_unitario
+                const unitPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario);
+                d.unitPrice = unitPrice;
+                // calcular total por cantidad
+                d.total = parseFloat((unitPrice * d.cantidad).toFixed(2));
+                return d;
+            });
+            
+            // Recalcular subtotal total del pedido según detalles enriquecidos
+            const enrichedOrder = order.toJSON ? order.toJSON() : { ...order };
+            enrichedOrder.total = enrichedOrderDetails
+                .reduce((sum, d) => sum + d.total, 0)
+                .toFixed(2);
+            
             const rest_html = ejs.render(html, {
-                order,
+                order: enrichedOrder,
                 address_sale: addressSale,
-                order_detail: orderDetails
+                order_detail: enrichedOrderDetails
             });
 
             const template = Handlebars.compile(rest_html);
@@ -343,9 +363,7 @@ const prepareItemsForPrintful = async (carts, sale) => {
 
 // Obtener archivos de un ítem (solo archivos que se van a imprimir, no previews)
 const getItemFiles = async (cart) => {
-    console.log("------------> getItemFiles : Obteniendo archivos para la variedadId:");
-    console.log(JSON.stringify(cart, null, 2));
-    
+    //console.log(JSON.stringify(cart, null, 2));
     let varietyId = cart.variedadId;
     const files = await File.findAll({ where: { varietyId } });
 
@@ -515,11 +533,9 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
         retail_costs: orderData.retail_costs
     };
 
-
-    console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
-    console.log(JSON.stringify(cleanOrder, null, 2)); // Formato legible
-    console.log("=====================================================");
-
+    //console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
+    //console.log(JSON.stringify(cleanOrder, null, 2)); // Formato legible
+    //console.log("=====================================================");
     // 🚨 Mientras pruebas puedes devolver solo el debug
     //return { error: false, data: cleanOrder };
 

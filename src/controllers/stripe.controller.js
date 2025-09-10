@@ -27,16 +27,27 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    const lineItems = cart.map((item) => ({
-      price_data: {
-        currency     : "eur",
-        product_data : {
-          name : item.product.title,
+    const lineItems = cart.map((item) => {
+      // Determine unit price: variant retail_price, or product price_usd, or fallback to item.price_unitario
+      const unitPrice = Number(
+        (item.variedad && item.variedad.retail_price != null)
+          ? item.variedad.retail_price
+          : (item.product && item.product.price_usd != null)
+            ? item.product.price_usd
+            : item.price_unitario
+      );
+      return {
+        price_data: {
+          currency     : "eur",
+          product_data : {
+            name : item.product.title,
+          },
+          // unitPrice in euros, convert to cents
+          unit_amount  : Math.round(unitPrice * 100),
         },
-        unit_amount  : Math.round(Number(item.product.price_usd) * 100), // € a céntimos
-      },
-      quantity: item.cantidad,
-    }));
+        quantity: item.cantidad,
+      };
+    });
 
 
     const session = await stripe.checkout.sessions.create({
