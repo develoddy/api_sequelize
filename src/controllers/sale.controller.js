@@ -172,6 +172,18 @@ async function send_email(sale_id) {
 export const registerGuest = async (req, res) => {
     try {
         const saleData = req.body.sale;
+        // Si ya viene stripeSessionId, evitar duplicados: devolver venta existente
+        if (saleData.stripeSessionId) {
+            const existing = await Sale.findOne({ where: { stripeSessionId: saleData.stripeSessionId } });
+            if (existing) {
+                const saleDetails = await getSaleDetails(existing.id);
+                return res.status(200).json({
+                    message: "Venta ya procesada (invitado)",
+                    sale: existing,
+                    saleDetails: saleDetails
+                });
+            }
+        }
        
         const saleAddressData = req.body.sale_address;
 
@@ -185,6 +197,7 @@ export const registerGuest = async (req, res) => {
 
         // Crear la venta y la dirección asociada
         const sale = await createSale(saleData);
+    
         const saleAddress = await createSaleAddress(saleAddressData, sale.id);
        
         // Obtener todos los carritos del usuario
@@ -203,7 +216,11 @@ export const registerGuest = async (req, res) => {
             });
         }
 
-        await sendEmail(sale.id);
+        try {
+            await sendEmail(sale.id);
+        } catch (emailErr) {
+            console.error('Error enviando email de confirmación (guest):', emailErr);
+        }
         const saleDetails = await getSaleDetails(sale.id);
 
         return res.status(200).json({
@@ -212,7 +229,6 @@ export const registerGuest = async (req, res) => {
             saleDetails: saleDetails,
         });
     } catch (error) {
-        console.error("Error en venta invitado:", error);
         return res.status(500).send({
             message: "Debug: SaleController registerGuest - OCURRIÓ UN PROBLEMA",
         });
@@ -225,11 +241,29 @@ export const registerGuest = async (req, res) => {
 export const register = async (req, res) => {
     try {
         const saleData = req.body.sale;
+        // Incluir stripeSessionId y evitar duplicados para usuarios autenticados
+        if (saleData.stripeSessionId) {
+            const existing = await Sale.findOne({ where: { stripeSessionId: saleData.stripeSessionId } });
+            if (existing) {
+                const saleDetails = await getSaleDetails(existing.id);
+                return res.status(200).json({
+                    message: "Venta ya procesada (auth)",
+                    sale: existing,
+                    saleDetails: saleDetails,
+                    deliveryEstimate: { min: existing.minDeliveryDate, max: existing.maxDeliveryDate }
+                });
+            }
+        }
 
         const saleAddressData = req.body.sale_address;
 
         // Crear una venta y asociar la dirección
         const sale = await createSale(saleData);
+        // Guardar stripeSessionId si viene en el payload
+        if (saleData.stripeSessionId) {
+            await sale.update({ stripeSessionId: saleData.stripeSessionId });
+        }
+    
         const saleAddress = await createSaleAddress(saleAddressData, sale.id);
 
         // Obtener todos los carritos del usuario
@@ -277,8 +311,12 @@ export const register = async (req, res) => {
         //    maxDeliveryDate: result.data.maxDeliveryDate
         //});
 
-        // Enviar email de confirmación
-        await sendEmail(sale.id);
+        // Enviar email de confirmación sin afectar el flujo
+        try {
+            await sendEmail(sale.id);
+        } catch (emailErr) {
+            console.error('Error enviando email de confirmación (auth):', emailErr);
+        }
 
         // Obtener los detalles de la venta
         const saleDetails = await getSaleDetails(sale.id);
@@ -293,7 +331,6 @@ export const register = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error en el proceso de registro de venta:", error);
         res.status(500).send({
             message: "Debug: SaleController register OCURRIÓ UN PROBLEMA",
         });
@@ -512,7 +549,7 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 });
 
 // Crear la orden en Printful (modo debug, no enviar realmente)
- const prepareCreatePrintfulOrder = async (orderData, res) => {
+const prepareCreatePrintfulOrder = async (orderData, res) => {
 
      // Limpiar cada item antes de enviarlo a Printful
     const cleanItems = orderData.items.map(item => ({
@@ -546,18 +583,8 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
         return { error: true, message: "Ups! Hubo un problema al generar la orden" };
     }
     return { error: false, data };
- };
+};
 
-// Crear la orden en Printful
-//  const prepareCreatePrintfulOrder = async (orderData, res) => {
-//      // Implementar la llamada a la API de Printful
-//      let data = await createPrintfulOrder(orderData);
-
-//      if (data === "error_order") {
-//          return { error: true, message: "Ups! Hubo un problema al generar la orden" };
-//      }
-//      return { error: false, data };
-//  };
 
 // Enviar correo electrónico de confirmación
 const sendEmail = async (saleId) => {
@@ -582,6 +609,29 @@ const getSaleDetails = async (saleId) => {
         detail.product.imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`;
         return detail;
     });
+};
+
+// Recuperar venta y detalles por stripeSessionId
+export const getSaleBySession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+            // Buscar la venta con el stripeSessionId
+            const sale = await Sale.findOne({
+                where: { stripeSessionId: sessionId },
+                include: [
+                    { model: SaleDetail },
+                    { model: SaleAddress }
+            ]
+        });
+        
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada para sessionId ' + sessionId });
+    }
+    return res.json({ sale, saleDetails: sale.SaleDetails || [] });
+  } catch (error) {
+    console.error('Error en getSaleBySession:', error);
+    return res.status(500).json({ message: 'Error recuperando la venta' });
+  }
 };
 
 

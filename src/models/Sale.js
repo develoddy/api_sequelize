@@ -11,6 +11,8 @@ export const Sale = sequelize.define('sales', {
   price_dolar: { type: DataTypes.FLOAT, defaultValue: 0 },
   minDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
   maxDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
+  // Stripe session identifier
+  stripeSessionId: { type: DataTypes.STRING, allowNull: true },
 }, {
   timestamps: true,
   tableName: 'sales'

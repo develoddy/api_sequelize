@@ -9,6 +9,8 @@ import { AddressGuest } from './AddressGuest.js';
 import { CartCache } from './CartCache.js';
 import { Variedad } from './Variedad.js';
 import { Sale } from './Sale.js';
+import { SaleDetail } from './SaleDetail.js';
+import { SaleAddress } from './SaleAddress.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE
@@ -46,3 +48,6 @@ CartCache.belongsTo(Variedad, { foreignKey: 'variedadId', allowNull: true });
  */
 Sale.belongsTo(User, { foreignKey: 'userId' });
 Sale.belongsTo(Guest, { foreignKey: 'guestId' });
+// Relaciones inversas para eager loading
+Sale.hasMany(SaleDetail, { foreignKey: 'saleId' });
+Sale.hasMany(SaleAddress, { foreignKey: 'saleId' });
