@@ -545,10 +545,11 @@ export const filters_products = async (req, res) => {
         // FILTRO DE VARIEDAD
         if (categories_selecteds.length > 0) {
             categories_selecteds.forEach(categorie => {
-                categories_s.push(categorie);
+                // Asegurar que sea número
+                categories_s.push(Number(categorie));
             });
         }
-
+        
         let campaingDiscount;
         // FILTRO DE DESCUENTO
         if (is_discount == 2) {
@@ -619,10 +620,9 @@ export const filters_products = async (req, res) => {
         }
 
 
+        // Buscar productos según filtro construido
         let OurProducts = await Product.findAll({
-            where: {
-              [Op.and]: filter
-            },
+            where: filter,
             include: [
                 { model: Galeria },
                 { model: Categorie }
