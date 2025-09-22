@@ -11,6 +11,7 @@ import { Variedad } from './Variedad.js';
 import { Sale } from './Sale.js';
 import { SaleDetail } from './SaleDetail.js';
 import { SaleAddress } from './SaleAddress.js';
+import { DiscountProduct } from './DiscountProduct.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE
@@ -19,6 +20,7 @@ import { SaleAddress } from './SaleAddress.js';
  */
 Product.belongsTo(Categorie, { foreignKey: 'categoryId', sourceKey: 'id'});
 Categorie.hasMany(Product, { foreignKey: 'categoryId', sourceKey: 'id'});
+DiscountProduct.belongsTo(Product, { foreignKey: 'productId' });
 Product.hasMany(Galeria, { foreignKey: 'productId', sourceKey: 'id'});
 
 /*

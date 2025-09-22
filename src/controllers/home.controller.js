@@ -49,6 +49,7 @@ export const list = async (req, res) => {
             ]
         });
 
+
         // Obtener mejores productos
         let BestProducts = await Product.findAll({
             where: { state: 2 },
@@ -118,39 +119,72 @@ export const list = async (req, res) => {
             ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
         }
 
+
         // Obtener ventas flash
-        let FlashSale = await Discount.findOne({
+        //let FlashSale = await Discount.findOne({
+        let FlashSales = await Discount.findAll({
             where: {
                 type_campaign: 2,
                 start_date_num: { [Op.lte]: TIME_NOW },
                 end_date_num: { [Op.gte]: TIME_NOW },
             },
-            include: [
-                { model: DiscountProduct },
+            include: [{ 
+                model: DiscountProduct,
+                include: [{
+                    model: Product,
+                    include: [Galeria]
+                }] 
+            },
             ]
         });
 
+        console.log(JSON.stringify(FlashSales, null, 2));
+
+
         let ProductList = [];
-        if (FlashSale) {
-            for (const product of FlashSale.discounts_products) { // Corregir aquí
+        if (FlashSales) {
+            for (const flash of FlashSales) {
+                for (const discountProduct of flash.discounts_products) {
+                    let ObjectT = discountProduct.product; // aquí ya tienes Product + Galerias 
+                    //console.log(JSON.stringify(ObjectT, null, 2));
 
-                let ObjectT = await Product.findByPk(product.productId); // Corregir aquí
+                     // Buscar las variedades del producto
+                    let variedades = await Variedad.findAll({ where: { productId: ObjectT.id } });
 
-                let variedades = await Variedad.findAll({ where: { productId: product.productId } });
+                    
+                    /**if (FlashSale) {
+                        if (FlashSale.type_segment === 1) { // Por producto
+                            let products_a = FlashSale.discounts_products.map(item => item.productId); // Corregir aquí
 
-                ProductList.push(resources.Product.product_list(ObjectT, variedades));
+                            if (products_a.includes(discountProduct.id)) {
+                                DISCOUNT_EXIST = FlashSale;
+
+                            }
+                        } else { // Por categoría
+                            let categories_a = FlashSale.discounts_categories.map(item => item.categoryId); // Corregir aquí
+                            if (categories_a.includes(discountProduct.categoryId)) {
+                                DISCOUNT_EXIST = FlashSale;
+                            }
+                        }
+                    }*/
+
+                    ProductList.push(resources.Product.product_list(ObjectT, variedades));
+                }
             }
+
+            
         } else {
             FlashSale = null;
             ProductList = [];
         }
 
+        
         res.status(200).json({
             sliders: Sliders,
             categories: Categories,
             bes_products: ObjectBestProducts,
             our_products: ObjectOurProducts,
-            FlashSale: FlashSale,
+            FlashSales: FlashSales,
             campaign_products: ProductList,
         });
 
@@ -308,7 +342,7 @@ export const profile_client = async (req, res) => {
               //console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
-
+                
                 collection_detail_orders.push({
                     _id: detail_order.id,
                     sale:order,
@@ -359,7 +393,8 @@ export const profile_client = async (req, res) => {
         });
     } catch (error) {
         res.status(500).send({
-            message: "Ocurrió un problema"
+            message: "Ocurrió un problema",
+            error: error.message
         });
         console.log(error);
     }

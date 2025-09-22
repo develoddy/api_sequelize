@@ -229,6 +229,8 @@ export const registerGuest = async (req, res) => {
             saleDetails: saleDetails,
         });
     } catch (error) {
+        console.log("------> DEBBUG : Error en registerGuest:", error);
+        
         return res.status(500).send({
             message: "Debug: SaleController registerGuest - OCURRIÓ UN PROBLEMA",
         });
