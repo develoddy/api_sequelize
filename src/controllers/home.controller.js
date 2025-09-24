@@ -36,10 +36,23 @@ export const list = async (req, res) => {
         let Categories = await Categorie.findAll({ where: { state: 1 } });
         Categories = Categories.map(categorie => resources.Categorie.categorie_list(categorie));
 
-        // Obtener descuentos de campaña con sus productos y categorías
-        let CampaingDiscount = await Discount.findOne({
+                // Obtener descuentos de campaña activos
+        const DISCOUNT_EXIST = await Discount.findOne({
             where: {
                 type_campaign: 1,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { model: DiscountProduct },
+                { model: DiscountCategorie }
+            ]
+        });
+
+        // Obtener Flash Sales activos
+        const SALE_FLASH_EXIST = await Discount.findOne({
+            where: {
+                type_campaign: 2,
                 start_date_num: { [Op.lte]: TIME_NOW },
                 end_date_num: { [Op.gte]: TIME_NOW },
             },
@@ -66,22 +79,22 @@ export const list = async (req, res) => {
             let REVIEWS = await Review.findAll({ where: { productId: product.id } });
             let AVG_REVIEW = REVIEWS.length > 0 ? Math.ceil(REVIEWS.reduce((sum, item) => sum + item.cantidad, 0) / REVIEWS.length) : 0;
             let COUNT_REVIEW = REVIEWS.length;
-            let DISCOUNT_EXIST = null;
-            if (CampaingDiscount) {
-                if (CampaingDiscount.type_segment === 1) { // Por producto
-                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId); // Corregir aquí
+            let PRODUCT_DISCOUNT = null;
+            if (DISCOUNT_EXIST) {
+                if (DISCOUNT_EXIST.type_segment === 1) { // Por producto
+                    let products_a = DISCOUNT_EXIST.discounts_products.map(item => item.productId);
                     if (products_a.includes(product.id)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+                        PRODUCT_DISCOUNT = DISCOUNT_EXIST;
                     }
                 } else { // Por categoría
-                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId); // Corregir aquí
+                    let categories_a = DISCOUNT_EXIST.discounts_categories.map(item => item.categoryId);
                     if (categories_a.includes(product.categoryId)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+                        PRODUCT_DISCOUNT = DISCOUNT_EXIST;
                     }
                 }
             }
 
-            ObjectBestProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            ObjectBestProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, PRODUCT_DISCOUNT));
         }
 
         // Obtener nuestros productos
@@ -101,22 +114,22 @@ export const list = async (req, res) => {
             let REVIEWS = await Review.findAll({ where: { productId: product.id } });
             let AVG_REVIEW = REVIEWS.length > 0 ? Math.ceil(REVIEWS.reduce((sum, item) => sum + item.cantidad, 0) / REVIEWS.length) : 0;
             let COUNT_REVIEW = REVIEWS.length;
-            let DISCOUNT_EXIST = null;
-            if (CampaingDiscount) {
-                if (CampaingDiscount.type_segment === 1) { // Por producto
-                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId); // Corregir aquí
+            let PRODUCT_DISCOUNT = null;
+            if (DISCOUNT_EXIST) {
+                if (DISCOUNT_EXIST.type_segment === 1) { // Por producto
+                    let products_a = DISCOUNT_EXIST.discounts_products.map(item => item.productId);
                     if (products_a.includes(product.id)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+                        PRODUCT_DISCOUNT = DISCOUNT_EXIST;
                     }
                 } else { // Por categoría
-                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId); // Corregir aquí
+                    let categories_a = DISCOUNT_EXIST.discounts_categories.map(item => item.categoryId);
                     if (categories_a.includes(product.categoryId)) {
-                        DISCOUNT_EXIST = CampaingDiscount;
+                        PRODUCT_DISCOUNT = DISCOUNT_EXIST;
                     }
                 }
             }
 
-            ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, PRODUCT_DISCOUNT));
         }
 
 
@@ -279,14 +292,71 @@ export const show_landing_product = async (req, res) => {
             objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview));
         }
 
-        // Obtener descuento de venta flash si se proporciona un ID de descuento
+        // Obtener descuento de campaña actual
+        const TIME_NOW = Date.now();
+        let CampaingDiscount = await Discount.findOne({
+            where: {
+                type_campaign: 1,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { model: DiscountProduct },
+                { model: DiscountCategorie }
+            ]
+        });
+
+        // Obtener Flash Sales activos
+        const SALE_FLASH_EXIST = await Discount.findOne({
+            where: {
+                type_campaign: 2,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { model: DiscountProduct },
+                { model: DiscountCategorie }
+            ]
+        });
+
+        // Verificar si el producto tiene descuento de campaña
+        let DISCOUNT_EXIST = null;
+        if (product && CampaingDiscount) {
+            if (CampaingDiscount.type_segment === 1) { // Por producto
+                let products_a = CampaingDiscount.discounts_products.map(item => item.productId);
+                if (products_a.includes(product.id)) {
+                    DISCOUNT_EXIST = CampaingDiscount;
+                }
+            } else { // Por categoría
+                let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
+                if (categories_a.includes(product.categoryId)) {
+                    DISCOUNT_EXIST = CampaingDiscount;
+                }
+            }
+        }
+
+        // Verificar si el producto tiene Flash Sale activo
         let saleFlash = null;
         if (DISCOUNT_ID) {
+            // Si se proporciona un ID de descuento específico
             saleFlash = await Discount.findByPk(DISCOUNT_ID);
+        } else if (product && SALE_FLASH_EXIST) {
+            // Verificar si el producto está incluido en el Flash Sale activo
+            if (SALE_FLASH_EXIST.type_segment === 1) { // Por producto
+                let products_a = SALE_FLASH_EXIST.discounts_products.map(item => item.productId);
+                if (products_a.includes(product.id)) {
+                    saleFlash = SALE_FLASH_EXIST;
+                }
+            } else { // Por categoría
+                let categories_a = SALE_FLASH_EXIST.discounts_categories.map(item => item.categoryId);
+                if (categories_a.includes(product.categoryId)) {
+                    saleFlash = SALE_FLASH_EXIST;
+                }
+            }
         }
 
         res.status(200).json({
-            product: resources.Product.product_list(product, variedades),
+            product: resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST),
             related_products: objectRelateProducts,
             SALE_FLASH: saleFlash,
             REVIEWS: reviews,
