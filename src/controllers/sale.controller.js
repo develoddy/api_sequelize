@@ -91,17 +91,26 @@ async function send_email(sale_id) {
                 return callback(err);
             }
 
-            // Enriquecer detalles con precio unitario y total según variedad o precio de base
+            // Enriquecer detalles con precio unitario y total considerando descuentos
             const enrichedOrderDetails = orderDetails.map(detail => {
                 const d = detail.toJSON();
                 d.product = d.product; // conservar producto
                 // Sequelize toJSON devuelve la variedad en d.variedade, renombramos a d.variedad
                 d.variedad = d.variedad ?? d.variedade ?? null;
-                // fallback a retail_price de la variedad o price_unitario
-                const unitPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario);
-                d.unitPrice = unitPrice;
-                // calcular total por cantidad
-                d.total = parseFloat((unitPrice * d.cantidad).toFixed(2));
+                
+                // Precio original (sin descuento)
+                const originalPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario);
+                d.originalPrice = originalPrice;
+                
+                // Precio final considerando descuento
+                const finalPrice = parseFloat(d.discount || d.code_discount || originalPrice);
+                d.unitPrice = finalPrice;
+                
+                // Indicar si tiene descuento (comparando precio original vs precio final)
+                d.hasDiscount = finalPrice < originalPrice;
+                
+                // calcular total por cantidad usando precio final
+                d.total = parseFloat((finalPrice * d.cantidad).toFixed(2));
                 return d;
             });
             
