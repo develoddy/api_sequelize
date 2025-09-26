@@ -296,7 +296,7 @@ a[x-apple-data-detectors],
                               <span style="text-decoration:line-through;color:#999999;"><%= order_detail[i].originalPrice.toFixed(2) %> €</span>
                             </p>
                             <p style="Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#e74c3c;font-size:14px">
-                              <strong>Precio con descuento:</strong> <%= order_detail[i].unitPrice.toFixed(2) %> €
+                              <strong>Descuento aplicado:</strong> -<%= (order_detail[i].originalPrice - order_detail[i].unitPrice).toFixed(2) %> €
                             </p>
                           <% } else { %>
                             <p style="Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px">
