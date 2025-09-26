@@ -27,22 +27,30 @@ export const createCheckoutSession = async (req, res) => {
     }
 
     const lineItems = cart.map((item) => {
-      // Determine unit price: variant retail_price, or product price_usd, or fallback to item.price_unitario
-      const unitPrice = Number(
+      // Usar el precio final si viene procesado desde el frontend (incluye descuentos)
+      // Si no existe finalPrice, usar el precio original como fallback
+      const finalPrice = item.finalPrice || Number(
         (item.variedad && item.variedad.retail_price != null)
           ? item.variedad.retail_price
           : (item.product && item.product.price_usd != null)
             ? item.product.price_usd
             : item.price_unitario
       );
+
+      // Agregar información de descuento en la descripción si aplica
+      let productName = item.product.title;
+      if (item.hasDiscount && item.originalPrice && item.finalPrice) {
+        productName += ` (Rebajado de €${item.originalPrice.toFixed(2)} a €${item.finalPrice.toFixed(2)})`;
+      }
+
       return {
         price_data: {
           currency     : "eur",
           product_data : {
-            name : item.product.title,
+            name : productName,
           },
-          // unitPrice in euros, convert to cents
-          unit_amount  : Math.round(unitPrice * 100),
+          // finalPrice in euros, convert to cents
+          unit_amount  : Math.round(finalPrice * 100),
         },
         quantity: item.cantidad,
       };
