@@ -218,7 +218,8 @@ export const show_landing_product = async (req, res) => {
         let product = null;
         let relatedProducts = [];
         let objectRelateProducts = [];
-        
+
+
 
         // Si se proporciona un slug, buscar el producto
         if (SLUG !== "null") {
@@ -282,15 +283,6 @@ export const show_landing_product = async (req, res) => {
         let avg_review = reviews.length > 0 ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / reviews.length) : 0;
         let count_review = reviews.length;
 
-        // Crear lista de productos relacionados con sus variedades y reviews
-        //let objectRelateProducts = [];
-        for (const relatedProduct of relatedProducts) {
-            let relatedVariedades = await Variedad.findAll({ where: { productId: relatedProduct.id } });
-            let relatedReviews = await Review.findAll({ where: { productId: relatedProduct.id } });
-            let relatedAvgReview = relatedReviews.length > 0 ? Math.ceil(relatedReviews.reduce((sum, item) => sum + item.cantidad, 0) / relatedReviews.length) : 0;
-            let relatedCountReview = relatedReviews.length;
-            objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview));
-        }
 
         // Obtener descuento de campaña actual
         const TIME_NOW = Date.now();
@@ -334,6 +326,33 @@ export const show_landing_product = async (req, res) => {
                 }
             }
         }
+
+        // Crear lista de productos relacionados con sus variedades y reviews
+        //let objectRelateProducts = [];
+        for (const relatedProduct of relatedProducts) {
+            let relatedVariedades = await Variedad.findAll({ where: { productId: relatedProduct.id } });
+            let relatedReviews = await Review.findAll({ where: { productId: relatedProduct.id } });
+            let relatedAvgReview = relatedReviews.length > 0 ? Math.ceil(relatedReviews.reduce((sum, item) => sum + item.cantidad, 0) / relatedReviews.length) : 0;
+            let relatedCountReview = relatedReviews.length;
+
+            // Calculamos descuento de campaña para el producto relacionado
+            let relatedDiscount = null;
+            if (CampaingDiscount) {
+                if (CampaingDiscount.type_segment === 1) { // Por producto
+                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId);
+                    if (products_a.includes(relatedProduct.id)) {
+                        relatedDiscount = CampaingDiscount;
+                    }
+                } else { // Por categoría
+                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
+                    if (categories_a.includes(relatedProduct.categoryId)) {
+                        relatedDiscount = CampaingDiscount;
+                    }
+                }
+            }
+            objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
+        }
+
 
         // Verificar si el producto tiene Flash Sale activo
         let saleFlash = null;
