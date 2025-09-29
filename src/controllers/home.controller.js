@@ -138,8 +138,6 @@ export const list = async (req, res) => {
             ]
         });
 
-        console.log(JSON.stringify(FlashSales, null, 2));
-
 
         let ProductList = [];
         if (FlashSales) {
@@ -658,7 +656,8 @@ export const filters_products = async (req, res) => {
             });
         }
         
-        let campaingDiscount;
+        let campaingDiscount = null;
+        let flashSales = null;
         // FILTRO DE DESCUENTO
         if (is_discount == 1 ||is_discount == 2) {
             campaingDiscount = await Discount.findOne({
@@ -685,6 +684,23 @@ export const filters_products = async (req, res) => {
                     });
                 }
             }
+
+
+            flashSales = await Discount.findOne({
+                where: {
+                    type_campaign: 2,
+                    start_date_num: { [Op.lte]: TIME_NOW },
+                    end_date_num: { [Op.gte]: TIME_NOW },
+                },
+                include: [{ 
+                    model: DiscountProduct,
+                    include: [{
+                        model: Product,
+                        include: [Galeria]
+                    }] 
+                },
+                ]
+            });
         }
 
         let variedadWhere = {};
@@ -728,7 +744,6 @@ export const filters_products = async (req, res) => {
             filter.logo_position = logo_position_selected;
         }
 
-
         // Buscar productos según filtro construido
         let OurProducts = await Product.findAll({
             state: 2,
@@ -742,13 +757,13 @@ export const filters_products = async (req, res) => {
         });
           
         const Products = [];
-        let DISCOUNT_EXIST = null;
+        
         for (const product of OurProducts) {
             const variedades = await Variedad.findAll({ where: { productId: product.id } });
             const REVIEWS = await Review.findAll({ where: { productId: product.id } });
             const AVG_REVIEW = REVIEWS.length > 0 ? Math.ceil(REVIEWS.reduce((sum, item) => sum + item.cantidad, 0) / REVIEWS.length) : 0;
             const COUNT_REVIEW = REVIEWS.length;
-        
+            let DISCOUNT_EXIST = null;
             if (campaingDiscount) {
                 if (campaingDiscount.type_segment == 1) { // Por producto
                     const products_a = campaingDiscount.discounts_products.map(item => item.productId);
@@ -757,12 +772,26 @@ export const filters_products = async (req, res) => {
                     if (products_a.includes(product.id)) {
                         DISCOUNT_EXIST = campaingDiscount;
                     }
-
-                    
                 } else { // Por categoria
-                    const categories_a = campaingDiscount.discounts_categories.map(item => item.productId);
+                    const categories_a = campaingDiscount.discounts_categories.map(item => item.categoryId);
                     if (categories_a.includes(product.categoryId)) {
                         DISCOUNT_EXIST = campaingDiscount;
+                    }
+                }
+            }
+
+            if (flashSales) {
+                if (flashSales.type_segment === 1) { // Por producto
+                    const products_a = flashSales.discounts_products.map(item => item.productId); // Corregir aquí
+
+                    if (products_a.includes(product.id)) {
+                        DISCOUNT_EXIST = flashSales;
+
+                    }
+                } else { // Por categoría
+                    const categories_a = flashSales.discounts_categories.map(item => item.categoryId); // Corregir aquí
+                    if (categories_a.includes(product.categoryId)) {
+                        DISCOUNT_EXIST = flashSales;
                     }
                 }
             }
