@@ -26,6 +26,14 @@ import bcrypt from 'bcryptjs';
 export const list = async (req, res) => {
     try {
 
+        // Definir sinónimos por categoría
+        const CATEGORY_MAP = {
+            sudaderas: ['hoodies', 'sudadera', 'sudaderas', 'hoodie', 'sweatshirt', 'sweatshirts'],
+            tazas: ['mugs', 'taza', 'tazas', 'cup', 'cups'],
+            camisetas: ['shirts', 'shirt', 'camiseta', 'camisetas', 'all shirts']
+        };
+
+
         const TIME_NOW = req.query.TIME_NOW;
 
         // Obtener sliders
@@ -96,6 +104,9 @@ export const list = async (req, res) => {
 
 
         let ObjectOurProducts = [];
+        let HoodiesProducts = [];
+        let MugsProducts = [];
+
         for (const product of OurProducts) {
             let variedades = await Variedad.findAll({ where: { productId: product.id } });
             let REVIEWS = await Review.findAll({ where: { productId: product.id } });
@@ -116,7 +127,17 @@ export const list = async (req, res) => {
                 }
             }
 
-            ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            // ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            let productObject = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
+            //ObjectOurProducts.push(productObject);
+
+            // Normalizar el nombre de categoría
+            const categoryName = product.category?.title?.toLowerCase();
+
+            // Separar por categoría
+            if (CATEGORY_MAP.camisetas.includes(categoryName)) ObjectOurProducts.push(productObject);
+            if (CATEGORY_MAP.sudaderas.includes(categoryName)) HoodiesProducts.push(productObject);
+            if (CATEGORY_MAP.tazas.includes(categoryName)) MugsProducts.push(productObject);
         }
 
 
@@ -182,6 +203,8 @@ export const list = async (req, res) => {
             categories: Categories,
             bes_products: ObjectBestProducts,
             our_products: ObjectOurProducts,
+            hoodies_products: HoodiesProducts,
+            mugs_products: MugsProducts,    
             FlashSales: FlashSales,
             campaign_products: ProductList,
         });
@@ -658,8 +681,9 @@ export const filters_products = async (req, res) => {
         
         let campaingDiscount = null;
         let flashSales = null;
-        // FILTRO DE DESCUENTO
-        if (is_discount == 1 ||is_discount == 2) {
+        
+        // FILTRO POR CAMPAING DISCOUNT
+        if (is_discount == 1 ) {
             campaingDiscount = await Discount.findOne({
                 where: {
                     type_campaign: 1,
@@ -672,20 +696,11 @@ export const filters_products = async (req, res) => {
                 ]
             });
 
-            if (campaingDiscount) {
-                //console.log("Debbug: campaingDiscount ANTES", campaingDiscount);
-                if (campaingDiscount.type_segment == 1) {
-                    campaingDiscount.discounts_products.forEach(item => {
-                        products_s.push(item.id);
-                    });
-                } else {
-                    campaingDiscount.discounts_categories.forEach(item => {
-                        categories_s.push(item.id);
-                    });
-                }
-            }
+            
+        }
 
-
+        // FILTRO POR FLASH SALE
+        if (is_discount == 2) {
             flashSales = await Discount.findOne({
                 where: {
                     type_campaign: 2,
@@ -702,6 +717,7 @@ export const filters_products = async (req, res) => {
                 ]
             });
         }
+
 
         let variedadWhere = {};
 
@@ -746,7 +762,7 @@ export const filters_products = async (req, res) => {
 
         // Buscar productos según filtro construido
         let OurProducts = await Product.findAll({
-            state: 2,
+            where: filter, //state: 2,
             include: [
                 { model: Galeria },
                 { model: Categorie }
