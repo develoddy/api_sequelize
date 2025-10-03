@@ -30,7 +30,16 @@ export const list = async (req, res) => {
         const CATEGORY_MAP = {
             sudaderas: ['hoodies', 'sudadera', 'sudaderas', 'hoodie', 'sweatshirt', 'sweatshirts'],
             tazas: ['mugs', 'taza', 'tazas', 'cup', 'cups'],
-            camisetas: ['shirts', 'shirt', 'camiseta', 'camisetas', 'all shirts']
+            camisetas: ['shirts', 'shirt', 'camiseta', 'camisetas', 'all shirts'],
+            gorras: [
+                'hats', 'hat',
+                'cap', 'caps',
+                'dad hat', 'dad hats',
+                'baseball cap', 'baseball caps',
+                'snapback', 'snapbacks',
+                'trucker hat', 'trucker hats',
+                'Dad hats / baseball caps', 'dad hats / baseball caps',
+            ]
         };
 
 
@@ -106,6 +115,9 @@ export const list = async (req, res) => {
         let ObjectOurProducts = [];
         let HoodiesProducts = [];
         let MugsProducts = [];
+        let CapsProducts = [];
+
+
 
         for (const product of OurProducts) {
             let variedades = await Variedad.findAll({ where: { productId: product.id } });
@@ -138,8 +150,8 @@ export const list = async (req, res) => {
             if (CATEGORY_MAP.camisetas.includes(categoryName)) ObjectOurProducts.push(productObject);
             if (CATEGORY_MAP.sudaderas.includes(categoryName)) HoodiesProducts.push(productObject);
             if (CATEGORY_MAP.tazas.includes(categoryName)) MugsProducts.push(productObject);
+            if (CATEGORY_MAP.gorras.includes(categoryName)) CapsProducts.push(productObject);
         }
-
 
         // Obtener ventas flash
         //let FlashSale = await Discount.findOne({
@@ -164,33 +176,12 @@ export const list = async (req, res) => {
         if (FlashSales) {
             for (const flash of FlashSales) {
                 for (const discountProduct of flash.discounts_products) {
-                    let ObjectT = discountProduct.product; // aquí ya tienes Product + Galerias 
-                    //console.log(JSON.stringify(ObjectT, null, 2));
-
-                     // Buscar las variedades del producto
+                    let ObjectT = discountProduct.product;
                     let variedades = await Variedad.findAll({ where: { productId: ObjectT.id } });
-
-                    
-                    /**if (FlashSale) {
-                        if (FlashSale.type_segment === 1) { // Por producto
-                            let products_a = FlashSale.discounts_products.map(item => item.productId); // Corregir aquí
-
-                            if (products_a.includes(discountProduct.id)) {
-                                DISCOUNT_EXIST = FlashSale;
-
-                            }
-                        } else { // Por categoría
-                            let categories_a = FlashSale.discounts_categories.map(item => item.categoryId); // Corregir aquí
-                            if (categories_a.includes(discountProduct.categoryId)) {
-                                DISCOUNT_EXIST = FlashSale;
-                            }
-                        }
-                    }*/
 
                     ProductList.push(resources.Product.product_list(ObjectT, variedades));
                 }
             }
-
             
         } else {
             FlashSale = null;
@@ -204,7 +195,8 @@ export const list = async (req, res) => {
             bes_products: ObjectBestProducts,
             our_products: ObjectOurProducts,
             hoodies_products: HoodiesProducts,
-            mugs_products: MugsProducts,    
+            mugs_products: MugsProducts,
+            caps_products: CapsProducts,  
             FlashSales: FlashSales,
             campaign_products: ProductList,
         });
