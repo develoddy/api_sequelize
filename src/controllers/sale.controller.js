@@ -239,7 +239,6 @@ export const registerGuest = async (req, res) => {
         });
     } catch (error) {
         console.log("------> DEBBUG : Error en registerGuest:", error);
-        
         return res.status(500).send({
             message: "Debug: SaleController registerGuest - OCURRIÓ UN PROBLEMA",
         });
@@ -559,8 +558,128 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
     },
 });
 
-// Crear la orden en Printful (modo debug, no enviar realmente)
+
+
+
+// 👉 Ajusta la orden para enviar a Printful
+// - Siempre limpiar los items con variant_id, quantity, name, retail_price y files.
+// - Solo añadir "options" si item.options existe y tiene contenido válido.
+// - Esto es automático: camisetas y tazas no tienen options, pero gorras bordadas sí.
+// - Usa validateThreadColors() para asegurar que los colores están permitidos por Printful.
+
 const prepareCreatePrintfulOrder = async (orderData, res) => {
+    const cleanItems = orderData.items.map(item => {
+        const cleanItem = {
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+            name: item.name,
+            retail_price: item.retail_price,
+            files: item.files.map(f => ({
+                url: f.url,
+                type: f.type,
+                filename: f.filename
+            }))
+        };
+
+        console.log("----- DEBUG: Procesando item.name ----- :", item.name);
+        
+        // ✅ Método mejorado para detectar si es un producto bordado
+        // 1. Verificar por nombre (método actual)
+        let isEmbroideredProduct = item.name.toLowerCase().includes('gorra') || 
+            item.name.toLowerCase().includes('bordado') || 
+            item.name.toLowerCase().includes('cap');
+            
+        // 2. Verificar por tipos de archivo (más confiable)
+        if (!isEmbroideredProduct && item.files && item.files.length > 0) {
+            // Si algún archivo tiene un tipo relacionado con bordado, es un producto bordado
+            isEmbroideredProduct = item.files.some(file => 
+                file.type.includes('embroidery') || 
+                file.type.includes('thread') || 
+                file.type.includes('stitch')
+            );
+        }
+        
+        // 3. Verificar por rangos de variant_id conocidos para productos bordados (si se conocen)
+        // Esto requiere conocimiento específico de los rangos de IDs de Printful
+        const embroideryVariantIdRanges = [
+            { min: 7800, max: 8000 },  // Ejemplo: gorras bordadas
+            { min: 12000, max: 12100 } // Ejemplo: otros productos bordados
+            // Añadir más rangos según sea necesario
+        ];
+        
+        if (!isEmbroideredProduct && item.variant_id) {
+            isEmbroideredProduct = embroideryVariantIdRanges.some(
+                range => item.variant_id >= range.min && item.variant_id <= range.max
+            );
+        }
+        
+        console.log("----- DEBUG: ¿Es producto bordado? ----- :", isEmbroideredProduct);
+        
+        // Solo añadir options para productos que realmente lo necesiten (gorras bordadas)
+        if (item.options && Object.keys(item.options).length > 0 && isEmbroideredProduct) {
+            // Filtrar solo las opciones relevantes para bordados y con valores válidos
+            const validOptions = Object.entries(item.options)
+                .filter(([id, value]) => {
+                    // Ignorar opciones irrelevantes para camisetas/productos no bordados
+                    if (!isEmbroideredProduct && (
+                        id.includes('embroidery') || 
+                        id.includes('thread_colors') ||
+                        id === 'stitch_color' ||
+                        id === 'lifelike'
+                    )) {
+                        return false;
+                    }
+                    
+                    // Verificar si el valor es válido
+                    if (value === undefined || value === null || value === '') return false;
+                    if (Array.isArray(value) && value.length === 0) return false;
+                    return true;
+                })
+                .map(([id, value]) => {
+                    // Si es array de colores, validarlos
+                    if (id.includes("thread_colors") && Array.isArray(value)) {
+                        return { id, value: validateThreadColors(value) };
+                    }
+                    return { id, value };
+                });
+                
+            // Solo asignar options si hay opciones válidas
+            if (validOptions.length > 0) {
+                cleanItem.options = validOptions;
+            }
+        }
+
+        return cleanItem;
+    });
+
+    const cleanOrder = {
+        recipient: orderData.recipient,
+        items: cleanItems,
+        retail_costs: orderData.retail_costs
+    };
+
+    /*console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
+    console.log(JSON.stringify(cleanOrder, null, 2));
+    console.log("========================================================");
+    return { error: false, data: cleanOrder };*/
+
+    let data = await createPrintfulOrder(cleanOrder);
+
+    if (data === "error_order") {
+        return { error: true, message: "Ups! Hubo un problema al generar la orden" };
+    }
+
+    return { error: false, data };
+};
+
+
+
+
+
+
+
+// Crear la orden en Printful (modo debug, no enviar realmente)
+/**const prepareCreatePrintfulOrder = async (orderData, res) => {
 
      // Limpiar cada item antes de enviarlo a Printful
     const cleanItems = orderData.items.map(item => ({
@@ -594,7 +713,7 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
         return { error: true, message: "Ups! Hubo un problema al generar la orden" };
     }
     return { error: false, data };
-};
+};*/
 
 
 // Enviar correo electrónico de confirmación
