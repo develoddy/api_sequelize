@@ -658,10 +658,10 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
         retail_costs: orderData.retail_costs
     };
 
-    /*console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
-    console.log(JSON.stringify(cleanOrder, null, 2));
-    console.log("========================================================");
-    return { error: false, data: cleanOrder };*/
+    // console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
+    // console.log(JSON.stringify(cleanOrder, null, 2));
+    // console.log("========================================================");
+    // return { error: false, data: cleanOrder };
 
     let data = await createPrintfulOrder(cleanOrder);
 
