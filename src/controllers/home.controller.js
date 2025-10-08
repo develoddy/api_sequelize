@@ -212,17 +212,25 @@ export const list = async (req, res) => {
 
 export const show_landing_product = async (req, res) => {
     try {
+
         const SLUG = req.params.slug || null;
         const DISCOUNT_ID = req.query._id;
 
         let product = null;
+
+        // Obtener productos de interés (siempre mostrar)
+        const productsOfInterest = await Product.findAll({
+          where: { state: 2 },
+          limit: 8
+        });
+
         let relatedProducts = [];
         let objectRelateProducts = [];
+        let objectInterestProducts = [];
         
 
         // Si se proporciona un slug, buscar el producto
         if (SLUG !== "null") {
-
             // Buscar producto por slug y estado
             product = await Product.findOne({
                 where: {
@@ -234,8 +242,6 @@ export const show_landing_product = async (req, res) => {
                     { model: Categorie }
                 ],
             });
-
-
 
             // Verificar si el producto existe
             if (!product) {
@@ -260,19 +266,20 @@ export const show_landing_product = async (req, res) => {
             relatedProducts = await Product.findAll({
                 where: {
                     categoryId: product.categoryId,
-                    state: 2
+                    state: 2,
+                    id: { [Op.ne]: product.id }
                 }
             });
         }
 
         // Si no hay slug o no hay productos relacionados, devolver productos de interés
-        if (SLUG === 'null' || !SLUG || relatedProducts.length === 0) {
+        //if (SLUG === 'null' || !SLUG || relatedProducts.length === 0) {
             // Devolver productos genéricos o sugeridos
-            relatedProducts = await Product.findAll({
-                where: { state: 2 },
-                limit: 2 // Limitar la cantidad de productos sugeridos
-            });
-        }
+        //    relatedProducts = await Product.findAll({
+        //        where: { state: 2 },
+        //        limit: 4 // Limitar la cantidad de productos sugeridos
+        //    });
+        //}
         
         // Obtener variedades del producto si hay slug
         let variedades = product ? await Variedad.findAll({ where: { productId: product.id } }) : [];
@@ -351,6 +358,31 @@ export const show_landing_product = async (req, res) => {
             objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
         }
 
+        // Crear lista de productos de interés con el mismo formato
+        for (const interestProduct of productsOfInterest) {
+            const interestVariedades = await Variedad.findAll({ where: { productId: interestProduct.id } });
+            const interestReviews = await Review.findAll({ where: { productId: interestProduct.id } });
+            const interestAvgReview = interestReviews.length > 0
+                ? Math.ceil(interestReviews.reduce((sum, item) => sum + item.cantidad, 0) / interestReviews.length)
+                : 0;
+            const interestCountReview = interestReviews.length;
+
+            let interestDiscount = null;
+            if (CampaingDiscount) {
+                if (CampaingDiscount.type_segment === 1 &&
+                    CampaingDiscount.discounts_products.map(p => p.productId).includes(interestProduct.id)) {
+                    interestDiscount = CampaingDiscount;
+                } else if (CampaingDiscount.type_segment !== 1 &&
+                    CampaingDiscount.discounts_categories.map(c => c.categoryId).includes(interestProduct.categoryId)) {
+                    interestDiscount = CampaingDiscount;
+                }
+            }
+
+            objectInterestProducts.push(
+                resources.Product.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount)
+            );
+        }
+
         // Obtener descuento de venta flash si se proporciona un ID de descuento
         let saleFlash = null;
         if (DISCOUNT_ID) {
@@ -374,6 +406,7 @@ export const show_landing_product = async (req, res) => {
         res.status(200).json({
             product: resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST),
             related_products: objectRelateProducts,
+            interest_products: objectInterestProducts,
             SALE_FLASH: saleFlash,
             REVIEWS: reviews,
             AVG_REVIEW: avg_review,
@@ -388,7 +421,6 @@ export const show_landing_product = async (req, res) => {
 }
 
 export const profile_client = async (req, res) => {
-
     try {
 
         let user_id = req.body.user_id;
@@ -425,7 +457,7 @@ export const profile_client = async (req, res) => {
 
             let collection_detail_orders = [];
             for ( const detail_order of detail_orders ) {
-              //console.log("Data detail_order", JSON.stringify(detail_order, null, 2));
+                //console.log("----> Data detail_order", JSON.stringify(detail_order, null, 2));
                 // Obtener review para el detalle de la orden
                 let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
                 
@@ -480,9 +512,9 @@ export const profile_client = async (req, res) => {
     } catch (error) {
         res.status(500).send({
             message: "Ocurrió un problema",
-            error: error.message
+            error: error
         });
-        console.log(error);
+        console.log(" [Internal error] ---->", error);
     }
 }
 
