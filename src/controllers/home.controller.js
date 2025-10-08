@@ -218,12 +218,6 @@ export const show_landing_product = async (req, res) => {
 
         let product = null;
 
-        // Obtener productos de interés (siempre mostrar)
-        const productsOfInterest = await Product.findAll({
-          where: { state: 2 },
-          limit: 8
-        });
-
         let relatedProducts = [];
         let objectRelateProducts = [];
         let objectInterestProducts = [];
@@ -231,7 +225,7 @@ export const show_landing_product = async (req, res) => {
 
         // Si se proporciona un slug, buscar el producto
         if (SLUG !== "null") {
-            // Buscar producto por slug y estado
+            // Buscar producto principal por slug y estado
             product = await Product.findOne({
                 where: {
                     slug: SLUG,
@@ -262,7 +256,7 @@ export const show_landing_product = async (req, res) => {
             let avg_review = reviews.length > 0 ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / reviews.length) : 0;
             let count_review = reviews.length;
 
-            // Obtener productos relacionados por categoría y estado
+            // Productos relacionados: misma categoría, excluir el mismo producto
             relatedProducts = await Product.findAll({
                 where: {
                     categoryId: product.categoryId,
@@ -280,6 +274,19 @@ export const show_landing_product = async (req, res) => {
         //        limit: 4 // Limitar la cantidad de productos sugeridos
         //    });
         //}
+
+        // Obtener productos de interés: diferentes a la categoría del producto principal
+        let interestWhere = { state: 2 };
+        if (product) interestWhere.categoryId = { [Op.ne]: product.categoryId };
+
+        // Obtener productos de interés (siempre mostrar)
+        const productsOfInterest = await Product.findAll({
+          where: interestWhere,
+          limit: 8
+        });
+
+
+
         
         // Obtener variedades del producto si hay slug
         let variedades = product ? await Variedad.findAll({ where: { productId: product.id } }) : [];
