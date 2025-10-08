@@ -79,7 +79,6 @@ export const getPrintfulProducts = async () => {
   try {
 
     const printfulProducts = await getPrintfulProductsService();
-    //console.log("-----> debbuf printfulProducts", JSON.stringify(printfulProducts, null, 2));
 
     /** CREA UN ARREGLO DE IDS DE PRODUCTOS DE PRINTFUL */
     const printfulProductIds = printfulProducts.map(product => product.id);
@@ -551,18 +550,19 @@ const deleteProductAndRelatedComponents = async (product) => {
  * Busca todos los archivos (File) que están asociados a la variedad (variety.id)
  */
 const deleteVarietyAndRelatedFiles = async (variety) => {
-
-  // ENCONTRAR Y ELIMINAR LOS ARCHIVOS ASOCIADOS A LA VARIEDAD
-  const files = await File.findAll({
-    where: {
-      varietyId: variety.id
-    }
+  // Primero eliminar ProductVariants asociados
+  await ProductVariants.destroy({
+    where: { varietyId: variety.id }
   });
 
-  for ( const file of files ) {
+  // Luego eliminar Files asociados
+  const files = await File.findAll({ where: { varietyId: variety.id } });
+  for (const file of files) {
     await file.destroy();
   }
 
+  // Finalmente eliminar la variedad
+  await variety.destroy();
 };
 
 /*
