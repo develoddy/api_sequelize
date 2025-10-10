@@ -13,26 +13,8 @@ import router from './routes/index.js';
 //const app = express();
 dotenv.config();
 const app = express();
-//app.use(cors());
+app.use(cors());
 
-// -------------------- CORS dinámico --------------------
-const allowedOrigins = [
-  process.env.URL_ADMIN 
-];
-
-app.use(cors({
-  origin: function(origin, callback){
-    if(!origin) return callback(null, true); // requests directas (Postman, server-to-server)
-    if(allowedOrigins.includes(origin)){
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET','POST','PUT','DELETE'],
-  allowedHeaders: ['Content-Type','Authorization','token'], // agregar token si lo usas
-  credentials: true
-}));
 
 
 // -------------------- Límites de tamaño --------------------
