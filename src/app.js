@@ -14,24 +14,39 @@ import router from './routes/index.js';
 dotenv.config();
 const app = express();
 //app.use(cors());
-// Configuración CORS para tu frontend
+
+// -------------------- CORS dinámico --------------------
+const allowedOrigins = [
+  process.env.URL_ADMIN 
+];
+
 app.use(cors({
-  origin: process.env.URL_ADMIN,   // tu dominio Angular
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: function(origin, callback){
+    if(!origin) return callback(null, true); // requests directas (Postman, server-to-server)
+    if(allowedOrigins.includes(origin)){
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type','Authorization','token'], // agregar token si lo usas
   credentials: true
 }));
 
 
-
+// -------------------- Límites de tamaño --------------------
 // Límite para el tamaño de las solicitudes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// -------------------- __dirname para ES Modules --------------------
 // Obtener __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+// -------------------- Middleware de cache --------------------
 // Middleware para desactivar caché
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
