@@ -21,7 +21,13 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + '-' + file.originalname); // Nombre del archivo
     }
   });
-const upload = multer({ storage: storage });
+//const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5 MB por archivo
+  }
+});
 
 const router = Router();
 

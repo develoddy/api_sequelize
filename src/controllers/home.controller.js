@@ -787,6 +787,8 @@ export const filters_products = async (req, res) => {
             filter.price_usd = { [Op.between]: [price_min, price_max] };
         }
 
+        console.log("------> logo_position_selected : ", logo_position_selected);
+        
         if (logo_position_selected && logo_position_selected !== '') {
             filter.logo_position = logo_position_selected;
         }
