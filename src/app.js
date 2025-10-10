@@ -13,7 +13,16 @@ import router from './routes/index.js';
 //const app = express();
 dotenv.config();
 const app = express();
-app.use(cors());
+//app.use(cors());
+// Configuración CORS para tu frontend
+app.use(cors({
+  origin: process.env.URL_ADMIN,   // tu dominio Angular
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+
 
 // Límite para el tamaño de las solicitudes
 app.use(express.json({ limit: '50mb' }));
