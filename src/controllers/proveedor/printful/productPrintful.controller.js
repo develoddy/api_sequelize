@@ -41,7 +41,7 @@ export const list = async( req, res ) => {
     res.status( 200 ).json({
         products: products,
     });
-  } catch {
+  } catch (error) {
     console.error('Error al traer los productos de Printful:', error);
     throw new Error('Error al traer los productos de Printful');
   }
@@ -62,7 +62,7 @@ export const show = async( req, res ) => {
     res.status( 200 ).json({
         product: product,
     });
-  } catch {
+  } catch (error) {
     console.error('Error al traer los productos de Printful:', error);
     throw new Error('Error al traer los productos de Printful');
   }
@@ -90,7 +90,15 @@ export const getPrintfulProducts = async () => {
 
     /** ELIMINA LOS PRODUCTOS CON SUS RELACIONES */
     for (const product of productsToDelete) {
-      await deleteProductAndRelatedComponents(product);
+      //await deleteProductAndRelatedComponents(product);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🧹 Eliminando producto local obsoleto: ${product.title}`);
+      }
+      try {
+        await deleteProductAndRelatedComponents(product);
+      } catch (error) {
+        console.error(`Error eliminando producto ${product.id}:`, error);
+      }
     }
 
     /** SE RECCORRE CADA PRODUCTO DE PRINTFUL*/
@@ -424,6 +432,10 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
   // ELIMINAR VARIANTES QUE YA NO EXISTEN
   for (const existingVariant of existingVariants) {
     if (!syncVariants.some(v => v.sku === existingVariant.sku)) {
+      // Eliminar opciones asociadas antes de eliminar la variedad
+      await Option.destroy({ where: { varietyId: existingVariant.id } });
+      await ProductVariants.destroy({ where: { varietyId: existingVariant.id } });
+      await File.destroy({ where: { varietyId: existingVariant.id } });
       await existingVariant.destroy();
     }
   }
@@ -474,75 +486,60 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
  * También llama a deleteOptionsForVariant(variety.id) para eliminar todas las opciones (Option) asociadas a esa variedad.
 */
 const deleteProductAndRelatedComponents = async (product) => {
+  try {
+    // Buscar la categoría asociada (si existe)
+    const category = await Categorie.findOne({ 
+      where: { id: product.categoryId } 
+    });
 
-  // BUSCAR LA CATEGORIA ASOCIADA
-  const category = await Categorie.findOne({
-    where: {
-      id: product.categoryId
+    // 🛒 Eliminar productos del carrito asociados
+    await Cart.destroy({ where: { productId: product.id } });
+
+   // 🧩 Buscar y eliminar las variedades asociadas
+    const varieties = await Variedad.findAll({
+      where: { productId: product.id }
+    });
+
+    for ( const variety of varieties ) {
+      await deleteVarietyAndRelatedFiles( variety );
+      await deleteOptionsForVariant( variety );
+      await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id } });
+      await ProductVariants.destroy({ where: { varietyId: variety.id } });
     }
-  });
 
-  await Cart.destroy({
-    where: {
-      productId: product.id
+    // 💖 Eliminar los favoritos asociado
+    const wishlists = await Wishlist.findAll({ where: { productId: product.id }});
+    if (wishlists) {
+      for (const wishlist of wishlists) {
+        await wishlist.destroy();
+      }
     }
-  });
 
-  // ENCONTRAR Y ELIMINAR LAS VARIEDADES ASOCIADAS
-  const varieties = await Variedad.findAll({
-    where: {
-      productId: product.id
+    // 🖼️ Eliminar las galerías asociadas
+    const galleries = await Galeria.findAll({ where: { productId: product.id } });
+    for ( const gallery of galleries ) {
+      await gallery.destroy();
     }
-  });
 
-  for ( const variety of varieties ) {
-    await deleteVarietyAndRelatedFiles( variety );
-    await deleteOptionsForVariant( variety );
-    await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id } });
-    await ProductVariants.destroy({ where: { varietyId: variety.id } });
-  }
+    // 🧹 Eliminar finalmente el producto
+    const count = await Product.destroy({ where: { idProduct: product.idProduct } });
 
-  // ENCONTRAR Y ELIMINAR LOS FAVORITOS ASOCIADOS
-  const wishlists = await Wishlist.findAll({
-    where: {
-      productId: product.id
+    // 🗂️ Verificar si la categoría sigue siendo usada
+    if (category) {
+      const productsInCategory = await Product.findAll({
+        where: { categoryId: category.id }
+      });
+
+      if (productsInCategory.length === 0) {
+        await category.destroy();
+        console.log(`🗂️ Categoría "${category.title}" eliminada (sin productos asociados).`);
+      }
     }
-  });
 
-  if (wishlists) {
-    for ( const wishlist of wishlists ) {
-      await wishlist.destroy();
-    }
-  }
+    console.log(`✅ Producto "${product.title}" y sus relaciones eliminados correctamente.`);
 
-  // ENCONTRAR Y ELIMINAR LAS GALERIAS ASOCIADAS
-  const galleries = await Galeria.findAll({
-    where: {
-      productId: product.id
-    }
-  });
-
-  for ( const gallery of galleries ) {
-    await gallery.destroy();
-  }
-
-  // ELIMINAR EL PRODUCTO FINALMENTE
-  const count = await Product.destroy({
-    where: {
-      idProduct: product.idProduct
-    }
-  });
-
-  // VERIFICAR SI LA CATEGORIA SIGUE SIENDO UTLIZADA POR ALGUN OTRO PRODUCTO
-  const productsInCategory = await Product.findAll({
-    where: {
-      categoryId: category.id
-    }
-  });
-
-  // SI NINGUN OTRO PRODUCTO USA ESTA CATEGORIA, ELIMINAR LA CATEGORIA
-  if ( productsInCategory.length === 0 ) {
-    await category.destroy();
+  } catch (error) {
+    console.error(`❌ Error eliminando producto ${product.id}:`, error);
   }
 };
 
@@ -550,19 +547,25 @@ const deleteProductAndRelatedComponents = async (product) => {
  * Busca todos los archivos (File) que están asociados a la variedad (variety.id)
  */
 const deleteVarietyAndRelatedFiles = async (variety) => {
-  // Primero eliminar ProductVariants asociados
-  await ProductVariants.destroy({
-    where: { varietyId: variety.id }
-  });
+  try {
+    // Primero eliminar ProductVariants asociados
+    await ProductVariants.destroy({
+      where: { varietyId: variety.id }
+    });
 
-  // Luego eliminar Files asociados
-  const files = await File.findAll({ where: { varietyId: variety.id } });
-  for (const file of files) {
-    await file.destroy();
+    // Luego eliminar Files asociados
+    const files = await File.findAll({ where: { varietyId: variety.id } });
+    for (const file of files) {
+      await file.destroy();
+    }
+
+    // Finalmente eliminar la variedad
+    await variety.destroy();
+
+  } catch (error) {
+    console.error(`Error eliminando variedad ${variety.id}:`, error);
+    throw new Error(`Error eliminando variedad ${variety.id}`);
   }
-
-  // Finalmente eliminar la variedad
-  await variety.destroy();
 };
 
 /*
@@ -581,11 +584,12 @@ const deleteOptionsForVariant = async (variety) => {
     }
 
     // ELIMINAR LA VARIEDAD FINALMENTE
-    await variety.destroy();
+    // ❌ NO eliminar la variedad aquí
+    // await variety.destroy();
 
   } catch ( error ) {
-    console.error(`Error deleting options for variant ${variantId}:`, error);
-    throw new Error(`Error deleting options for variant ${variantId}`);
+    console.error(`Error deleting options for variant ${variety.id}:`, error);
+    throw new Error(`Error deleting options for variant ${variety.id}`);
   }
 };
 
