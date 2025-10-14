@@ -15,6 +15,7 @@ export const Product = sequelize.define('products', {
     portada: { type: DataTypes.STRING, allowNull: false },
     //galerias: { type: DataTypes.JSON, allowNull: true },
     state: { type: DataTypes.INTEGER, defaultValue: 1 },
+    printful_ignored: {type: DataTypes.BOOLEAN, allowNull: true, defaultValue: false},
     stock: { type: DataTypes.INTEGER, defaultValue: 0 },
     // Descripciones multilenguaje
     description_en: { type: DataTypes.TEXT, allowNull: false },  // Inglés original

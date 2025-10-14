@@ -20,14 +20,45 @@ export const getPrintfulShippingRatesService = async (payload) => {
 };
 
 /** STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV */
+//export const getPrintfulProductsService = async () => {
+//    try {
+//        const response = await printfulApi.get('/store/products');
+//        return response.data.result;
+//    } catch (error) {
+//        console.error('Error fetching Printful products:', error);
+//        throw new Error('Failed to fetch Printful products');
+//    }
+//};
+
+/** STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV (con paginación) */
 export const getPrintfulProductsService = async () => {
-    try {
-        const response = await printfulApi.get('/store/products');
-        return response.data.result;
-    } catch (error) {
-        console.error('Error fetching Printful products:', error);
-        throw new Error('Failed to fetch Printful products');
+  try {
+    let allProducts = [];
+    let offset = 0;
+    const limit = 20; // Printful devuelve máximo 20 productos por página
+
+    while (true) {
+      const response = await printfulApi.get(`/store/products?offset=${offset}&limit=${limit}`);
+      const products = response.data.result;
+      const paging = response.data.paging;
+
+      allProducts = allProducts.concat(products);
+
+      console.log(`🔄 Página cargada: offset ${offset} | Productos: ${products.length}`);
+
+      // Si ya no hay más productos, rompemos el bucle
+      if (paging.total <= offset + limit) break;
+
+      offset += limit;
     }
+
+    console.log(`✅ Total productos obtenidos de Printful: ${allProducts.length}`);
+    return allProducts;
+
+  } catch (error) {
+    console.error('Error fetching Printful products:', error);
+    throw new Error('Failed to fetch Printful products');
+  }
 };
 
 /** STORE: SE OBTIENE EL DETALLE DEL PRODUCTO SELECCIONADO */

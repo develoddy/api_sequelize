@@ -158,6 +158,7 @@ const processPrintfulProduct = async (product) => {
     if ( existingProduct ) {
       await createOrUpdateVariants( existingProduct.id, productDetail.sync_variants );
     }
+    console.log(`Procesando producto: ${product.id} - ${product.name}`);
 
   } catch ( error ) {
     console.error('Error processing Printful product:', error);
@@ -237,15 +238,10 @@ const createProduct = async (product, productDetail, category) => {
   // Llamada extra al catálogo para obtener la descripción
   const catalogResponse = await getPrintfulCatalogProductDetail(productId);
 
-  
-
-   // Traduce aquí con tu función de traducción (Google, DeepL, etc)
+  // Traduce aquí con tu función de traducción (Google, DeepL, etc)
   const description_en = catalogResponse.product?.description || "Descripción no disponible";
   const description_es = "Descripción no disponible";
 
-  
-
-  
   return await Product.create({
     idProduct: product.id,
     title: product.name,
@@ -259,13 +255,12 @@ const createProduct = async (product, productDetail, category) => {
     sku: await extractSKU(productDetail.sync_variants[0].sku),
     slug: await generateSlug(product.name),
     state: product.is_ignored ? 1 : 2,
+    printful_ignored: product.is_ignored,
     imagen: "tu_imagen",
     type_inventario: 2,
     tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
   });
 };
-
-
 
 // Actualiza un producto solo si hay cambios
 const updateProductIfNeeded = async (existingProduct, product, productDetail, category) => {

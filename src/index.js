@@ -34,7 +34,7 @@ import './models/Associations.js';
 async function main() {
     try {
         await sequelize.sync({ force: false });
-        //await sequelize.sync({ alter: true });
+        //await sequelize.sync({ alter: true }); // Esto actualiza la tabla sin borrar datos:
         const PORT = 3500;
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
