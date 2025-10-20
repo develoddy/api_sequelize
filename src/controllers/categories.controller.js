@@ -38,23 +38,41 @@ export const register = async( req, res ) => {
 
 export const update = async(req, res) => {
     try {
-        if (req.files && req.files.length > 0) {
-            const portadaFile = req.files.find(file => file.fieldname === 'portada');
-            if (portadaFile) {
-                var img_path = portadaFile.path;
-                var name = img_path.split('/');
-                var portada_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
-                req.body.imagen = portada_name;
-            }
+        // if (req.files && req.files.length > 0) {
+        //     const portadaFile = req.files.find(file => file.fieldname === 'portada');
+        //     if (portadaFile) {
+        //         var img_path = portadaFile.path;
+        //         var name = img_path.split('/');
+        //         var portada_name = name[name.length - 1];
+        //         req.body.imagen = portada_name;
+        //     }
+        // }
+
+        // --- Imagen portada ---
+        if (req.files?.portada?.length > 0) {
+            const portadaFile = req.files.portada[0];
+            const img_path = portadaFile.path;
+            const name = img_path.split('/');
+            const portada_name = name[name.length - 1];
+            req.body.imagen = portada_name;
         }
 
-        const customFile = req.files.find(file => file.fieldname === 'custom_image');
-        if (customFile) {
+        // --- Imagen personalizada ---
+        if (req.files?.custom_image?.length > 0) {
+            const customFile = req.files.custom_image[0];
             const img_path = customFile.path;
             const name = img_path.split('/');
             const custom_name = name[name.length - 1];
             req.body.custom_image = custom_name;
         }
+
+        // const customFile = req.files.find(file => file.fieldname === 'custom_image');
+        // if (customFile) {
+        //     const img_path = customFile.path;
+        //     const name = img_path.split('/');
+        //     const custom_name = name[name.length - 1];
+        //     req.body.custom_image = custom_name;
+        // }
 
         await Categorie.update(req.body, {
             where: {

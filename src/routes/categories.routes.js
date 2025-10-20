@@ -27,7 +27,8 @@ const upload = multer({ storage: storage });
 const router = Router();
 
 router.post( '/register', [auth.verifyAdmin, upload.array('portada')], register);
-router.put( '/update', [ auth.verifyAdmin, upload.array('portada') ], update);
+//router.put( '/update', [ auth.verifyAdmin, upload.array('portada') ], update);
+router.put('/update',[auth.verifyAdmin, upload.fields([{ name: 'portada', maxCount: 1 },{ name: 'custom_image', maxCount: 1 }])],update);
 router.get( '/list', auth.verifyAdmin, list);
 router.delete( '/delete', auth.verifyAdmin, remove);
 router.get( '/uploads/categorie/:img', getImage);
