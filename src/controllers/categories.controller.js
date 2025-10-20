@@ -14,10 +14,20 @@ export const register = async( req, res ) => {
                 var portada_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
                 req.body.imagen = portada_name;
             }
+
+            // Imagen personalizada (opcional)
+            const customFile = req.files.find(file => file.fieldname === 'custom_image');
+            if (customFile) {
+                const img_path = customFile.path;
+                const name = img_path.split('/');
+                const custom_name = name[name.length - 1];
+                req.body.custom_image = custom_name;
+            }
         }
 
         const categorie = await Categorie.create(req.body);
         res.status(200).json(categorie);
+
     } catch ( error ) {
         res.status(500).send({
             message: "debbug: CategorieController register - OCURRIÓ UN PROBLEMA"
@@ -36,6 +46,14 @@ export const update = async(req, res) => {
                 var portada_name = name[name.length - 1]; // Obtén el último elemento que es el nombre del archivo
                 req.body.imagen = portada_name;
             }
+        }
+
+        const customFile = req.files.find(file => file.fieldname === 'custom_image');
+        if (customFile) {
+            const img_path = customFile.path;
+            const name = img_path.split('/');
+            const custom_name = name[name.length - 1];
+            req.body.custom_image = custom_name;
         }
 
         await Categorie.update(req.body, {

@@ -9,7 +9,7 @@ import {
 
 export const getPrintfulCategory = async(categoryId) =>  {
     try {
-        const response = await etPrintfulCategory( categoryId );
+        const response = await getPrintfulCategory( categoryId );
         return response.result; // Aquí deberías obtener los detalles del producto
     } catch (error) {
         console.error('Error al obtener los detalles del producto:', error);
