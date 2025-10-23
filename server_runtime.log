@@ -1,0 +1,540 @@
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'users' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `users`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'categories' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `categories`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'products' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `products`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'galerias' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `galerias`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'variedades' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `variedades`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'productVariants' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `productVariants`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'files' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `files`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'options' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `options`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'carts' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `carts`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'wishlists' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `wishlists`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'guests' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `guests`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'sales' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `sales`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'sale_details' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `sale_details`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'address_clients' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `address_clients`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'address_guests' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `address_guests`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'sliders' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `sliders`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'cupones' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `cupones`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'cupones_product' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `cupones_product`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'cupones_categorie' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `cupones_categorie`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'discounts' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `discounts`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'discounts_product' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `discounts_product`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'discounts_categorie' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `discounts_categorie`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'reviews' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `reviews`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'sale_addresses' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `sale_addresses`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'cartsCache' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `cartsCache`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'chat_conversations' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `chat_conversations`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'chat_messages' AND TABLE_SCHEMA = 'ecommercedb'
+Executing (default): SHOW INDEX FROM `chat_messages`
+Server running on port 3500
+Socket.IO server started
+Cliente conectado: waSAYYBmBh1AawX6AAAC
+Cliente conectado: aDtJKqE8iPCY2vKWAAAD
+Usuario identificado - Session: sess_mh3w4tnyygk3zs, SocketID: waSAYYBmBh1AawX6AAAC
+Agente identificado - ID: agent_sim, Nombre: Agent Sim, SocketID: aDtJKqE8iPCY2vKWAAAD
+Executing (default): SELECT `id`, `user_id`, `guest_id`, `session_id`, `is_active`, `status`, `last_message`, `last_message_time`, `unread_count`, `agent_id` FROM `chat_conversations` AS `ChatConversation` WHERE `ChatConversation`.`session_id` = 'sess_mh3w4tnyygk3zs' AND `ChatConversation`.`guest_id` = 'guest_sim' AND `ChatConversation`.`is_active` = true LIMIT 1;
+Executing (default): INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+Error creando conversación: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3w4tnyygk3zs',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Error en findOrCreateConversation: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3w4tnyygk3zs',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Error en identify-user: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3w4tnyygk3zs',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3w4tnyygk3zs',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Usuario desconectado - Session: sess_mh3w4tnyygk3zs, SocketID: waSAYYBmBh1AawX6AAAC
+Cliente desconectado: waSAYYBmBh1AawX6AAAC
+Agente desconectado - ID: agent_sim, SocketID: aDtJKqE8iPCY2vKWAAAD
+Cliente desconectado: aDtJKqE8iPCY2vKWAAAD
+Executing (default): SELECT `id`, `user_id`, `guest_id`, `session_id`, `is_active`, `status`, `last_message`, `last_message_time`, `unread_count`, `agent_id` FROM `chat_conversations` AS `ChatConversation` WHERE `ChatConversation`.`session_id` = 'sess_mh3w4tnyygk3zs' AND `ChatConversation`.`guest_id` = 123 AND `ChatConversation`.`is_active` = true LIMIT 1;
+Executing (default): INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+Cliente conectado: Q-OWIyVc4GQKOmHjAAAG
+Cliente conectado: sUhQd0FrWE6D7tzAAAAH
+Agente identificado - ID: agent_sim, Nombre: Agent Sim, SocketID: Q-OWIyVc4GQKOmHjAAAG
+Usuario identificado - Session: sess_mh3wgh8nlq59w3, SocketID: sUhQd0FrWE6D7tzAAAAH
+Executing (default): SELECT `id`, `user_id`, `guest_id`, `session_id`, `is_active`, `status`, `last_message`, `last_message_time`, `unread_count`, `agent_id` FROM `chat_conversations` AS `ChatConversation` WHERE `ChatConversation`.`session_id` = 'sess_mh3wgh8nlq59w3' AND `ChatConversation`.`guest_id` = 'guest_sim' AND `ChatConversation`.`is_active` = true LIMIT 1;
+Executing (default): INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+Error creando conversación: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3wgh8nlq59w3',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Error en findOrCreateConversation: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3wgh8nlq59w3',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Error en identify-user: Error
+    at Query.run (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async MySQLQueryInterface.insert (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/dialects/abstract/query-interface.js:308:21)
+    at async model.save (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:2490:35)
+    at async ChatConversation.create (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/sequelize/lib/model.js:1362:12)
+    at async ChatService.createConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:15:14)
+    at async ChatService.findOrCreateConversation (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/services/chat/chat.service.js:63:14)
+    at async Socket.<anonymous> (file:///Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/src/controllers/chat/socket.controller.js:48:30) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  original: Error: Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1
+      at Packet.asError (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Execute.execute (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at Socket.<anonymous> (/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/node_modules/mysql2/lib/base/connection.js:100:25)
+      at Socket.emit (node:events:517:28)
+      at addChunk (node:internal/streams/readable:368:12)
+      at readableAddChunk (node:internal/streams/readable:341:9)
+      at Readable.push (node:internal/streams/readable:278:10) {
+    code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+    errno: 1366,
+    sqlState: '22007',
+    sqlMessage: "Incorrect integer value: 'guest_sim' for column `ecommercedb`.`chat_conversations`.`guest_id` at row 1",
+    sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+    parameters: [
+      null,
+      'guest_sim',
+      'sess_mh3wgh8nlq59w3',
+      true,
+      'open',
+      null,
+      null,
+      0
+    ]
+  },
+  sql: 'INSERT INTO `chat_conversations` (`id`,`user_id`,`guest_id`,`session_id`,`is_active`,`status`,`last_message`,`last_message_time`,`unread_count`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);',
+  parameters: [
+    null,
+    'guest_sim',
+    'sess_mh3wgh8nlq59w3',
+    true,
+    'open',
+    null,
+    null,
+    0
+  ]
+}
+Agente desconectado - ID: agent_sim, SocketID: Q-OWIyVc4GQKOmHjAAAG
+Cliente desconectado: Q-OWIyVc4GQKOmHjAAAG
+Usuario desconectado - Session: sess_mh3wgh8nlq59w3, SocketID: sUhQd0FrWE6D7tzAAAAH
+Cliente desconectado: sUhQd0FrWE6D7tzAAAAH

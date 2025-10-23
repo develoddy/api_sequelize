@@ -22,6 +22,8 @@
     "express": "^4.19.2",
     "handlebars": "^4.7.8",
     "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
+    "mongoose": "^8.19.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "mysql2": "^3.9.7",
@@ -30,7 +32,10 @@
     "nodemailer-smtp-transport": "^2.7.4",
     "sequelize": "^6.37.3",
     "sharp": "^0.33.4",
-    "stripe": "^18.3.0"
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "stripe": "^18.3.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
