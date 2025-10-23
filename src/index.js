@@ -56,8 +56,8 @@ async function main() {
                     'http://localhost:4200',     // Frontend de e-commerce
                     'http://localhost:4201',     // Panel de admin
                     'http://localhost:4300',     // Otros orígenes si es necesario
-                    process.env.FRONTEND_URL,    // URL de producción del frontend
-                    process.env.ADMIN_URL        // URL de producción del admin
+                    process.env.URL_FRONTEND,    // URL de producción del frontend
+                    process.env.URL_ADMIN       // URL de producción del admin
                 ].filter(Boolean), // Filtrar valores nulos o undefined
                 methods: ['GET', 'POST', 'PUT', 'DELETE'],
                 credentials: true
