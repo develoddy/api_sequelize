@@ -49,8 +49,10 @@ export const ChatConversation = sequelize.define('ChatConversation', {
     comment: 'ID del agente asignado'
   },
 }, {
-  timestamps: false,
-  tableName: 'chat_conversations'
+  tableName: 'chat_conversations',
+  timestamps: true,       // ✅ activa createdAt y updatedAt
+  underscored: true       // ✅ columnas serán created_at y updated_at
+
 });
 
 //module.exports = ChatConversation;
