@@ -168,8 +168,17 @@ const chatController = {
    */
   async getActiveConversations(req, res) {
     try {
-      // Obtener todas las conversaciones activas
-      const conversations = await chatService.getActiveConversations();
+      // Si se pasa ?status= en la query, delegamos al servicio para que
+      // devuelva conversaciones filtradas por estado (open|closed|pending).
+      const { status } = req.query || {};
+      let conversations;
+      if (status) {
+        // permitirá que el servicio valide el valor
+        conversations = await chatService.getConversationsByStatus(status);
+      } else {
+        // Obtener todas las conversaciones activas
+        conversations = await chatService.getActiveConversations();
+      }
       
       return res.status(200).json({
         success: true,

@@ -193,6 +193,68 @@ class ChatService {
   }
 
   /**
+   * Obtiene conversaciones filtradas por status.
+   * Soporta: 'open' | 'closed' | 'pending'
+   * - open: conversaciones activas con status = 'open'
+   * - closed: conversaciones con status = 'closed'
+   * - pending: conversaciones sin agente asignado y no cerradas
+   */
+  async getConversationsByStatus(status) {
+    try {
+      const s = (status || '').toString().toLowerCase();
+      let where = {};
+
+      if (s === 'open') {
+        // Return all conversations whose status is 'open' regardless of is_active
+        // since some rows may have is_active = 0 but still be considered open
+        where = { status: 'open' };
+      } else if (s === 'closed') {
+        where = { status: 'closed' };
+      } else if (s === 'pending') {
+        // pending = no agent assigned and not closed
+        where = {
+          agent_id: null,
+          status: { [Op.ne]: 'closed' }
+        };
+      } else {
+        // si se recibe un valor desconocido, devolver arreglo vacío
+        return [];
+      }
+
+      // Some deployments may store empty-string agent IDs; include both null
+      // and '' when filtering for pending conversations. Also use `raw: true`
+      // to return plain objects (avoid instance serialization issues).
+      if (s === 'pending') {
+        where = {
+          [Op.and]: [
+            { status: { [Op.ne]: 'closed' } },
+            { [Op.or]: [{ agent_id: null }, { agent_id: '' }] }
+          ]
+        };
+      }
+
+      // Optional per-query SQL logging to help debugging; remove or guard in
+      // production if it's too verbose.
+      const loggingFn = (sql) => console.debug(`SQL getConversationsByStatus(${s}): ${sql}`);
+
+      const results = await ChatConversation.findAll({
+        where,
+        order: [['updated_at', 'DESC']],
+        raw: true,
+        logging: loggingFn
+      });
+
+      // debug: (can be removed) log how many rows matched for clarity during testing
+      console.debug(`getConversationsByStatus(${s}) -> ${Array.isArray(results) ? results.length : 0} rows`);
+
+      return results;
+    } catch (error) {
+      console.error("Error obteniendo conversaciones por status:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Asigna un agente a una conversación
    * @param {number} conversationId - ID de la conversación
    * @param {number} agentId - ID del agente
