@@ -844,6 +844,8 @@ export const list = async (req, res) => {
 
             // Get a small preview of products and an image if available
             const details = await SaleDetail.findAll({ where: { saleId: s.id }, include: [ { model: Product }, { model: Variedad, include: { model: File } } ], limit: 5 });
+            //console.log(JSON.stringify(details, null, 2));
+            
             const items = details.map(d => {
                 const det = d.toJSON ? d.toJSON() : d;
                 let image = null;
@@ -858,7 +860,8 @@ export const list = async (req, res) => {
                     title: det.product ? det.product.title : null,
                     cantidad: det.cantidad,
                     price_unitario: det.price_unitario,
-                    imagen: image
+                    imagen: image,
+                    talla: det.variedade ? det.variedade.valor || det.variedade.name : null
                 };
             });
 
