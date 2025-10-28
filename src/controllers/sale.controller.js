@@ -808,7 +808,7 @@ export const list = async (req, res) => {
             // We do this with a separate query to avoid fragile $...$ path substitution in WHERE clauses.
             const productMatches = await SaleDetail.findAll({
                 attributes: ['saleId'],
-                include: [{ model: Product, required: true, where: { title: qLike } }],
+                include: [{ model: Product, required: true, where: { [Op.or]: [ { title: qLike }, { sku: qLike } ] } }],
                 where: {},
                 raw: true
             });
@@ -867,6 +867,7 @@ export const list = async (req, res) => {
                     id: det.id,
                     productId: det.productId,
                     title: det.product ? det.product.title : null,
+                    sku: det.product ? det.product.sku : null,
                     cantidad: det.cantidad,
                     price_unitario: det.price_unitario,
                     imagen: image,
