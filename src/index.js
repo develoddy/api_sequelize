@@ -42,7 +42,7 @@ async function main() {
     try {
         // Sincronizar la base de datos
         await sequelize.sync({ force: false });
-        // await sequelize.sync({ alter: true }); // Esto actualiza la tabla sin borrar datos
+        //await sequelize.sync({ alter: true }); // Esto actualiza la tabla sin borrar datos
         
         const PORT = process.env.PORT || 3500;
         
