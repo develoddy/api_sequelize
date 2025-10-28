@@ -804,28 +804,37 @@ export const list = async (req, res) => {
         if (q) {
             const qLike = { [Op.like]: `%${q}%` };
 
-            // Aquí buscamos por id exacto o número de transacción parcial
-            where[Op.or] = [
+            // First, try to find saleIds that contain products with matching title.
+            // We do this with a separate query to avoid fragile $...$ path substitution in WHERE clauses.
+            const productMatches = await SaleDetail.findAll({
+                attributes: ['saleId'],
+                include: [{ model: Product, required: true, where: { title: qLike } }],
+                where: {},
+                raw: true
+            });
+
+            const saleIdsFromProduct = Array.from(new Set(productMatches.map(pm => pm.saleId)));
+
+            // Aquí buscamos por id exacto o número de transacción parcial o email de user/guest
+            // Además añadimos la condición por id si algún saleId fue encontrado por título de producto
+            const orConditions = [
                 { id: parseInt(q) || 0 },
                 { n_transaction: qLike },
                 { '$User.email$': qLike },
                 { '$Guest.email$': qLike }
             ];
 
-            // If q looks like a number, also try matching id
-            // For more complex searches (user email/name/product title) we rely on Sequelize include and a separate filter below
-            // Para incluir email de usuario o título de producto
+            if (saleIdsFromProduct.length > 0) {
+                orConditions.push({ id: { [Op.in]: saleIdsFromProduct } });
+            }
+
+            where[Op.or] = orConditions;
+
+            // For text search include user/guest so we can filter by their email via the OR conditions
+            // Do NOT add a `where` on the include because that would null out the association when the email doesn't match
             include = [
-                {
-                    model: User,
-                    required: false,
-                    where: { email: qLike }
-                },
-                {
-                    model: Guest,
-                    required: false,
-                    where: { email: qLike }
-                },
+                { model: User, required: false },
+                { model: Guest, required: false }
             ];
         }
 
@@ -927,6 +936,9 @@ export const show = async (req, res) => {
             } else if (d.variedad && d.variedad.Files && d.variedad.Files.length > 0) {
                 image = d.variedad.Files[0].preview_url;
             }
+            // normalize variedad naming and extract talla (valor)
+            const variedadObj = d.variedad || d.variedade || null;
+            const tallaVal = variedadObj ? (variedadObj.valor || variedadObj.name || variedadObj.valor_ ? variedadObj.valor_ : null) : null;
 
             return {
                 _id: d.id,
@@ -938,7 +950,8 @@ export const show = async (req, res) => {
                 price_unitario: d.price_unitario,
                 subtotal: d.subtotal,
                 total: d.total,
-                variedad: d.variedad,
+                variedad: variedadObj,
+                talla: tallaVal,
                 type_discount: d.type_discount,
                 discount: d.discount,
                 code_cupon: d.code_cupon,
