@@ -20,6 +20,7 @@ import wishlistRoutes from "./wishlist.routes.js";
 import shippingratesRoutes from "./shippingrates.route.js";
 import stripeRoutes from "./stripe.routes.js"
 import chatRoutes from './chat/chat.routes.js';
+import saleRoutes  from './sale.routes.js';
 
 
 const app = express();
@@ -44,5 +45,6 @@ app.use("/wishlist", wishlistRoutes);
 app.use("/shipping", shippingratesRoutes);
 app.use("/stripe", stripeRoutes);
 app.use("/chat", chatRoutes);
+app.use("/sales", saleRoutes);
 
 export default app;

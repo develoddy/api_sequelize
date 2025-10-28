@@ -764,4 +764,194 @@ export const getSaleBySession = async (req, res) => {
   }
 };
 
+// Listar ventas (admin) con filtros y paginación
+export const list = async (req, res) => {
+    try {
+        const { page = 1, limit = 20, q, status, userId, dateFrom, dateTo, sortBy = 'createdAt', order = 'DESC' } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
 
+        const where = {};
+
+        if (status) {
+            where.status = status;
+        }
+
+        if (userId) {
+            where.userId = userId;
+        }
+
+        if (dateFrom || dateTo) {
+            where.createdAt = {};
+            if (dateFrom) {
+                where.createdAt[Op.gte] = new Date(dateFrom);
+            }
+            if (dateTo) {
+                // include end of day
+                const toDate = new Date(dateTo);
+                toDate.setHours(23,59,59,999);
+                where.createdAt[Op.lte] = toDate;
+            }
+        }
+
+        // Search across id and stripeTransaction or associated user email/name
+        let include = [
+            { model: User },
+            { model: Guest },
+            { model: SaleDetail, include: [ { model: Product }, { model: Variedad } ] }
+        ];
+
+        // Basic text search on id, n_transaction or user email/name/product title
+        if (q) {
+            const qLike = { [Op.like]: `%${q}%` };
+
+            // Aquí buscamos por id exacto o número de transacción parcial
+            where[Op.or] = [
+                { id: parseInt(q) || 0 },
+                { n_transaction: qLike },
+                { '$User.email$': qLike },
+                { '$Guest.email$': qLike }
+            ];
+
+            // If q looks like a number, also try matching id
+            // For more complex searches (user email/name/product title) we rely on Sequelize include and a separate filter below
+            // Para incluir email de usuario o título de producto
+            include = [
+                {
+                    model: User,
+                    required: false,
+                    where: { email: qLike }
+                },
+                {
+                    model: Guest,
+                    required: false,
+                    where: { email: qLike }
+                },
+            ];
+        }
+
+        const { count, rows } = await Sale.findAndCountAll({
+            where,
+            include,
+            distinct: true, // importante para que el count no duplique por joins
+            limit: parseInt(limit),
+            offset,
+            order: [[sortBy, order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']]
+        });
+
+        // Map results to a lighter payload for admin list
+        const sales = await Promise.all(rows.map(async sale => {
+            const s = sale.toJSON ? sale.toJSON() : sale;
+
+            // Get a small preview of products and an image if available
+            const details = await SaleDetail.findAll({ where: { saleId: s.id }, include: [ { model: Product }, { model: Variedad, include: { model: File } } ], limit: 5 });
+            const items = details.map(d => {
+                const det = d.toJSON ? d.toJSON() : d;
+                let image = null;
+                if (det.product && det.product.portada) {
+                    image = `${process.env.URL_BACKEND}/api/products/uploads/product/${det.product.portada}`;
+                } else if (det.variedad && det.variedad.Files && det.variedad.Files.length > 0) {
+                    image = det.variedad.Files[0].preview_url;
+                }
+                return {
+                    id: det.id,
+                    productId: det.productId,
+                    title: det.product ? det.product.title : null,
+                    cantidad: det.cantidad,
+                    price_unitario: det.price_unitario,
+                    imagen: image
+                };
+            });
+
+            return {
+                id: s.id,
+                n_transaction: s.n_transaction,
+                method_payment: s.method_payment,
+                user: s.user || null,
+                guest: s.guest || null,
+                total: s.total,
+                status: s.status,
+                createdAt: s.createdAt,
+                updatedAt: s.updatedAt,
+                items
+            };
+        }));
+
+        return res.json({
+            success: true,
+            total: count,
+            page: parseInt(page),
+            pages: Math.ceil(count / parseInt(limit)),
+            sales
+        });
+    } catch (error) {
+        console.error('Error in sale.list:', error);
+        return res.status(500).json({ success: false, message: 'Error retrieving sales' });
+    }
+};
+
+
+export const show = async (req, res) => {
+  try {
+        const { id } = req.params;
+
+        const sale = await Sale.findOne({
+            where: { id },
+            include: [
+                { model: User },
+                { model: Guest },
+            ]
+        });
+
+        if (!sale) {
+            return res.status(404).json({ success: false, message: 'Sale not found' });
+        }
+
+        // Obtener detalles de la venta con sus relaciones
+        const details = await SaleDetail.findAll({
+            where: { saleId: sale.id },
+            include: [
+                { model: Product },
+                { model: Variedad, include: { model: File } },
+                { model: Sale },
+            ],
+        });
+
+        // Mapear items para enviar imagen y demás info al front
+        const items = details.map(d => {
+            let image = null;
+            if (d.product && d.product.portada) {
+                image = `${process.env.URL_BACKEND}/api/products/uploads/product/${d.product.portada}`;
+            } else if (d.variedad && d.variedad.Files && d.variedad.Files.length > 0) {
+                image = d.variedad.Files[0].preview_url;
+            }
+
+            return {
+                _id: d.id,
+                product: {
+                    ...d.product?.toJSON(),
+                    imagen: image,
+                },
+                cantidad: d.cantidad,
+                price_unitario: d.price_unitario,
+                subtotal: d.subtotal,
+                total: d.total,
+                variedad: d.variedad,
+                type_discount: d.type_discount,
+                discount: d.discount,
+                code_cupon: d.code_cupon,
+                code_discount: d.code_discount,
+            };
+        });
+
+        return res.json({
+            success: true,
+            sale: {
+                ...sale.toJSON(),
+                items,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching sale:', error);
+        return res.status(500).json({ success: false, message: 'Error fetching sale' });
+    }
+};
