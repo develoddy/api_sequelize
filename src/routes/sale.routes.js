@@ -8,7 +8,10 @@ import {
     registerGuest,
     getSaleBySession,
     list,
-    show
+    show,
+    address,
+    createAdminSale,
+    adminCorrectSale
 } from "../controllers/sale.controller.js";
 
 const router = Router();
@@ -21,6 +24,12 @@ router.get("/by-session/:sessionId", auth.optionalAuth, getSaleBySession);
 // Listado de ventas para panel admin
 router.get('/list', auth.verifyAdmin, list);
 router.get('/show/:id', auth.verifyAdmin, show);
+// Obtener dirección de una venta (para admin)
+router.get('/address/:id', auth.verifyAdmin, address);
+// Admin create sale (creates sale only if Printful accepts)
+router.post('/admin/create', auth.verifyAdmin, createAdminSale);
+// Admin correct sale (create replacement/correction order linked to original)
+router.post('/admin/:id/correct', auth.verifyAdmin, adminCorrectSale);
 
 
 export default router;

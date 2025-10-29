@@ -245,6 +245,187 @@ export const registerGuest = async (req, res) => {
     }
 };
 
+// Crear una venta manual desde admin (envía a Printful primero, persiste solo si Printful acepta)
+export const createAdminSale = async (req, res) => {
+    try {
+        // Expect payload: { sale: {...}, sale_address: {...}, items: [...], costs: {...} }
+        const { sale: saleData = {}, sale_address: saleAddressData = {}, items = [], costs = {} } = req.body;
+        console.log('🟡 createAdminSale payload items:', items && items.length);
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'No items provided' });
+        }
+
+        // Basic normalization: ensure variant_id numbers and files types
+        const cleanedItems = [];
+        for (const it of items) {
+            const variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
+            const files = Array.isArray(it.files) ? it.files.map(f => ({ url: f.url, type: mapPrintfulFileType(f.type), filename: f.filename })).filter(f => f.url && f.type) : [];
+            let name = it.name || it.title || null;
+            if (!name && (it.productId || it.product_id)) {
+                try {
+                    const p = await Product.findByPk(it.productId || it.product_id);
+                    if (p) name = p.title;
+                } catch (e) { /* ignore */ }
+            }
+            cleanedItems.push({ ...it, variant_id, files, name });
+        }
+
+        // Validate items before creating DB records by sending to Printful (prepareCreatePrintfulOrder)
+        const pfOrderData = createPrintfulOrderData(saleAddressData || {}, cleanedItems, costs || {});
+        console.log('🔵 Preparing Printful order for admin creation');
+        const pfResult = await prepareCreatePrintfulOrder(pfOrderData);
+        if (pfResult.error) {
+            console.error('DEBUG createAdminSale: Printful rejected order', pfResult.message || pfResult);
+            return res.status(400).json({ success: false, message: 'Printful validation failed', details: pfResult.message || null });
+        }
+
+        // Persist sale and related records
+        const salePayload = {
+            method_payment: saleData.method_payment || 'MANUAL',
+            n_transaction: saleData.n_transaction || `ADMIN-${Date.now()}`,
+            total: saleData.total || 0,
+            currency_payment: saleData.currency_payment || 'EUR',
+            userId: saleData.userId || saleData.user || null,
+        };
+
+        const newSale = await createSale(salePayload);
+        if (saleAddressData && Object.keys(saleAddressData).length > 0) {
+            const addr = { ...saleAddressData };
+            addr.saleId = newSale.id;
+            await createSaleAddress(addr, newSale.id);
+        }
+
+        // Create sale details for each item
+        for (const it of items) {
+            const det = {
+                type_discount: it.type_discount || 1,
+                discount: it.discount || 0,
+                cantidad: it.quantity || it.cantidad || 1,
+                code_cupon: it.code_cupon || null,
+                code_discount: it.code_discount || null,
+                price_unitario: it.retail_price || it.price || it.price_unitario || 0,
+                subtotal: (parseFloat(it.retail_price || it.price || 0) * (it.quantity || it.cantidad || 1)).toFixed(2),
+                total: (parseFloat(it.retail_price || it.price || 0) * (it.quantity || it.cantidad || 1)).toFixed(2),
+                saleId: newSale.id,
+                productId: it.productId || it.product_id || null,
+                variedadId: it.variedadId || it.varietyId || null
+            };
+            await createSaleDetail(det, newSale.id);
+        }
+
+        // link delivery dates if Printful returned them
+        if (pfResult.data && pfResult.data.minDeliveryDate) {
+            const minD = new Date(pfResult.data.minDeliveryDate);
+            const maxD = new Date(minD);
+            maxD.setDate(maxD.getDate() + 7);
+            await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
+        }
+
+        try { await sendEmail(newSale.id); } catch (e) { console.error('Error sending admin creation email', e); }
+
+        return res.json({ success: true, message: 'Admin sale created and sent to Printful', sale: newSale, pf: pfResult.data });
+    } catch (error) {
+        console.error('❌ Error in createAdminSale:', error);
+        if (error && error.stack) console.error(error.stack);
+        return res.status(500).json({ success: false, message: 'Error creating admin sale' });
+    }
+};
+
+// Crear una corrección de pedido para un pedido existente (admin) — similar to replacement but more generic
+export const adminCorrectSale = async (req, res) => {
+    try {
+        const { id } = req.params; // original sale id
+        const { items = [], sale_address: saleAddressData = {}, costs = {} } = req.body;
+        console.log('🟡 adminCorrectSale for original id:', id, 'items:', items && items.length);
+
+        const original = await Sale.findByPk(id, { include: [{ model: SaleDetail, include: [{ model: Product }, { model: Variedad, include: { model: File } }] }, { model: SaleAddress }, { model: User }, { model: Guest }] });
+        if (!original) return res.status(404).json({ success: false, message: 'Original sale not found' });
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'No items provided for correction' });
+        }
+
+        // Normalize items (populate product name if missing)
+        const cleanedItems = [];
+        for (const it of items) {
+            const variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
+            const files = Array.isArray(it.files) ? it.files.map(f => ({ url: f.url, type: mapPrintfulFileType(f.type), filename: f.filename })).filter(f => f.url && f.type) : [];
+            let name = it.name || it.title || null;
+            if (!name && (it.productId || it.product_id)) {
+                try {
+                    const p = await Product.findByPk(it.productId || it.product_id);
+                    if (p) name = p.title;
+                } catch (e) { /* ignore */ }
+            }
+            cleanedItems.push({ ...it, variant_id, files, name });
+        }
+
+        const pfOrderData = createPrintfulOrderData(saleAddressData || (original.sale_addresses && original.sale_addresses[0] ? (original.sale_addresses[0].toJSON ? original.sale_addresses[0].toJSON() : original.sale_addresses[0]) : {}), cleanedItems, costs || {});
+        const pfResult = await prepareCreatePrintfulOrder(pfOrderData);
+        if (pfResult.error) {
+            console.error('DEBUG adminCorrectSale: Printful rejected order', pfResult.message || pfResult);
+            return res.status(400).json({ success: false, message: 'Printful validation failed', details: pfResult.message || null });
+        }
+
+        // Persist new sale (replacement) and details
+        const salePayload = {
+            method_payment: original.method_payment || 'MANUAL',
+            n_transaction: `ADMIN-REPL-${Date.now()}`,
+            total: items.reduce((s, it) => s + (parseFloat(it.retail_price || it.price || 0) * (it.quantity || it.cantidad || 1)), 0),
+            currency_payment: original.currency_payment || 'EUR',
+            userId: original.userId || original.user || null
+        };
+
+        const newSale = await createSale(salePayload);
+
+        if (saleAddressData && Object.keys(saleAddressData).length > 0) {
+            const addr = { ...saleAddressData };
+            await createSaleAddress(addr, newSale.id);
+        } else if (original.sale_addresses && original.sale_addresses.length > 0) {
+            const addr = original.sale_addresses[0].toJSON ? original.sale_addresses[0].toJSON() : original.sale_addresses[0];
+            delete addr.id;
+            await createSaleAddress(addr, newSale.id);
+        }
+
+        for (const it of items) {
+            const det = {
+                type_discount: it.type_discount || 1,
+                discount: it.discount || 0,
+                cantidad: it.quantity || it.cantidad || 1,
+                code_cupon: it.code_cupon || null,
+                code_discount: it.code_discount || null,
+                price_unitario: it.retail_price || it.price || it.price_unitario || 0,
+                subtotal: (parseFloat(it.retail_price || it.price || 0) * (it.quantity || it.cantidad || 1)).toFixed(2),
+                total: (parseFloat(it.retail_price || it.price || 0) * (it.quantity || it.cantidad || 1)).toFixed(2),
+                saleId: newSale.id,
+                productId: it.productId || it.product_id || null,
+                variedadId: it.variedadId || it.varietyId || null
+            };
+            await createSaleDetail(det, newSale.id);
+        }
+
+        // Save delivery dates and link replacement
+        if (pfResult.data && pfResult.data.minDeliveryDate) {
+            const minD = new Date(pfResult.data.minDeliveryDate);
+            const maxD = new Date(minD);
+            maxD.setDate(maxD.getDate() + 7);
+            await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0], replacementOfId: original.id });
+        } else {
+            await newSale.update({ replacementOfId: original.id });
+        }
+
+        try { await sendEmail(newSale.id); } catch (e) { console.error('Error sending admin correction email', e); }
+
+        return res.json({ success: true, message: 'Correction order created and sent to Printful', newSale, pf: pfResult.data });
+
+    } catch (error) {
+        console.error('❌ Error in adminCorrectSale:', error);
+        if (error && error.stack) console.error(error.stack);
+        return res.status(500).json({ success: false, message: 'Error creating correction order' });
+    }
+};
+
 
 // Registrar una venta y asociar dirección
 // Register de sale para usuarios Autenticados
@@ -568,26 +749,23 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 // - Usa validateThreadColors() para asegurar que los colores están permitidos por Printful.
 
 const prepareCreatePrintfulOrder = async (orderData, res) => {
-    const cleanItems = orderData.items.map(item => {
+        const cleanItems = orderData.items.map(item => {
         const cleanItem = {
             variant_id: item.variant_id,
             quantity: item.quantity,
-            name: item.name,
+            name: item.name || '',
             retail_price: item.retail_price,
-            files: item.files.map(f => ({
-                url: f.url,
-                type: f.type,
-                filename: f.filename
-            }))
+            files: Array.isArray(item.files) ? item.files.map(f => ({ url: f.url, type: f.type, filename: f.filename })) : []
         };
 
         console.log("----- DEBUG: Procesando item.name ----- :", item.name);
         
         // ✅ Método mejorado para detectar si es un producto bordado
         // 1. Verificar por nombre (método actual)
-        let isEmbroideredProduct = item.name.toLowerCase().includes('gorra') || 
-            item.name.toLowerCase().includes('bordado') || 
-            item.name.toLowerCase().includes('cap');
+        const itemNameLower = (item.name || '').toString().toLowerCase();
+        let isEmbroideredProduct = itemNameLower.includes('gorra') || 
+            itemNameLower.includes('bordado') || 
+            itemNameLower.includes('cap');
             
         // 2. Verificar por tipos de archivo (más confiable)
         if (!isEmbroideredProduct && item.files && item.files.length > 0) {
@@ -671,49 +849,6 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
 
     return { error: false, data };
 };
-
-
-
-
-
-
-
-// Crear la orden en Printful (modo debug, no enviar realmente)
-/**const prepareCreatePrintfulOrder = async (orderData, res) => {
-
-     // Limpiar cada item antes de enviarlo a Printful
-    const cleanItems = orderData.items.map(item => ({
-        variant_id: item.variant_id,
-        quantity: item.quantity,
-        name: item.name,
-        retail_price: item.retail_price, // opcional, pero ok si lo quieres llevar
-        files: item.files.map(f => ({
-            url: f.url,
-            type: f.type,
-            filename: f.filename
-        }))
-    }));
-
-    const cleanOrder = {
-        recipient: orderData.recipient,
-        items: cleanItems,
-        retail_costs: orderData.retail_costs
-    };
-
-    //console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
-    //console.log(JSON.stringify(cleanOrder, null, 2)); // Formato legible
-    //console.log("=====================================================");
-    // 🚨 Mientras pruebas puedes devolver solo el debug
-    //return { error: false, data: cleanOrder };
-
-    // ✅ Cuando lo quieras enviar de verdad:
-    let data = await createPrintfulOrder(cleanOrder);
-
-    if (data === "error_order") {
-        return { error: true, message: "Ups! Hubo un problema al generar la orden" };
-    }
-    return { error: false, data };
-};*/
 
 
 // Enviar correo electrónico de confirmación
@@ -970,5 +1105,18 @@ export const show = async (req, res) => {
     } catch (error) {
         console.error('Error fetching sale:', error);
         return res.status(500).json({ success: false, message: 'Error fetching sale' });
+    }
+};
+
+// Obtener la dirección asociada a una venta (para prefilling en admin)
+export const address = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const addr = await SaleAddress.findOne({ where: { saleId: id } });
+        if (!addr) return res.status(404).json({ success: false, message: 'Address not found' });
+        return res.json({ success: true, address: addr });
+    } catch (error) {
+        console.error('Error fetching sale address:', error);
+        return res.status(500).json({ success: false, message: 'Error fetching sale address' });
     }
 };
