@@ -15,6 +15,8 @@ import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
 import fs from 'fs';
 import path from "path";
+import http from 'http';
+import https from 'https';
 import Handlebars from 'handlebars';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
@@ -257,10 +259,25 @@ export const createAdminSale = async (req, res) => {
         }
 
         // Basic normalization: ensure variant_id numbers and files types
-        const cleanedItems = [];
+        // Ensure each incoming item has a Printful variant_id.
+        // The frontend may send `variedadId` (our internal id). Map it to Printful's variant_id via getVariantId().
+    const cleanedItems = [];
         for (const it of items) {
-            const variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
-            const files = Array.isArray(it.files) ? it.files.map(f => ({ url: f.url, type: mapPrintfulFileType(f.type), filename: f.filename })).filter(f => f.url && f.type) : [];
+            let variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
+            // If variant_id not provided, try to resolve from variedadId
+            if ((!variant_id || isNaN(variant_id)) && (it.variedadId || it.variedad || it.varietyId)) {
+                try {
+                    const variedadId = it.variedadId || (it.variedad && it.variedad.id) || it.varietyId;
+                    if (variedadId) {
+                        const resolved = await getVariantId(variedadId);
+                        if (resolved) variant_id = Number(resolved);
+                    }
+                } catch (e) {
+                    console.error('[DEBUG] Error resolving variant_id for variedadId', it.variedadId, e && e.message);
+                }
+            }
+
+            const files = Array.isArray(it.files) ? it.files.map(f => ({ url: f.url || f.file_url || f.preview_url || '', type: mapPrintfulFileType(f.type), filename: f.filename || '' })).filter(f => f.url && f.type) : [];
             let name = it.name || it.title || null;
             if (!name && (it.productId || it.product_id)) {
                 try {
@@ -271,7 +288,135 @@ export const createAdminSale = async (req, res) => {
             cleanedItems.push({ ...it, variant_id, files, name });
         }
 
+        // Validate cleanedItems not empty after normalization
+        if (!Array.isArray(cleanedItems) || cleanedItems.length === 0) {
+            console.error('createAdminSale: No valid items after normalization. Incoming payload items may be invalid.');
+            return res.status(400).json({ success: false, message: 'No valid items after normalization. Check payload items format.' });
+        }
+
+        // Server-side fallback: for any cleaned item without files, try to fetch a public thumbnail_url from the Variedad's Files
+        for (let ciIndex = 0; ciIndex < cleanedItems.length; ciIndex++) {
+            const ci = cleanedItems[ciIndex];
+            // Trigger fallback if no files provided by admin OR first file is not a public HTTPS URL
+            const hasPublicFileFromAdmin = Array.isArray(ci.files) && ci.files.length > 0 && isPublicHttpsUrl(ci.files[0].url);
+            if (!hasPublicFileFromAdmin) {
+                if (Array.isArray(ci.files) && ci.files.length > 0) {
+                    console.debug('createAdminSale: admin provided files but first is not public HTTPS, attempting DB fallback', { index: ciIndex, adminFile: ci.files[0] });
+                }
+                    // Determine variedadId from common locations
+                    const variedadId = ci.variedadId || ci.varietyId || (ci.variedad && ci.variedad.id) || null;
+                    if (variedadId) {
+                        try {
+                        const filesFromDb = await File.findAll({ where: { varietyId: variedadId } });
+                        if (!filesFromDb || filesFromDb.length === 0) {
+                            console.debug('createAdminSale: no files rows in DB for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public files available for variety ${variedadId}` });
+                        }
+
+                        const printFiles = filesFromDb.filter(f => (f.type || '').toString().toLowerCase() !== 'preview');
+                        if (!printFiles || printFiles.length === 0) {
+                            console.debug('createAdminSale: no printable files (non-preview) for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public files available for variety ${variedadId}` });
+                        }
+
+                        const publicFiles = printFiles
+                            .map(f => ({ url: f.thumbnail_url || f.preview_url || f.url || null, file_url: f.thumbnail_url || f.preview_url || f.url || null, type: 'default', filename: f.filename || '' }))
+                            .filter(f => f.url && isPublicHttpsUrl(f.url));
+
+                        if (!publicFiles || publicFiles.length === 0) {
+                            console.debug('createAdminSale: printable files exist but no public HTTPS URL for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public HTTPS files available for variety ${variedadId}` });
+                        }
+
+                        ci.files = publicFiles;
+                        console.debug('createAdminSale: fallback populated ci.files from DB for variedad', variedadId, 'filesCount=', ci.files.length);
+                        } catch (e) {
+                            console.warn('createAdminSale: error fetching Files for variedad', variedadId, e && e.message);
+                        }
+                    }
+                // If still no files, downstream validation will return 400 for non-embroidered products
+            }
+        }
+
+        // After attempting fallback, ensure non-embroidered items have files (clear error if not)
+        for (let ciIndex = 0; ciIndex < cleanedItems.length; ciIndex++) {
+            const ci = cleanedItems[ciIndex];
+            const nameLower = (ci.name || ci.title || '').toString().toLowerCase();
+            const isEmbroidered = nameLower.includes('gorra') || nameLower.includes('bordado') || nameLower.includes('cap');
+            if (!isEmbroidered && (!ci.files || ci.files.length === 0)) {
+                const variedadId = ci.variedadId || ci.varietyId || (ci.variedad && ci.variedad.id) || null;
+                console.error('createAdminSale: No public thumbnail_url available for Printful for item', { index: ciIndex, productId: ci.productId, variedadId });
+                return res.status(400).json({ success: false, message: `No public thumbnail_url available for Printful for item index ${ciIndex} (productId=${ci.productId}, variedadId=${variedadId})` });
+            }
+        }
+
+        // Build minimal payload expected by Printful and validate
+        const itemsForPrintful = cleanedItems.map(ci => ({ variant_id: ci.variant_id != null ? Number(ci.variant_id) : null, quantity: ci.quantity || ci.cantidad || 1 }));
+        console.log('Payload a Printful:', itemsForPrintful);
+        // If any variant_id is missing, abort and do not call Printful
+        const missing = itemsForPrintful.filter(i => i.variant_id == null || i.variant_id === 0);
+        if (missing.length > 0) {
+            console.error('Error: Missing variant_id for some items, aborting Printful call', missing);
+            return res.status(400).json({ success: false, message: 'Missing variant_id for one or more items. Cannot send to Printful.' });
+        }
+
         // Validate items before creating DB records by sending to Printful (prepareCreatePrintfulOrder)
+        // Sanitize and log minimal payload for debugging (no sensitive fields)
+        const sanitizedPayload = {
+            items: cleanedItems.map((ci) => ({
+                productId: ci.productId || ci.product_id || null,
+                variedadId: ci.variedadId || ci.varietyId || null,
+                variant_id: ci.variant_id || null,
+                quantity: ci.quantity || ci.cantidad || 1,
+                retail_price: ci.retail_price || ci.price || null,
+                files: Array.isArray(ci.files) ? ci.files.map(f => ({ url: f.url, type: f.type })) : []
+            })),
+            costs: costs || {}
+        };
+        console.log('🔵 createAdminSale - sanitized payload:', JSON.stringify(sanitizedPayload, null, 2));
+
+        // Debug: show final files for each cleaned item (sanitized)
+        cleanedItems.forEach((ci, idx) => {
+            console.debug('createAdminSale: final files for item', idx, Array.isArray(ci.files) ? ci.files.map(f => ({ url: f.url, type: f.type })) : []);
+        });
+
+        // Optional: check reachability of each file URL before sending to Printful
+        for (let idx = 0; idx < sanitizedPayload.items.length; idx++) {
+            const it = sanitizedPayload.items[idx];
+            if (it.files && it.files.length > 0) {
+                for (let fidx = 0; fidx < it.files.length; fidx++) {
+                    const fu = it.files[fidx];
+                    // Ensure URL is public https (Printful requirement)
+                    if (!isPublicHttpsUrl(fu.url)) {
+                        console.error(`createAdminSale: File URL not acceptable for Printful: ${fu.url}`);
+                        return res.status(400).json({ success: false, message: `File URL not acceptable for Printful (must be public HTTPS): ${fu.url}` });
+                    }
+                    // Optionally skip HEAD check in development
+                    if (process.env.SKIP_FILE_CHECK === 'true') {
+                        console.log(`🔎 createAdminSale: skipping reachability check for ${fu.url} due to SKIP_FILE_CHECK=true`);
+                    } else {
+                        const reachable = await isUrlReachable(fu.url).catch(() => false);
+                        console.log(`🔎 createAdminSale: item ${idx} file[${fidx}] reachable=${reachable} url=${fu.url} type=${fu.type}`);
+                        if (!reachable) {
+                            return res.status(400).json({ success: false, message: `File URL not reachable: ${fu.url}` });
+                        }
+                    }
+                }
+            }
+        }
+
+        // After attempting fallback, ensure non-embroidered items have files (clear error if not)
+        for (let ciIndex = 0; ciIndex < cleanedItems.length; ciIndex++) {
+            const ci = cleanedItems[ciIndex];
+            const nameLower = (ci.name || ci.title || '').toString().toLowerCase();
+            const isEmbroidered = nameLower.includes('gorra') || nameLower.includes('bordado') || nameLower.includes('cap');
+            if (!isEmbroidered && (!ci.files || ci.files.length === 0)) {
+                const variedadId = ci.variedadId || ci.varietyId || (ci.variedad && ci.variedad.id) || null;
+                console.error('adminCorrectSale: No public thumbnail_url available for Printful for item', { index: ciIndex, productId: ci.productId, variedadId });
+                return res.status(400).json({ success: false, message: `No public thumbnail_url available for Printful for item index ${ciIndex} (productId=${ci.productId}, variedadId=${variedadId})` });
+            }
+        }
+
         const pfOrderData = createPrintfulOrderData(saleAddressData || {}, cleanedItems, costs || {});
         console.log('🔵 Preparing Printful order for admin creation');
         const pfResult = await prepareCreatePrintfulOrder(pfOrderData);
@@ -346,10 +491,22 @@ export const adminCorrectSale = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No items provided for correction' });
         }
 
-        // Normalize items (populate product name if missing)
+        // Normalize items (populate product name if missing) and ensure variant_id via variedadId mapping
         const cleanedItems = [];
         for (const it of items) {
-            const variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
+            let variant_id = it.variant_id ? Number(String(it.variant_id).replace(/[^0-9]/g, '')) : null;
+            if ((!variant_id || isNaN(variant_id)) && (it.variedadId || it.variedad || it.varietyId)) {
+                try {
+                    const variedadId = it.variedadId || (it.variedad && it.variedad.id) || it.varietyId;
+                    if (variedadId) {
+                        const resolved = await getVariantId(variedadId);
+                        if (resolved) variant_id = Number(resolved);
+                    }
+                } catch (e) {
+                    console.error('[DEBUG] Error resolving variant_id for variedadId', it.variedadId, e && e.message);
+                }
+            }
+
             const files = Array.isArray(it.files) ? it.files.map(f => ({ url: f.url, type: mapPrintfulFileType(f.type), filename: f.filename })).filter(f => f.url && f.type) : [];
             let name = it.name || it.title || null;
             if (!name && (it.productId || it.product_id)) {
@@ -361,7 +518,183 @@ export const adminCorrectSale = async (req, res) => {
             cleanedItems.push({ ...it, variant_id, files, name });
         }
 
-        const pfOrderData = createPrintfulOrderData(saleAddressData || (original.sale_addresses && original.sale_addresses[0] ? (original.sale_addresses[0].toJSON ? original.sale_addresses[0].toJSON() : original.sale_addresses[0]) : {}), cleanedItems, costs || {});
+        // Validate cleanedItems not empty after normalization
+        if (!Array.isArray(cleanedItems) || cleanedItems.length === 0) {
+            console.error('adminCorrectSale: No valid items after normalization. Incoming payload items may be invalid.');
+            return res.status(400).json({ success: false, message: 'No valid items after normalization. Check payload items format.' });
+        }
+
+        // Server-side fallback: only when admin did not provide files, fetch printable files from DB (same as ecommerce)
+        for (let ciIndex = 0; ciIndex < cleanedItems.length; ciIndex++) {
+            const ci = cleanedItems[ciIndex];
+            // fallback trigger: admin didn't send files OR admin file isn't public HTTPS
+            const hasPublicFileFromAdmin = Array.isArray(ci.files) && ci.files.length > 0 && isPublicHttpsUrl(ci.files[0].url);
+            if (!hasPublicFileFromAdmin) {
+                if (Array.isArray(ci.files) && ci.files.length > 0) {
+                    console.debug('adminCorrectSale: admin provided files but first is not public HTTPS, attempting DB fallback', { index: ciIndex, adminFile: ci.files[0] });
+                }
+                const variedadId = ci.variedadId || ci.varietyId || (ci.variedad && ci.variedad.id) || null;
+                if (variedadId) {
+                    try {
+                        const filesFromDb = await File.findAll({ where: { varietyId: variedadId } });
+                        if (!filesFromDb || filesFromDb.length === 0) {
+                            console.debug('adminCorrectSale: no files rows in DB for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public files available for variety ${variedadId}` });
+                        }
+
+                        // Filter out preview files
+                        const printFiles = filesFromDb.filter(f => (f.type || '').toString().toLowerCase() !== 'preview');
+                        if (!printFiles || printFiles.length === 0) {
+                            console.debug('adminCorrectSale: no printable files (non-preview) for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public files available for variety ${variedadId}` });
+                        }
+
+                        // Keep only public HTTPS URLs
+                        const publicFiles = printFiles
+                            .map(f => ({
+                                url: f.thumbnail_url || f.preview_url || f.url || null,
+                                file_url: f.thumbnail_url || f.preview_url || f.url || null,
+                                type: 'default',
+                                filename: f.filename || ''
+                            }))
+                            .filter(f => f.url && isPublicHttpsUrl(f.url));
+
+                        if (!publicFiles || publicFiles.length === 0) {
+                            console.debug('adminCorrectSale: printable files exist but no public HTTPS URL for variedad', variedadId);
+                            return res.status(400).json({ success: false, message: `No public HTTPS files available for variety ${variedadId}` });
+                        }
+
+                        ci.files = publicFiles;
+                        console.debug('adminCorrectSale: fallback populated ci.files from DB for variedad', variedadId, 'filesCount=', ci.files.length);
+                    } catch (e) {
+                        console.warn('adminCorrectSale: error fetching Files for variedad', variedadId, e && e.message);
+                        return res.status(500).json({ success: false, message: 'Error fetching files for variety', details: e && e.message });
+                    }
+                } else {
+                    console.debug('adminCorrectSale: variedadId not provided for item index', ciIndex);
+                }
+            }
+            // debug final files for this item (sanitized)
+            console.debug('adminCorrectSale: final files for item', { index: ciIndex, files: Array.isArray(ci.files) ? ci.files.map(f => ({ url: f.url, type: f.type })) : [] });
+        }
+
+        // Normalize files for each cleaned item: keep only one file per placement/type (first encountered)
+        for (let ni = 0; ni < cleanedItems.length; ni++) {
+            const ci = cleanedItems[ni];
+            if (Array.isArray(ci.files) && ci.files.length > 0) {
+                const acc = {};
+                for (const f of ci.files) {
+                    const placement = (f.type || 'default').toString();
+                    if (!acc[placement]) {
+                        acc[placement] = {
+                            url: f.url || f.file_url || f.preview_url || '',
+                            type: placement,
+                            filename: f.filename || ''
+                        };
+                    }
+                }
+                ci.files = Object.values(acc);
+                console.debug('adminCorrectSale: normalized files for item', { index: ni, files: ci.files.map(ff => ({ url: ff.url, type: ff.type })) });
+            }
+        }
+
+        // Build minimal payload expected by Printful and validate, copying files from the original sale
+        const originalItems = original && (original.SaleDetails || original.sale_details || original.saleDetails || []);
+
+        const itemsForPrintful = cleanedItems.map(ci => {
+            // try to find the corresponding original sale item to copy files
+            const originalItem = originalItems ? originalItems.find(oi => {
+                const o = oi.toJSON ? oi.toJSON() : oi;
+                return (o.id && ci.id && o.id === ci.id) || (o.productId && ci.productId && o.productId === ci.productId) || (o.variedadId && ci.variedadId && o.variedadId === ci.variedadId) || (o.varietyId && ci.variedadId && o.varietyId === ci.variedadId);
+            }) : null;
+
+            // Prefer files sent by admin (ci.files). If none, fall back to original sale item's stored files.
+            let files = Array.isArray(ci.files) && ci.files.length > 0 ? ci.files.map(f => ({ url: f.url || f.file_url || f.preview_url || '', type: f.type || '', filename: f.filename || '' })) : [];
+            try {
+                if ((!files || files.length === 0) && originalItem) {
+                    const oi = originalItem ? (originalItem.toJSON ? originalItem.toJSON() : originalItem) : null;
+                    // Prefer files stored in the Variedad relation (Variedad.Files)
+                    const variedadObj = oi && (oi.Variedad || oi.variedad || oi.variedade);
+                    if (variedadObj && variedadObj.Files && Array.isArray(variedadObj.Files) && variedadObj.Files.length > 0) {
+                        files = variedadObj.Files.map(f => ({ url: f.preview_url || f.url || f.path || '', type: f.type || '', filename: f.filename || '' }));
+                    } else if (oi && oi.files && Array.isArray(oi.files) && oi.files.length > 0) {
+                        files = oi.files.map(f => ({ url: f.preview_url || f.url || '', type: f.type || '', filename: f.filename || '' }));
+                    }
+                }
+            } catch (e) {
+                console.warn('[DEBUG] Error extracting files from original item', e && e.message);
+                files = files || [];
+            }
+
+            return {
+                // ensure numeric variant_id
+                variant_id: Number(ci.variant_id),
+                quantity: ci.quantity || ci.cantidad || 1,
+                name: ci.name || ci.title || '',
+                retail_price: ci.retail_price || ci.price || null,
+                files
+            };
+        });
+
+        // Validate that non-embroidered items have files
+        for (let idx = 0; idx < itemsForPrintful.length; idx++) {
+            const item = itemsForPrintful[idx];
+            const nameLower = (item.name || '').toString().toLowerCase();
+            let isEmbroideredProduct = nameLower.includes('gorra') || nameLower.includes('bordado') || nameLower.includes('cap');
+            if (!isEmbroideredProduct && item.files && item.files.length > 0) {
+                // check file types
+                isEmbroideredProduct = item.files.some(f => (f.type || '').toString().toLowerCase().includes('embroidery') || (f.type || '').toString().toLowerCase().includes('thread') || (f.type || '').toString().toLowerCase().includes('stitch'));
+            }
+
+            if (!isEmbroideredProduct && (!item.files || item.files.length === 0)) {
+                console.error('Item requires files for Printful', { idx, item });
+                return res.status(400).json({ success: false, message: `Item ${idx} requiere archivos para Printful` });
+            }
+        }
+
+        console.log('Payload a Printful con archivos copiados:', JSON.stringify(itemsForPrintful, null, 2));
+
+        // Sanitize and log minimal payload for debugging
+        const sanitizedPayload = {
+            originalSaleId: original.id,
+            items: itemsForPrintful.map((ci) => ({
+                variant_id: ci.variant_id || null,
+                quantity: ci.quantity || 1,
+                name: ci.name || '',
+                retail_price: ci.retail_price || null,
+                files: Array.isArray(ci.files) ? ci.files.map(f => ({ url: f.url, type: f.type })) : []
+            })),
+            costs: costs || {}
+        };
+        console.log('🔵 adminCorrectSale - sanitized payload:', JSON.stringify(sanitizedPayload, null, 2));
+
+        // Validate file URLs reachable for items that include files
+        for (let idx = 0; idx < sanitizedPayload.items.length; idx++) {
+            const it = sanitizedPayload.items[idx];
+            if (it.files && it.files.length > 0) {
+                for (let fidx = 0; fidx < it.files.length; fidx++) {
+                    const fu = it.files[fidx];
+                    // Ensure URL is public https (Printful requirement)
+                    if (!isPublicHttpsUrl(fu.url)) {
+                        console.error(`adminCorrectSale: File URL not acceptable for Printful: ${fu.url}`);
+                        return res.status(400).json({ success: false, message: `File URL not acceptable for Printful (must be public HTTPS): ${fu.url}` });
+                    }
+                    // Optionally skip HEAD check in development
+                    if (process.env.SKIP_FILE_CHECK === 'true') {
+                        console.log(`🔎 adminCorrectSale: skipping reachability check for ${fu.url} due to SKIP_FILE_CHECK=true`);
+                    } else {
+                        const reachable = await isUrlReachable(fu.url).catch(() => false);
+                        console.log(`🔎 adminCorrectSale: item ${idx} file[${fidx}] reachable=${reachable} url=${fu.url} type=${fu.type}`);
+                        if (!reachable) {
+                            return res.status(400).json({ success: false, message: `File URL not reachable: ${fu.url}` });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Use itemsForPrintful when preparing the Printful order so files are included
+        const pfOrderData = createPrintfulOrderData(saleAddressData || (original.sale_addresses && original.sale_addresses[0] ? (original.sale_addresses[0].toJSON ? original.sale_addresses[0].toJSON() : original.sale_addresses[0]) : {}), itemsForPrintful, costs || {});
         const pfResult = await prepareCreatePrintfulOrder(pfOrderData);
         if (pfResult.error) {
             console.error('DEBUG adminCorrectSale: Printful rejected order', pfResult.message || pfResult);
@@ -648,6 +981,65 @@ const validateThreadColors = (colors) => {
     ];
     const filteredColors = Array.isArray(colors) ? colors.filter(color => allowedThreadColors.includes(color)) : [colors];
     return filteredColors.length > 0 ? filteredColors : ["#FFFFFF"];
+};
+
+// Normaliza tipos de archivo entrantes a los tipos usados para Printful
+const mapPrintfulFileType = (type) => {
+    if (!type) return 'default';
+    const t = String(type).toLowerCase();
+    // Tipos relacionados con bordado
+    if (t.includes('embroidery') || t.includes('thread') || t.includes('stitch')) return 'embroidery';
+    // Previews o thumbnails
+    if (t.includes('preview')) return 'preview';
+    // Imágenes/prints estándar
+    if (t.includes('print') || t.includes('image') || t.includes('default')) return 'default';
+    // Fallback: devolver 'default' para evitar filtrados accidentales
+    return 'default';
+};
+
+// Verifica si una URL es alcanzable (HEAD request) con timeout en ms
+const isUrlReachable = (url, timeout = 5000) => {
+    return new Promise((resolve) => {
+        if (!url || typeof url !== 'string') return resolve(false);
+        try {
+            const parsed = new URL(url);
+            const lib = parsed.protocol === 'https:' ? https : http;
+            const options = {
+                method: 'HEAD',
+                host: parsed.hostname,
+                path: parsed.pathname + (parsed.search || ''),
+                port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+                timeout
+            };
+            const req = lib.request(options, (res) => {
+                const ok = res.statusCode >= 200 && res.statusCode < 400;
+                res.resume();
+                resolve(ok);
+            });
+            req.on('timeout', () => { req.destroy(); resolve(false); });
+            req.on('error', () => resolve(false));
+            req.end();
+        } catch (e) {
+            return resolve(false);
+        }
+    });
+};
+
+// Validate that a URL is public and uses https (Printful requires publicly-accessible HTTPS URLs)
+const isPublicHttpsUrl = (url) => {
+    try {
+        const u = new URL(url);
+        if (u.protocol !== 'https:') return false;
+        const host = u.hostname;
+        // reject localhost, loopback and common private ranges
+        if (host === 'localhost' || host === '127.0.0.1') return false;
+        // simple private network detection
+        if (/^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)) return false;
+        if (host.endsWith('.local')) return false;
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 // Crear el objeto de ítem
@@ -1042,6 +1434,8 @@ export const show = async (req, res) => {
   try {
         const { id } = req.params;
 
+        console.log('[DEBUG Admin] Fetching sale id=', id);
+
         const sale = await Sale.findOne({
             where: { id },
             include: [
@@ -1065,22 +1459,38 @@ export const show = async (req, res) => {
         });
 
         // Mapear items para enviar imagen y demás info al front
-        const items = details.map(d => {
+        const items = await Promise.all(details.map(async d => {
             let image = null;
             if (d.product && d.product.portada) {
                 image = `${process.env.URL_BACKEND}/api/products/uploads/product/${d.product.portada}`;
             } else if (d.variedad && d.variedad.Files && d.variedad.Files.length > 0) {
                 image = d.variedad.Files[0].preview_url;
             }
+
             // normalize variedad naming and extract talla (valor)
             const variedadObj = d.variedad || d.variedade || null;
             const tallaVal = variedadObj ? (variedadObj.valor || variedadObj.name || variedadObj.valor_ ? variedadObj.valor_ : null) : null;
+
+            // También adjuntar la lista completa de variedades del producto para el admin (útil al rectificar)
+            let variedadesProducto = [];
+            try {
+                const pid = d.product && d.product.id ? d.product.id : (d.productId || null);
+                if (pid) {
+                    variedadesProducto = await Variedad.findAll({ where: { productId: pid } });
+                }
+            } catch (e) {
+                console.warn('[DEBUG Admin] Error cargando variedades del producto para sale.detail:', e && e.message);
+                variedadesProducto = [];
+            }
+
+            console.log('[DEBUG Admin] Variedades cargadas para productId=', d.product && d.product.id, 'count=', variedadesProducto.length);
 
             return {
                 _id: d.id,
                 product: {
                     ...d.product?.toJSON(),
                     imagen: image,
+                    variedades: variedadesProducto
                 },
                 cantidad: d.cantidad,
                 price_unitario: d.price_unitario,
@@ -1093,7 +1503,9 @@ export const show = async (req, res) => {
                 code_cupon: d.code_cupon,
                 code_discount: d.code_discount,
             };
-        });
+        }));
+
+        console.log('[DEBUG Admin] Items mapped for sale:', items.length);
 
         return res.json({
             success: true,

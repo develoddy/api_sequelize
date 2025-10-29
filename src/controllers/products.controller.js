@@ -11,6 +11,11 @@ import { Cart } from "../models/Cart.js";
 import { Wishlist } from "../models/Wishlist.js";
 import { SaleDetail } from "../models/SaleDetail.js";
 import { ProductVariants } from "../models/ProductVariants.js";
+import { Review } from "../models/Review.js";
+import { User } from "../models/User.js";
+import { Discount } from "../models/Discount.js";
+import { DiscountProduct } from "../models/DiscountProduct.js";
+import { DiscountCategorie } from "../models/DiscountCategorie.js";
 import fs from 'fs';
 import path from "path";
 import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
@@ -396,6 +401,171 @@ export const show = async(req, res) => {
             message: "debbug: ProductController show - OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
+    }
+}
+
+// Nuevo endpoint para uso en panel admin: devuelve producto con la misma estructura
+// que show_landing_product (variedades, reviews, descuentos, etc.) pero protegido
+// para no modificar la implementación existente en home.controller.js
+export const show_admin_product = async (req, res) => {
+    try {
+        const product_id = req.params.id;
+
+        // Buscar producto por PK incluyendo galerías y categoría
+        const product = await Product.findOne({
+            where: { id: product_id },
+            include: [
+                { model: Galeria },
+                { model: Categorie }
+            ]
+        });
+
+        if (!product) {
+            return res.status(404).json({ message: "Producto no encontrado" });
+        }
+
+        console.log("[DEBUG Admin] Cargando producto:", product.id);
+
+        // Obtener variedades exactamente como en home.controller
+        const variedades = await Variedad.findAll({ where: { productId: product.id } });
+        console.log("[DEBUG Admin] Variedades cargadas:", variedades.length);
+
+        // Obtener reviews junto con usuarios
+        const reviews = await Review.findAll({ where: { productId: product.id }, include: [{ model: User }] });
+        const avg_review = reviews.length > 0 ? Math.ceil(reviews.reduce((sum, item) => sum + item.cantidad, 0) / reviews.length) : 0;
+        const count_review = reviews.length;
+
+        // Obtener descuento de campaña actual (mismo comportamiento que frontend)
+        const TIME_NOW = Date.now();
+        let CampaingDiscount = await Discount.findOne({
+            where: {
+                type_campaign: 1,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { model: DiscountProduct },
+                { model: DiscountCategorie }
+            ]
+        });
+
+        let DISCOUNT_EXIST = null;
+        if (CampaingDiscount) {
+            if (CampaingDiscount.type_segment === 1) {
+                const products_a = CampaingDiscount.discounts_products.map(item => item.productId);
+                if (products_a.includes(product.id)) {
+                    DISCOUNT_EXIST = CampaingDiscount;
+                }
+            } else {
+                const categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
+                if (categories_a.includes(product.categoryId)) {
+                    DISCOUNT_EXIST = CampaingDiscount;
+                }
+            }
+        }
+
+        // Productos relacionados: misma categoría, excluir el mismo producto
+        let relatedProducts = await Product.findAll({
+            where: {
+                categoryId: product.categoryId,
+                state: 2,
+                id: { [Op.ne]: product.id }
+            }
+        });
+
+        let objectRelateProducts = [];
+        for (const relatedProduct of relatedProducts) {
+            let relatedVariedades = await Variedad.findAll({ where: { productId: relatedProduct.id } });
+            let relatedReviews = await Review.findAll({ where: { productId: relatedProduct.id } });
+            let relatedAvgReview = relatedReviews.length > 0 ? Math.ceil(relatedReviews.reduce((sum, item) => sum + item.cantidad, 0) / relatedReviews.length) : 0;
+            let relatedCountReview = relatedReviews.length;
+
+            let relatedDiscount = null;
+            if (CampaingDiscount) {
+                if (CampaingDiscount.type_segment === 1) {
+                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId);
+                    if (products_a.includes(relatedProduct.id)) {
+                        relatedDiscount = CampaingDiscount;
+                    }
+                } else {
+                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
+                    if (categories_a.includes(relatedProduct.categoryId)) {
+                        relatedDiscount = CampaingDiscount;
+                    }
+                }
+            }
+
+            objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
+        }
+
+        // Productos de interés (distintos a la categoría del producto)
+        let interestWhere = { state: 2 };
+        if (product) interestWhere.categoryId = { [Op.ne]: product.categoryId };
+
+        const productsOfInterest = await Product.findAll({ where: interestWhere, limit: 8 });
+        let objectInterestProducts = [];
+        for (const interestProduct of productsOfInterest) {
+            const interestVariedades = await Variedad.findAll({ where: { productId: interestProduct.id } });
+            const interestReviews = await Review.findAll({ where: { productId: interestProduct.id } });
+            const interestAvgReview = interestReviews.length > 0 ? Math.ceil(interestReviews.reduce((sum, item) => sum + item.cantidad, 0) / interestReviews.length) : 0;
+            const interestCountReview = interestReviews.length;
+
+            let interestDiscount = null;
+            if (CampaingDiscount) {
+                if (CampaingDiscount.type_segment === 1 && CampaingDiscount.discounts_products.map(p => p.productId).includes(interestProduct.id)) {
+                    interestDiscount = CampaingDiscount;
+                } else if (CampaingDiscount.type_segment !== 1 && CampaingDiscount.discounts_categories.map(c => c.categoryId).includes(interestProduct.categoryId)) {
+                    interestDiscount = CampaingDiscount;
+                }
+            }
+
+            objectInterestProducts.push(resources.Product.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount));
+        }
+
+        // Flash sales (SALE_FLASH)
+        const SALE_FLASH_EXIST = await Discount.findOne({
+            where: {
+                type_campaign: 2,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { model: DiscountProduct },
+                { model: DiscountCategorie }
+            ]
+        });
+
+        let saleFlash = null;
+        if (SALE_FLASH_EXIST) {
+            if (SALE_FLASH_EXIST.type_segment === 1) {
+                let products_a = SALE_FLASH_EXIST.discounts_products.map(item => item.productId);
+                if (products_a.includes(product.id)) {
+                    saleFlash = SALE_FLASH_EXIST;
+                }
+            } else {
+                let categories_a = SALE_FLASH_EXIST.discounts_categories.map(item => item.categoryId);
+                if (categories_a.includes(product.categoryId)) {
+                    saleFlash = SALE_FLASH_EXIST;
+                }
+            }
+        }
+
+        const finalProduct = resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST);
+        console.log("[DEBUG Admin] Producto final:", finalProduct && finalProduct._id);
+
+        res.status(200).json({
+            product: finalProduct,
+            related_products: objectRelateProducts,
+            interest_products: objectInterestProducts,
+            SALE_FLASH: saleFlash,
+            REVIEWS: reviews,
+            AVG_REVIEW: avg_review,
+            COUNT_REVIEW: count_review,
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "debbug: ProductController show_admin_product - OCURRIÓ UN PROBLEMA" });
     }
 }
 /* --------------------------------------------------------------------------- */

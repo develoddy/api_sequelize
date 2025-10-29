@@ -11,6 +11,7 @@ import {
     register_imagen,
     remove_imagen,
     show,
+    show_admin_product,
     syncPrintfulProducts,
     syncGelatoProducts,
 } from "../controllers/products.controller.js";
@@ -47,6 +48,7 @@ router.get("/list", auth.verifyAdmin, list);
 router.delete("/delete", auth.verifyAdmin, remove);
 router.get("/uploads/product/:img", getImage);
 router.get("/show/:id", show);
+router.get("/show_admin/:id", auth.verifyAdmin, show_admin_product);
 router.get("/synPrintfulProducts", auth.verifyAdmin, syncPrintfulProducts);
 router.get("/synGelatoProducts", auth.verifyAdmin, syncGelatoProducts);
 
