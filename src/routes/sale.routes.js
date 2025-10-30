@@ -13,6 +13,7 @@ import {
     createAdminSale,
     adminCorrectSale
 } from "../controllers/sale.controller.js";
+import { refreshPrintfulStatus } from "../controllers/admin/sales.controller.js";
 
 const router = Router();
 
@@ -30,6 +31,9 @@ router.get('/address/:id', auth.verifyAdmin, address);
 router.post('/admin/create', auth.verifyAdmin, createAdminSale);
 // Admin correct sale (create replacement/correction order linked to original)
 router.post('/admin/:id/correct', auth.verifyAdmin, adminCorrectSale);
+
+// Admin: refresh Printful order status for a sale
+router.get('/admin/printful/refresh/:id', auth.verifyAdmin, refreshPrintfulStatus);
 
 
 export default router;

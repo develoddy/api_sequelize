@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const PRINTFUL_API_TOKEN = 'CcbTqhupaIzBCtmkhmnYY59az1Tc8WxIrF9auaGH';
+//const PRINTFUL_API_TOKEN = 'CcbTqhupaIzBCtmkhmnYY59az1Tc8WxIrF9auaGH';
+const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN; 
+
 
 const printfulApi = axios.create({
     baseURL: 'https://api.printful.com',
@@ -18,17 +20,6 @@ export const getPrintfulShippingRatesService = async (payload) => {
         throw new Error('Error fetching Printful Shipping Rates');
     }
 };
-
-/** STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV */
-//export const getPrintfulProductsService = async () => {
-//    try {
-//        const response = await printfulApi.get('/store/products');
-//        return response.data.result;
-//    } catch (error) {
-//        console.error('Error fetching Printful products:', error);
-//        throw new Error('Failed to fetch Printful products');
-//    }
-//};
 
 /** STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV (con paginación) */
 export const getPrintfulProductsService = async () => {
