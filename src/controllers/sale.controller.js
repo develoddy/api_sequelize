@@ -1520,6 +1520,11 @@ export const list = async (req, res) => {
                 method_payment: s.method_payment,
                 user: s.user || null,
                 guest: s.guest || null,
+                // Include Printful metadata so frontend can display printful status/order and delivery estimates
+                printfulOrderId: s.printfulOrderId ?? null,
+                printfulStatus: s.printfulStatus ?? s.status ?? null,
+                minDeliveryDate: s.minDeliveryDate ?? null,
+                maxDeliveryDate: s.maxDeliveryDate ?? null,
                 total: s.total,
                 status: s.status,
                 createdAt: s.createdAt,
