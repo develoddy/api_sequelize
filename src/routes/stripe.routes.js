@@ -7,6 +7,7 @@ import {
 } from "../controllers/stripe.controller.js";
 
 const router = Router();
+console.log('[Stripe Routes] Stripe routes module loaded — webhook route available at POST /api/stripe/webhook');
 
 router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession);
 

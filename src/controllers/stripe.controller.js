@@ -1,5 +1,6 @@
 import { Op, Sequelize } from 'sequelize';
 import Stripe from 'stripe';
+import { Sale } from '../models/Sale.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16', // o la que uses
@@ -100,6 +101,10 @@ export const getCheckoutSession = async (req, res) => {
 
 
 export const stripeWebhook = async (req, res) => {
+  console.log('[Stripe Webhook] Webhook recibido');
+  console.log('[Stripe Webhook] req.headers:', JSON.stringify(req.headers || {}, null, 2));
+  console.log('[Stripe Webhook] req.body (truncated):', (req.body && Object.keys(req.body).length) ? JSON.stringify(Object.keys(req.body).slice(0,20)) : req.body);
+
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -109,12 +114,18 @@ export const stripeWebhook = async (req, res) => {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
+    console.log('[Stripe Webhook] event.type =', event && event.type);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'checkout.session.completed') {
+  // Log event type explicitly
+  try {
+    const eventType = event && event.type;
+    console.log('[Stripe Webhook] Processing event type:', eventType);
+
+    if (eventType === 'checkout.session.completed') {
     const session = event.data.object;
 
     const nTransaction = `STRIPE_${session.id}`;
@@ -136,10 +147,13 @@ export const stripeWebhook = async (req, res) => {
 
     try {
       const sale = await Sale.create(saleData);
-      console.log('Venta registrada vía webhook:', nTransaction);
+      console.log('[Stripe Webhook] Venta registrada vía webhook:', nTransaction, 'saleId=', sale && sale.id);
     } catch (err) {
-      console.error('Error registrando la venta desde webhook:', err);
+      console.error('[Stripe Webhook] Error registrando la venta desde webhook:', err && (err.stack || err.message || err));
     }
+  }
+  } catch (procErr) {
+    console.error('[Stripe Webhook] Error processing event:', procErr && (procErr.stack || procErr.message || procErr));
   }
 
   res.json({ received: true });
