@@ -1,14 +1,20 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import auth from '../middlewares/auth.js';
 import {
     createCheckoutSession,
     getCheckoutSession,
+    stripeWebhook
 } from "../controllers/stripe.controller.js";
 
 const router = Router();
 
 router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession);
+
 // Endpoint para obtener detalles de una sesión de Stripe Checkout
 router.get("/session/:sessionId", auth.optionalAuth, getCheckoutSession);
+
+// 🔹 Nuevo endpoint para el webhook
+// Nota: Stripe NO envía auth, por eso no usamos auth middleware
+router.post("/webhook", express.raw({ type: 'application/json' }), stripeWebhook);
 
 export default router;

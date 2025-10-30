@@ -97,3 +97,50 @@ export const getCheckoutSession = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener la sesión de Stripe.' });
   }
 };
+
+
+export const stripeWebhook = async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+
+    const nTransaction = `STRIPE_${session.id}`;
+    const saleData = {
+      user: session.metadata.userId || null,
+      guestId: session.metadata.guestId || null,
+      currency_payment: session.currency,
+      method_payment: 'STRIPE',
+      n_transaction: nTransaction,
+      stripeSessionId: session.id,
+      total: session.amount_total / 100,
+    };
+
+    const saleAddress = {
+      name: session.customer_details?.name || '',
+      email: session.customer_details?.email || '',
+      address: session.customer_details?.address || {},
+    };
+
+    try {
+      const sale = await Sale.create(saleData);
+      console.log('Venta registrada vía webhook:', nTransaction);
+    } catch (err) {
+      console.error('Error registrando la venta desde webhook:', err);
+    }
+  }
+
+  res.json({ received: true });
+};
