@@ -459,12 +459,43 @@ export const createAdminSale = async (req, res) => {
             await createSaleDetail(det, newSale.id);
         }
 
-        // link delivery dates if Printful returned them
-        if (pfResult.data && pfResult.data.minDeliveryDate) {
-            const minD = new Date(pfResult.data.minDeliveryDate);
-            const maxD = new Date(minD);
-            maxD.setDate(maxD.getDate() + 7);
-            await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
+        // Log full Printful response and save Printful metadata (orderId, status)
+        try {
+            console.log('[Printful] Estructura de respuesta completa:', JSON.stringify(pfResult, null, 2));
+
+            if (pfResult && pfResult.data) {
+                const pfResp = pfResult;
+                // Support multiple possible response shapes
+                const printfulOrderId = pfResp.data.orderId ?? (pfResp.data.result && pfResp.data.result.id) ?? null;
+                const printfulStatus = pfResp.data.raw?.status || (pfResp.data.result && pfResp.data.result.status) || 'unknown';
+                const printfulUpdatedAt = new Date();
+
+                console.log('[Printful] Datos de orden recibidos:', { orderId: printfulOrderId, status: printfulStatus });
+
+                await newSale.update({
+                    printfulOrderId,
+                    printfulStatus,
+                    printfulUpdatedAt
+                });
+
+                console.log('[Printful] Estado inicial guardado en BD:', {
+                    printfulOrderId,
+                    printfulStatus
+                });
+
+                // delivery dates may be in pfResp.data or pfResp.data.result
+                const pfData = pfResp.data.result || pfResp.data || {};
+                if (pfData.minDeliveryDate) {
+                    const minD = new Date(pfData.minDeliveryDate);
+                    const maxD = new Date(minD);
+                    maxD.setDate(maxD.getDate() + 7);
+                    await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
+                }
+            } else {
+                console.warn('[Printful] No se recibió data válida de la orden para admin create.');
+            }
+        } catch (pfSaveErr) {
+            console.error('[Printful] Error guardando estado en BD (admin create):', pfSaveErr && (pfSaveErr.message || pfSaveErr));
         }
 
         try { await sendEmail(newSale.id); } catch (e) { console.error('Error sending admin creation email', e); }
@@ -738,14 +769,47 @@ export const adminCorrectSale = async (req, res) => {
             await createSaleDetail(det, newSale.id);
         }
 
-        // Save delivery dates and link replacement
-        if (pfResult.data && pfResult.data.minDeliveryDate) {
-            const minD = new Date(pfResult.data.minDeliveryDate);
-            const maxD = new Date(minD);
-            maxD.setDate(maxD.getDate() + 7);
-            await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0], replacementOfId: original.id });
-        } else {
-            await newSale.update({ replacementOfId: original.id });
+        // Log Printful full response, save Printful metadata and delivery dates, and link replacement
+        try {
+            console.log('[Printful] Estructura de respuesta completa (admin correction):', JSON.stringify(pfResult, null, 2));
+
+            if (pfResult && pfResult.data) {
+                const pfResp = pfResult;
+                const printfulOrderId = pfResp.data.orderId ?? (pfResp.data.result && pfResp.data.result.id) ?? null;
+                const printfulStatus = pfResp.data.raw?.status || (pfResp.data.result && pfResp.data.result.status) || 'unknown';
+                const printfulUpdatedAt = new Date();
+
+                console.log('[Printful] Datos de orden recibidos (admin correction):', { orderId: printfulOrderId, status: printfulStatus });
+
+                const updatePayload = {
+                    printfulOrderId,
+                    printfulStatus,
+                    printfulUpdatedAt,
+                    replacementOfId: original.id
+                };
+
+                // delivery dates may be present in different shapes
+                const pfData = pfResp.data.result || pfResp.data || {};
+                if (pfData.minDeliveryDate) {
+                    const minD = new Date(pfData.minDeliveryDate);
+                    const maxD = new Date(minD);
+                    maxD.setDate(maxD.getDate() + 7);
+                    updatePayload.minDeliveryDate = minD.toISOString().split('T')[0];
+                    updatePayload.maxDeliveryDate = maxD.toISOString().split('T')[0];
+                }
+
+                await newSale.update(updatePayload);
+
+                console.log('[Printful] Estado inicial guardado en BD (admin correction):', { printfulOrderId, printfulStatus });
+            } else {
+                // at minimum link replacement
+                await newSale.update({ replacementOfId: original.id });
+                console.warn('[Printful] No se recibió data válida de la orden para admin correction. Sólo se enlazó replacementOfId.');
+            }
+        } catch (pfSaveErr) {
+            console.error('[Printful] Error guardando estado en BD (admin correction):', pfSaveErr && (pfSaveErr.message || pfSaveErr));
+            // Ensure replacement link even on error
+            try { await newSale.update({ replacementOfId: original.id }); } catch (e) { /* ignore */ }
         }
 
         try { await sendEmail(newSale.id); } catch (e) { console.error('Error sending admin correction email', e); }
