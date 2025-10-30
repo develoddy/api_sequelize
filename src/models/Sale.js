@@ -13,8 +13,23 @@ export const Sale = sequelize.define('sales', {
   maxDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
   // Stripe session identifier
   stripeSessionId: { type: DataTypes.STRING, allowNull: true },
+  // Printful integration fields
+  printfulOrderId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  printfulStatus: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  printfulUpdatedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
 }, {
   timestamps: true,
   tableName: 'sales'
 });
+
+console.log('[Sale Model] Campos de estado Printful añadidos');
 

@@ -764,6 +764,7 @@ export const adminCorrectSale = async (req, res) => {
 // Register de sale para usuarios Autenticados
 export const register = async (req, res) => {
     try {
+        console.log('[Sale Controller] Iniciando registro de venta...');
         const saleData = req.body.sale;
         // Incluir stripeSessionId y evitar duplicados para usuarios autenticados
         if (saleData.stripeSessionId) {
@@ -809,6 +810,47 @@ export const register = async (req, res) => {
             });
         }
 
+        // ✅ Guardar el estado inicial de Printful
+        console.log('[Printful] Resultado recibido:', result);
+
+        try {
+            // Log the complete response structure for future debugging
+            console.log('[Printful] Estructura de respuesta completa:', JSON.stringify(result, null, 2));
+
+            if (result && result.data) {
+                // Expected response shape:
+                // {
+                //   error: false,
+                //   data: {
+                //     orderId: 132374667,
+                //     raw: { status: 'draft', ... }
+                //   }
+                // }
+                const printfulResponse = result;
+
+                const printfulOrderId = printfulResponse.data.orderId ?? null;
+                const printfulStatus = (printfulResponse.data.raw && printfulResponse.data.raw.status) ? printfulResponse.data.raw.status : 'unknown';
+                const printfulUpdatedAt = new Date();
+
+                console.log('[Printful] Datos de orden recibidos:', { orderId: printfulOrderId, status: printfulStatus });
+
+                await sale.update({
+                    printfulOrderId,
+                    printfulStatus,
+                    printfulUpdatedAt
+                });
+
+                console.log('[Printful] Estado inicial guardado en BD:', {
+                    printfulOrderId,
+                    printfulStatus,
+                });
+            } else {
+                console.warn('[Printful] No se recibió data válida de la orden.');
+            }
+        } catch (pfSaveErr) {
+            console.error('[Printful] Error guardando estado en BD:', pfSaveErr && (pfSaveErr.message || pfSaveErr));
+        }
+
         // Obtener la fecha mínima desde la respuesta de Printful
         //const minDeliveryDate = new Date(result.data.minDeliveryDate);
         // Obtener la fecha mínima desde la respuesta de Printful
@@ -845,6 +887,8 @@ export const register = async (req, res) => {
         // Obtener los detalles de la venta
         const saleDetails = await getSaleDetails(sale.id);
 
+        console.log('[Sale Controller] Registro completado con éxito. Sale ID:', sale.id);
+
         res.status(200).json({
             message: "Muy bien! La orden se generó correctamente",
             sale: sale,
@@ -852,6 +896,10 @@ export const register = async (req, res) => {
             deliveryEstimate: {
                 min: sale.minDeliveryDate,
                 max: sale.maxDeliveryDate
+            },
+            printful: {
+                id: sale.printfulOrderId,
+                status: sale.printfulStatus
             }
         });
     } catch (error) {
