@@ -199,23 +199,28 @@ export const stripeWebhook = async (req, res) => {
       // si no, recuperar los carritos desde la DB usando userId/guestId
       let cartItems = [];
 
-      // 1) Prefer checkout cache referenced via metadata.cartId
-      const cartIdFromMetadata = session.metadata?.cartId || session.metadata?.cart_id || session.metadata?.cartid || null;
-      if (cartIdFromMetadata) {
-        try {
-          console.log('[Stripe Webhook] Found cartId in metadata:', cartIdFromMetadata);
-          const cacheRow = await CheckoutCache.findByPk(Number(cartIdFromMetadata));
-          if (cacheRow && cacheRow.cart) {
-            cartItems = JSON.parse(cacheRow.cart || '[]');
-            console.log('[Stripe Webhook] Loaded cart from CheckoutCache id=', cacheRow.id, 'items=', Array.isArray(cartItems) ? cartItems.length : 0);
-          } else {
-            console.warn('[Stripe Webhook] No CheckoutCache row found for id=', cartIdFromMetadata);
+        // 1) Prefer checkout cache referenced via metadata.cartId
+        const cartIdFromMetadata = session.metadata?.cartId || session.metadata?.cart_id || session.metadata?.cartid || null;
+        // tracking vars to decide whether to delete the cache after successful processing
+        let checkoutCacheId = null;
+        let checkoutCacheRowFound = false;
+        if (cartIdFromMetadata) {
+          try {
+            console.log('[Stripe Webhook] Found cartId in metadata:', cartIdFromMetadata);
+            const cacheRow = await CheckoutCache.findByPk(Number(cartIdFromMetadata));
+            if (cacheRow && cacheRow.cart) {
+              cartItems = JSON.parse(cacheRow.cart || '[]');
+              checkoutCacheId = cacheRow.id;
+              checkoutCacheRowFound = true;
+              console.log('[Stripe Webhook] Loaded cart from CheckoutCache id=', cacheRow.id, 'items=', Array.isArray(cartItems) ? cartItems.length : 0);
+            } else {
+              console.warn('[Stripe Webhook] No CheckoutCache row found for id=', cartIdFromMetadata);
+            }
+          } catch (cacheErr) {
+            console.warn('[Stripe Webhook] Error reading CheckoutCache id=', cartIdFromMetadata, cacheErr);
+            cartItems = [];
           }
-        } catch (cacheErr) {
-          console.warn('[Stripe Webhook] Error reading CheckoutCache id=', cartIdFromMetadata, cacheErr);
-          cartItems = [];
         }
-      }
 
       // 2) Fallback to metadata.cart if no cache or cache missing
       if ((!Array.isArray(cartItems) || cartItems.length === 0) && session.metadata?.cart) {
@@ -319,6 +324,22 @@ export const stripeWebhook = async (req, res) => {
       }
 
       console.log('[Stripe Webhook] Created SaleDetails count=', createdDetailsCount, 'for saleId=', sale.id);
+
+      // Si vinimos desde CheckoutCache y TODOS los detalles se crearon correctamente,
+      // eliminar la fila de CheckoutCache para mantener la DB limpia.
+      try {
+        const expectedCount = Array.isArray(cartItems) ? cartItems.length : 0;
+        if (checkoutCacheRowFound && checkoutCacheId) {
+          if (expectedCount > 0 && createdDetailsCount === expectedCount) {
+            await CheckoutCache.destroy({ where: { id: checkoutCacheId } });
+            console.log(`[Stripe Webhook] Deleted CheckoutCache id=${checkoutCacheId} after successful processing`);
+          } else {
+            console.log(`[Stripe Webhook] Not deleting CheckoutCache id=${checkoutCacheId} because createdDetailsCount=${createdDetailsCount} != cartItems.length=${expectedCount}`);
+          }
+        }
+      } catch (delCacheErr) {
+        console.warn('[Stripe Webhook] Failed to delete CheckoutCache id=', checkoutCacheId, delCacheErr && (delCacheErr.message || delCacheErr));
+      }
 
       // Si vinimos desde DB, eliminar los items del carrito originales
       if (sourceCarts && sourceCarts.length > 0) {
