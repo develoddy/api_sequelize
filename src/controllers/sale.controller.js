@@ -281,6 +281,10 @@ export const register = async (req, res) => {
 
         // Obtener todos los carritos del usuario
         const carts = await getUserCarts(sale.userId);
+        console.log('[Sale Controller] register - fetched carts count for userId=', sale.userId, Array.isArray(carts) ? carts.length : 0);
+        if (Array.isArray(carts) && carts.length > 0) {
+            console.log('[Sale Controller] register - cart ids:', carts.map(c=>c.id));
+        }
 
         // Preparar los items para Printful
         const { items, costs } = await prepareItemsForPrintful(carts, sale); 
@@ -431,6 +435,7 @@ const prepareItemsForPrintful = async (carts, sale) => {
     let tax = 0.00; // Ajusta el impuesto según tus necesidades
 
     for (const cart of carts) {
+        console.log('[prepareItemsForPrintful] processing cart id=', cart.id, 'productId=', cart.productId, 'variedadId=', cart.variedadId, 'cantidad=', cart.cantidad);
         const itemFiles = await getItemFiles(cart); // Solo url de imagen
         const itemOptions = await getItemOptions(cart); // Color, talla, etc.
         const item = await createItem(cart, itemFiles, itemOptions);
@@ -440,7 +445,13 @@ const prepareItemsForPrintful = async (carts, sale) => {
         await updateStock(cart);
 
         // Crear detalles de venta
-        await createSaleDetail(cart, sale.id);
+        try {
+            const createdDetail = await createSaleDetail(cart, sale.id);
+            console.log('[prepareItemsForPrintful] createSaleDetail succeeded for cart id=', cart.id, 'detailId=', createdDetail && createdDetail.id);
+        } catch (detailErr) {
+            console.error('[prepareItemsForPrintful] createSaleDetail FAILED for cart id=', cart.id, detailErr && (detailErr.stack || detailErr.message || detailErr));
+            throw detailErr; // bubble up so register fails visibly
+        }
 
         // Eliminar el ítem del carrito
         await removeCartItem(cart);
@@ -628,20 +639,31 @@ const updateStock = async (cart) => {
 
 // Crear detalles de venta
 const createSaleDetail = async (cart, saleId) => {
+    // Ensure numeric/default fields to avoid DB constraint errors
+    const price_unitario = cart.price_unitario != null ? Number(cart.price_unitario) : Number(cart.price || 0);
+    const cantidad = cart.cantidad != null ? Number(cart.cantidad) : 1;
+    const subtotalVal = cart.subtotal != null ? Number(cart.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
+    const totalVal = cart.total != null ? Number(cart.total) : subtotalVal;
+
     const saleDetailData = {
         type_discount: cart.type_discount || 1,
         discount: cart.discount || 0,
-        cantidad: cart.cantidad,
+        cantidad: cantidad,
         code_cupon: cart.code_cupon || null,
         code_discount: cart.code_discount || null,
-        price_unitario: cart.price_unitario,
-        subtotal: cart.subtotal,
-        total: cart.total,
+        price_unitario: price_unitario,
+        subtotal: subtotalVal,
+        total: totalVal,
         saleId: saleId,
-        productId: cart.productId,
+        productId: cart.productId || null,
         variedadId: cart.variedadId || null
     };
-    await SaleDetail.create(saleDetailData);
+
+    // Log the payload used to create the SaleDetail
+    console.log('[createSaleDetail] creating sale detail', saleDetailData);
+
+    const created = await SaleDetail.create(saleDetailData);
+    return created;
 };
 
 // Eliminar ítem del carrito
@@ -811,19 +833,32 @@ const getSaleDetails = async (saleId) => {
 export const getSaleBySession = async (req, res) => {
     try {
         const { sessionId } = req.params;
-            // Buscar la venta con el stripeSessionId
-            const sale = await Sale.findOne({
-                where: { stripeSessionId: sessionId },
-                include: [
-                    { model: SaleDetail },
-                    { model: SaleAddress }
+        // Buscar la venta con el stripeSessionId e incluir direcciones y relaciones de user/guest
+        console.log('[Sale Controller] getSaleBySession - buscando venta para stripeSessionId=', sessionId);
+        const sale = await Sale.findOne({
+            where: { stripeSessionId: sessionId },
+            include: [
+                { model: SaleAddress },
+                { model: User },
+                { model: Guest }
             ]
         });
-        
-    if (!sale) {
-      return res.status(404).json({ message: 'Venta no encontrada para sessionId ' + sessionId });
-    }
-    return res.json({ sale, saleDetails: sale.SaleDetails || [] });
+
+        if (!sale) {
+            console.log('[Sale Controller] getSaleBySession - no se encontró venta para stripeSessionId=', sessionId);
+            return res.status(404).json({ message: 'Venta no encontrada para sessionId ' + sessionId });
+        }
+
+        // Obtener detalles con helper para mantener la forma esperada (product imagen, variedad, etc.)
+        const saleDetails = await getSaleDetails(sale.id);
+        console.log('[Sale Controller] getSaleBySession - saleId=', sale.id, 'saleDetails.count=', Array.isArray(saleDetails) ? saleDetails.length : 0);
+
+        // Si aún no hay detalles, devolver vacío (el frontend tiene retry) pero logear para depuración
+        if (!saleDetails || saleDetails.length === 0) {
+            console.warn('[Sale Controller] getSaleBySession - venta sin detalles aún. stripeSessionId=', sessionId, 'saleId=', sale.id);
+        }
+
+        return res.json({ sale, saleDetails });
   } catch (error) {
     console.error('Error en getSaleBySession:', error);
     return res.status(500).json({ message: 'Error recuperando la venta' });

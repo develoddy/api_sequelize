@@ -15,42 +15,23 @@ dotenv.config();
 const app = express();
 app.use(cors());
 
-
-
-// -------------------- Límites de tamaño --------------------
-// Nota: Stripe necesita que el body llegue como raw (Buffer) para verificar la firma.
-// Por eso aplicamos un parser raw específicamente para la ruta del webhook ANTES
-// de registrar el body-parser JSON global.
-app.use((req, res, next) => {
-  try {
-    // Asegurarnos de que la ruta y método coinciden con el webhook
-    if (req.originalUrl === '/api/stripe/webhook' && req.method === 'POST') {
-      // Ejecutar express.raw sólo para este request y luego continuar al router
-      return express.raw({ type: 'application/json' })(req, res, (err) => {
-        if (err) {
-          console.error('[App] Error parsing raw body for Stripe webhook:', err);
-          return next(err);
-        }
-        console.log('[App] Raw body middleware applied for /api/stripe/webhook - headers:', JSON.stringify(req.headers || {}, null, 2));
-        console.log('[App] Raw body type info - isBuffer:', Buffer.isBuffer(req.body), 'bodyLength:', req.body ? (req.body.length || JSON.stringify(req.body).length) : 0);
-        return next();
-      });
-    }
-  } catch (e) {
-    console.error('[App] Exception in raw-webhook middleware:', e && (e.stack || e.message || e));
-    // fallthrough to next so other middleware can handle
-  }
-  return next();
-});
-
-// Límite para el tamaño de las solicitudes (JSON/urlencoded)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
 // -------------------- __dirname para ES Modules --------------------
 // Obtener __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// -------------------- Middleware para Stripe Webhook --------------------
+// ⚠️ Debe ir ANTES de express.json() global
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  console.log('[App] Stripe webhook request hit', req.method, req.originalUrl);
+  console.log('[App] Raw body isBuffer:', Buffer.isBuffer(req.body), 'length:', req.body.length);
+  next();
+});
+
+
+// Límite para el tamaño de las solicitudes (JSON/urlencoded)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 
 // -------------------- Middleware de cache --------------------
