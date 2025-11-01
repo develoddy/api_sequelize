@@ -6,6 +6,13 @@ import { Variedad } from '../models/Variedad.js';
 import { Cart } from '../models/Cart.js';
 import { CartCache } from '../models/CartCache.js';
 import { CheckoutCache } from '../models/CheckoutCache.js';
+import { Guest } from '../models/Guest.js';
+import { User } from '../models/User.js';
+import { SaleAddress } from '../models/SaleAddress.js';
+import { File } from '../models/File.js';
+
+import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
+import { sendEmail } from './sale.controller.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16', // o la que uses
@@ -98,13 +105,15 @@ export const createCheckoutSession = async (req, res) => {
       total: item.total ?? null
     }));
 
-    // Persist full sanitized cart in CheckoutCache to avoid Stripe metadata size limits
+    // Persist full sanitized cart and (optionally) the shipping address in CheckoutCache
+    // Store as an object { items, address } so webhook can reproduce the frontend register flow
     let checkoutCache = null;
     try {
+      const payloadToStore = { items: sanitizedCart, address: address || null };
       checkoutCache = await CheckoutCache.create({
         userId: userId || null,
         guestId: guestId || null,
-        cart: JSON.stringify(sanitizedCart)
+        cart: JSON.stringify(payloadToStore)
       });
       console.log('[Stripe] CheckoutCache created id=', checkoutCache.id);
     } catch (cacheErr) {
@@ -170,202 +179,395 @@ export const stripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
+  if (event.type !== 'checkout.session.completed') {
+    console.log('[Stripe Webhook] Ignoring event type:', event.type);
+    return res.json({ received: true });
+  }
 
-    console.log('[Stripe Webhook] session object (summary):', {
-      id: session.id,
-      amount_total: session.amount_total,
-      currency: session.currency,
-      metadata: session.metadata
+  const session = event.data.object;
+
+  console.log('[Stripe Webhook] session object (summary):', {
+    id: session.id,
+    amount_total: session.amount_total,
+    currency: session.currency,
+    metadata: session.metadata
+  });
+
+  const userId = Number(session.metadata.userId) || null;
+  const guestId = Number(session.metadata.guestId) || null;
+
+  try {
+    // Crear venta
+    const sale = await Sale.create({
+      userId,
+      guestId,
+      currency_payment: session.currency,
+      method_payment: 'STRIPE',
+      n_transaction: `STRIPE_${session.id}`,
+      stripeSessionId: session.id,
+      total: (session.amount_total ?? 0) / 100,
     });
 
-    const userId = Number(session.metadata.userId) || null;
-    const guestId = Number(session.metadata.guestId) || null;
+    // Crear detalles del carrito
+    let cartItems = [];
+    const cartIdFromMetadata = session.metadata?.cartId || session.metadata?.cart_id || session.metadata?.cartid || null;
+    let checkoutCacheId = null;
+    let checkoutCacheRowFound = false;
+    let printfulCreated = false;
 
-    try {
-      // Crear venta
-      const sale = await Sale.create({
-        userId,
-        guestId,
-        currency_payment: session.currency,
-        method_payment: 'STRIPE',
-        n_transaction: `STRIPE_${session.id}`,
-        stripeSessionId: session.id,
-        total: (session.amount_total ?? 0) / 100,
-      });
-
-      // Crear detalles del carrito: preferir metadata.cart (si frontend la envía),
-      // si no, recuperar los carritos desde la DB usando userId/guestId
-      let cartItems = [];
-
-        // 1) Prefer checkout cache referenced via metadata.cartId
-        const cartIdFromMetadata = session.metadata?.cartId || session.metadata?.cart_id || session.metadata?.cartid || null;
-        // tracking vars to decide whether to delete the cache after successful processing
-        let checkoutCacheId = null;
-        let checkoutCacheRowFound = false;
-        if (cartIdFromMetadata) {
-          try {
-            console.log('[Stripe Webhook] Found cartId in metadata:', cartIdFromMetadata);
-            const cacheRow = await CheckoutCache.findByPk(Number(cartIdFromMetadata));
-            if (cacheRow && cacheRow.cart) {
-              cartItems = JSON.parse(cacheRow.cart || '[]');
-              checkoutCacheId = cacheRow.id;
-              checkoutCacheRowFound = true;
-              console.log('[Stripe Webhook] Loaded cart from CheckoutCache id=', cacheRow.id, 'items=', Array.isArray(cartItems) ? cartItems.length : 0);
-            } else {
-              console.warn('[Stripe Webhook] No CheckoutCache row found for id=', cartIdFromMetadata);
-            }
-          } catch (cacheErr) {
-            console.warn('[Stripe Webhook] Error reading CheckoutCache id=', cartIdFromMetadata, cacheErr);
+    if (cartIdFromMetadata) {
+      try {
+        console.log('[Stripe Webhook] Found cartId in metadata:', cartIdFromMetadata);
+        const cacheRow = await CheckoutCache.findByPk(Number(cartIdFromMetadata));
+        if (cacheRow && cacheRow.cart) {
+          const parsedCache = JSON.parse(cacheRow.cart || 'null');
+          if (Array.isArray(parsedCache)) {
+            cartItems = parsedCache;
+          } else if (parsedCache && Array.isArray(parsedCache.items)) {
+            cartItems = parsedCache.items;
+            req._stripe_cached_address = parsedCache.address || null;
+          } else {
             cartItems = [];
           }
+          checkoutCacheId = cacheRow.id;
+          checkoutCacheRowFound = true;
+          console.log('[Stripe Webhook] Loaded cart from CheckoutCache id=', cacheRow.id, 'items=', Array.isArray(cartItems) ? cartItems.length : 0);
+        } else {
+          console.warn('[Stripe Webhook] No CheckoutCache row found for id=', cartIdFromMetadata);
         }
-
-      // 2) Fallback to metadata.cart if no cache or cache missing
-      if ((!Array.isArray(cartItems) || cartItems.length === 0) && session.metadata?.cart) {
-        try {
-          cartItems = JSON.parse(session.metadata.cart || '[]');
-          console.log('[Stripe Webhook] Loaded cart from metadata.cart length=', Array.isArray(cartItems) ? cartItems.length : 0);
-        } catch (e) {
-          console.warn('[Stripe Webhook] metadata.cart JSON parse failed, will fallback to DB carts:', e);
-          cartItems = [];
-        }
+      } catch (cacheErr) {
+        console.warn('[Stripe Webhook] Error reading CheckoutCache id=', cartIdFromMetadata, cacheErr);
+        cartItems = [];
       }
-
-      console.log('[Stripe Webhook] cartItems from metadata/checkoutCache length=', Array.isArray(cartItems) ? cartItems.length : 0);
-
-  let sourceCarts = [];
-  let sourceIsCache = false;
-      if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        console.log('[Stripe Webhook] No cart items in metadata, loading from DB for userId/guestId', { userId, guestId });
-        if (userId) {
-          const carts = await Cart.findAll({ where: { userId } });
-          sourceCarts = carts;
-          sourceIsCache = false;
-          cartItems = carts.map(c => ({
-            id: c.id,
-            productId: c.productId,
-            variedadId: c.variedadId,
-            cantidad: c.cantidad,
-            price_unitario: c.price_unitario,
-            discount: c.discount,
-            code_discount: c.code_discount
-          }));
-          console.log('[Stripe Webhook] Loaded carts from DB for userId=', userId, 'count=', carts.length);
-        } else if (guestId) {
-          const cartsCache = await CartCache.findAll({ where: { guest_id: guestId } });
-          sourceCarts = cartsCache;
-          sourceIsCache = true;
-          cartItems = cartsCache.map(c => ({
-            id: c.id,
-            productId: c.productId,
-            variedadId: c.variedadId,
-            cantidad: c.cantidad,
-            price_unitario: c.price_unitario,
-            discount: c.discount,
-            code_discount: c.code_discount
-          }));
-          console.log('[Stripe Webhook] Loaded carts from CartCache for guestId=', guestId, 'count=', cartsCache.length);
-        }
-      }
-
-      console.log('[Stripe Webhook] Final cartItems to persist count=', Array.isArray(cartItems) ? cartItems.length : 0, 'sourceIsCache=', sourceIsCache);
-
-      // Crear cada SaleDetail con manejo de errores por item y logs
-      let createdDetailsCount = 0;
-      for (const item of cartItems) {
-        try {
-          // Normalize numeric fields and compute subtotal/total if missing
-          const price_unitario = item.price_unitario != null ? Number(item.price_unitario) : (item.price != null ? Number(item.price) : 0);
-          const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
-          const discount = item.discount != null ? Number(item.discount) : 0;
-          const code_discount = item.code_discount || null;
-
-          const subtotal = item.subtotal != null ? Number(item.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
-          const total = item.total != null ? Number(item.total) : subtotal;
-
-          // If productId is missing in metadata, try to resolve it from Variedad
-          let resolvedProductId = item.productId || null;
-          if (!resolvedProductId && item.variedadId) {
-            try {
-              const variedadRow = await Variedad.findByPk(item.variedadId);
-              if (variedadRow && variedadRow.productId) {
-                resolvedProductId = variedadRow.productId;
-                // Log in the requested format so it's easy to grep
-                console.log(`[Stripe Webhook] Resolved productId=${resolvedProductId} from variedadId=${item.variedadId}`);
-              }
-            } catch (resolveErr) {
-              console.warn('[Stripe Webhook] Could not resolve productId from Variedad for variedadId=', item.variedadId, resolveErr && (resolveErr.message || resolveErr));
-            }
-          }
-
-          const detailPayload = {
-            saleId: sale.id,
-            productId: resolvedProductId,
-            variedadId: item.variedadId || null,
-            cantidad: cantidad,
-            price_unitario: price_unitario,
-            discount: discount,
-            code_discount: code_discount,
-            subtotal: subtotal,
-            total: total,
-          };
-
-          console.log('[Stripe Webhook] creating SaleDetail payload:', detailPayload);
-
-          const created = await SaleDetail.create(detailPayload);
-          createdDetailsCount++;
-          // Log the created SaleDetail in a concise, easy-to-search format
-          console.log(`[Stripe Webhook] SaleDetail creado: { saleId: ${sale.id}, productId: ${detailPayload.productId}, variedadId: ${detailPayload.variedadId} }`);
-        } catch (detailErr) {
-          console.error('[Stripe Webhook] Error creando SaleDetail para saleId=' + sale.id + ' item=', item, detailErr && (detailErr.stack || detailErr.message || detailErr));
-        }
-      }
-
-      console.log('[Stripe Webhook] Created SaleDetails count=', createdDetailsCount, 'for saleId=', sale.id);
-
-      // Si vinimos desde CheckoutCache y TODOS los detalles se crearon correctamente,
-      // eliminar la fila de CheckoutCache para mantener la DB limpia.
-      try {
-        const expectedCount = Array.isArray(cartItems) ? cartItems.length : 0;
-        if (checkoutCacheRowFound && checkoutCacheId) {
-          if (expectedCount > 0 && createdDetailsCount === expectedCount) {
-            await CheckoutCache.destroy({ where: { id: checkoutCacheId } });
-            console.log(`[Stripe Webhook] Deleted CheckoutCache id=${checkoutCacheId} after successful processing`);
-          } else {
-            console.log(`[Stripe Webhook] Not deleting CheckoutCache id=${checkoutCacheId} because createdDetailsCount=${createdDetailsCount} != cartItems.length=${expectedCount}`);
-          }
-        }
-      } catch (delCacheErr) {
-        console.warn('[Stripe Webhook] Failed to delete CheckoutCache id=', checkoutCacheId, delCacheErr && (delCacheErr.message || delCacheErr));
-      }
-
-      // Si vinimos desde DB, eliminar los items del carrito originales
-      if (sourceCarts && sourceCarts.length > 0) {
-        try {
-          for (const c of sourceCarts) {
-            try {
-              if (c && c.id) {
-                if (sourceIsCache) {
-                  await CartCache.destroy({ where: { id: c.id } });
-                } else {
-                  await Cart.destroy({ where: { id: c.id } });
-                }
-              }
-            } catch (delErr) {
-              console.warn('[Stripe Webhook] No se pudo eliminar item de carrito fuente id=', c && c.id, delErr && (delErr.message || delErr));
-            }
-          }
-        } catch (delAllErr) {
-          console.error('[Stripe Webhook] Error eliminando items de carrito fuente:', delAllErr && (delAllErr.stack || delAllErr.message || delAllErr));
-        }
-      }
-
-      console.log('[Stripe Webhook] Venta y detalles registrados correctamente, saleId=', sale.id);
-    } catch (err) {
-      console.error('[Stripe Webhook] Error registrando venta + detalles:', err);
     }
+
+    // Fallback to metadata.cart
+    if ((!Array.isArray(cartItems) || cartItems.length === 0) && session.metadata?.cart) {
+      try {
+        cartItems = JSON.parse(session.metadata.cart || '[]');
+        console.log('[Stripe Webhook] Loaded cart from metadata.cart length=', Array.isArray(cartItems) ? cartItems.length : 0);
+      } catch (e) {
+        console.warn('[Stripe Webhook] metadata.cart JSON parse failed, will fallback to DB carts:', e);
+        cartItems = [];
+      }
+    }
+
+    console.log('[Stripe Webhook] cartItems from metadata/checkoutCache length=', Array.isArray(cartItems) ? cartItems.length : 0);
+
+    let sourceCarts = [];
+    let sourceIsCache = false;
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      console.log('[Stripe Webhook] No cart items in metadata, loading from DB for userId/guestId', { userId, guestId });
+      if (userId) {
+        const carts = await Cart.findAll({ where: { userId } });
+        sourceCarts = carts;
+        sourceIsCache = false;
+        cartItems = carts.map(c => ({
+          id: c.id,
+          productId: c.productId,
+          variedadId: c.variedadId,
+          cantidad: c.cantidad,
+          price_unitario: c.price_unitario,
+          discount: c.discount,
+          code_discount: c.code_discount
+        }));
+        console.log('[Stripe Webhook] Loaded carts from DB for userId=', userId, 'count=', carts.length);
+      } else if (guestId) {
+        const cartsCache = await CartCache.findAll({ where: { guest_id: guestId } });
+        sourceCarts = cartsCache;
+        sourceIsCache = true;
+        cartItems = cartsCache.map(c => ({
+          id: c.id,
+          productId: c.productId,
+          variedadId: c.variedadId,
+          cantidad: c.cantidad,
+          price_unitario: c.price_unitario,
+          discount: c.discount,
+          code_discount: c.code_discount
+        }));
+        console.log('[Stripe Webhook] Loaded carts from CartCache for guestId=', guestId, 'count=', cartsCache.length);
+      }
+    }
+
+    console.log('[Stripe Webhook] Final cartItems to persist count=', Array.isArray(cartItems) ? cartItems.length : 0, 'sourceIsCache=', sourceIsCache);
+
+    // Create SaleDetails
+    let createdDetailsCount = 0;
+    for (const item of cartItems) {
+      try {
+        const price_unitario = item.price_unitario != null ? Number(item.price_unitario) : (item.price != null ? Number(item.price) : 0);
+        const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
+        const discount = item.discount != null ? Number(item.discount) : 0;
+        const code_discount = item.code_discount || null;
+
+        const subtotal = item.subtotal != null ? Number(item.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
+        const total = item.total != null ? Number(item.total) : subtotal;
+
+        let resolvedProductId = item.productId || null;
+        if (!resolvedProductId && item.variedadId) {
+          try {
+            const variedadRow = await Variedad.findByPk(item.variedadId);
+            if (variedadRow && variedadRow.productId) {
+              resolvedProductId = variedadRow.productId;
+              console.log(`[Stripe Webhook] Resolved productId=${resolvedProductId} from variedadId=${item.variedadId}`);
+            }
+          } catch (resolveErr) {
+            console.warn('[Stripe Webhook] Could not resolve productId from Variedad for variedadId=', item.variedadId, resolveErr && (resolveErr.message || resolveErr));
+          }
+        }
+
+        const detailPayload = {
+          saleId: sale.id,
+          productId: resolvedProductId,
+          variedadId: item.variedadId || null,
+          cantidad: cantidad,
+          price_unitario: price_unitario,
+          discount: discount,
+          code_discount: code_discount,
+          subtotal: subtotal,
+          total: total,
+        };
+
+        console.log('[Stripe Webhook] creating SaleDetail payload:', detailPayload);
+
+        await SaleDetail.create(detailPayload);
+        createdDetailsCount++;
+        console.log(`[Stripe Webhook] SaleDetail creado: { saleId: ${sale.id}, productId: ${detailPayload.productId}, variedadId: ${detailPayload.variedadId} }`);
+      } catch (detailErr) {
+        console.error('[Stripe Webhook] Error creando SaleDetail para saleId=' + sale.id + ' item=', item, detailErr && (detailErr.stack || detailErr.message || detailErr));
+      }
+    }
+
+    console.log('[Stripe Webhook] Created SaleDetails count=', createdDetailsCount, 'for saleId=', sale.id);
+
+    // === Printful + email flow ===
+    try {
+      // Re-read cache for address
+      let saleAddressFromCache = null;
+      if (checkoutCacheRowFound && checkoutCacheId) {
+        try {
+          const cacheRow = await CheckoutCache.findByPk(checkoutCacheId);
+          if (cacheRow && cacheRow.cart) {
+            const parsed = JSON.parse(cacheRow.cart || '{}');
+            if (parsed && parsed.address) saleAddressFromCache = parsed.address;
+          }
+        } catch (e) {
+          console.warn('[Stripe Webhook] Could not parse CheckoutCache for address id=', checkoutCacheId, e && e.message);
+        }
+      }
+
+      if (!saleAddressFromCache && req && req._stripe_cached_address) {
+        saleAddressFromCache = req._stripe_cached_address;
+      }
+
+      const emailFromMetadata = session.metadata?.email || '';
+      if ((saleAddressFromCache || emailFromMetadata) && Array.isArray(cartItems) && cartItems.length > 0) {
+        console.log('[Stripe Webhook] Preparing Printful payload; address present?', !!saleAddressFromCache, 'emailFromMetadata=', !!emailFromMetadata);
+
+        const pfItems = [];
+        let subtotal = 0;
+        for (const it of cartItems) {
+          const cantidad = it.cantidad != null ? Number(it.cantidad) : 1;
+          const price_unitario = it.price_unitario != null ? Number(it.price_unitario) : (it.price != null ? Number(it.price) : 0);
+          subtotal += price_unitario * cantidad;
+
+          let variant_id = null;
+          try {
+            if (it.variedadId) {
+              const v = await Variedad.findByPk(it.variedadId);
+              if (v && v.variant_id) variant_id = Number(v.variant_id);
+            }
+          } catch (e) {
+            console.warn('[Stripe Webhook] Error resolving variant_id for variedadId=', it.variedadId, e && e.message);
+          }
+
+          let files = [];
+          try {
+            if (it.variedadId) {
+              const fileRows = await File.findAll({ where: { varietyId: it.variedadId } });
+              if (Array.isArray(fileRows) && fileRows.length > 0) {
+                files = fileRows.map(f => ({ url: f.preview_url || f.thumbnail_url || f.url || '', type: f.type || 'default', filename: f.filename || '' })).filter(f => f.url);
+              }
+            }
+          } catch (e) {
+            console.warn('[Stripe Webhook] Error fetching files for variedadId=', it.variedadId, e && e.message);
+          }
+
+          let name = it.title || '';
+          try {
+            if (!name && it.productId) {
+              const prod = await (await import('../models/Product.js')).Product.findByPk(it.productId).catch(() => null);
+              if (prod && prod.title) name = prod.title;
+            }
+          } catch (e) { /* ignore */ }
+
+          pfItems.push({ variant_id: variant_id, quantity: cantidad, name: name || '', price: String(price_unitario), retail_price: String(price_unitario), files });
+        }
+
+        const recipient = {
+          name: (saleAddressFromCache && (saleAddressFromCache.name || saleAddressFromCache.fullname)) || '',
+          address1: (saleAddressFromCache && (saleAddressFromCache.address || saleAddressFromCache.address1)) || '',
+          city: (saleAddressFromCache && (saleAddressFromCache.ciudad || saleAddressFromCache.city)) || '',
+          state_code: (saleAddressFromCache && (saleAddressFromCache.region || saleAddressFromCache.state)) || '',
+          country_code: (saleAddressFromCache && (saleAddressFromCache.pais || saleAddressFromCache.country)) || 'ES',
+          zip: (saleAddressFromCache && (saleAddressFromCache.zipcode || saleAddressFromCache.zip)) || '',
+          phone: (saleAddressFromCache && (saleAddressFromCache.telefono || saleAddressFromCache.phone)) || '',
+          email: (saleAddressFromCache && saleAddressFromCache.email) || emailFromMetadata || ''
+        };
+
+        const pfOrder = {
+          recipient,
+          items: pfItems,
+          retail_costs: { subtotal: subtotal.toFixed(2), discount: '0.00', shipping: '0.00', tax: '0.00' }
+        };
+
+        // Persist recipient email to Guest/User if present
+        try {
+          const resolvedEmail = (recipient && recipient.email) ? String(recipient.email).trim() : '';
+          if (resolvedEmail) {
+            if (guestId) {
+              try {
+                const guestRow = await Guest.findByPk(guestId);
+                if (guestRow && (!guestRow.email || guestRow.email.trim() === '')) {
+                  await guestRow.update({ email: resolvedEmail });
+                  console.log('[Stripe Webhook] Updated Guest.email from metadata for guestId=', guestId);
+                }
+              } catch (gErr) {
+                console.warn('[Stripe Webhook] Could not update Guest email for guestId=', guestId, gErr && gErr.message);
+              }
+            }
+            if (userId) {
+              try {
+                const userRow = await User.findByPk(userId);
+                if (userRow && (!userRow.email || userRow.email.trim() === '')) {
+                  await userRow.update({ email: resolvedEmail });
+                  console.log('[Stripe Webhook] Updated User.email from metadata for userId=', userId);
+                }
+              } catch (uErr) {
+                console.warn('[Stripe Webhook] Could not update User email for userId=', userId, uErr && uErr.message);
+              }
+            }
+          }
+        } catch (persistErr) {
+          console.warn('[Stripe Webhook] Error persisting resolved email to Guest/User:', persistErr && persistErr.message);
+        }
+
+        // Persist SaleAddress if we have cached address and none exists
+        try {
+          if (saleAddressFromCache) {
+            const existingAddr = await SaleAddress.findOne({ where: { saleId: sale.id } });
+            if (!existingAddr) {
+              const addrPayload = {
+                saleId: sale.id,
+                name: saleAddressFromCache.name || saleAddressFromCache.fullname || '',
+                surname: saleAddressFromCache.surname || '',
+                pais: saleAddressFromCache.pais || saleAddressFromCache.country || '',
+                address: saleAddressFromCache.address || saleAddressFromCache.address1 || '',
+                referencia: saleAddressFromCache.referencia || '',
+                ciudad: saleAddressFromCache.ciudad || saleAddressFromCache.city || '',
+                region: saleAddressFromCache.region || saleAddressFromCache.state || saleAddressFromCache.poblacion || '',
+                telefono: saleAddressFromCache.telefono || saleAddressFromCache.phone || '',
+                email: saleAddressFromCache.email || emailFromMetadata || '',
+                nota: saleAddressFromCache.nota || ''
+              };
+              await SaleAddress.create(addrPayload);
+              console.log('[Stripe Webhook] Created SaleAddress from cached address for saleId=', sale.id);
+            } else {
+              console.log('[Stripe Webhook] SaleAddress already exists for saleId=', sale.id);
+            }
+          }
+        } catch (addrErr) {
+          console.warn('[Stripe Webhook] Could not persist SaleAddress for saleId=', sale.id, addrErr && addrErr.message);
+        }
+
+        // Log payload and call Printful
+        try {
+          console.log('[Stripe Webhook] Printful order payload (recipient, first item):', {
+            recipient: pfOrder.recipient,
+            firstItem: pfOrder.items && pfOrder.items.length > 0 ? pfOrder.items[0] : null,
+            itemsCount: Array.isArray(pfOrder.items) ? pfOrder.items.length : 0
+          });
+
+          const pfResult = await createPrintfulOrder(pfOrder);
+          console.log('[Stripe Webhook] Full Printful raw result:', pfResult);
+
+          const pfData = (pfResult && pfResult.data) ? pfResult.data : (pfResult && typeof pfResult === 'object' ? pfResult : null);
+          if (pfData) {
+            const printfulOrderId = pfData.orderId ?? (pfData.result && pfData.result.id) ?? null;
+            const printfulStatus = pfData.raw?.status || (pfData.result && pfData.result.status) || 'unknown';
+            await sale.update({ printfulOrderId, printfulStatus, printfulUpdatedAt: new Date() });
+            printfulCreated = true;
+
+            const pfDates = (pfData.result || pfData);
+            if (pfDates && pfDates.minDeliveryDate) {
+              const minD = new Date(pfDates.minDeliveryDate);
+              if (!isNaN(minD.getTime())) {
+                const maxD = new Date(minD);
+                maxD.setDate(maxD.getDate() + 7);
+                await sale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
+              }
+            }
+          } else {
+            console.warn('[Stripe Webhook] Printful returned no data for saleId=', sale.id, 'pfResult=', pfResult);
+          }
+        } catch (pfErr) {
+          console.error('[Stripe Webhook] Error creating Printful order for saleId=', sale.id, pfErr && (pfErr.message || pfErr));
+        }
+
+        // Always attempt to send confirmation email
+        try {
+          console.log('[Stripe Webhook] Calling sendEmail for saleId=', sale.id);
+          await sendEmail(sale.id);
+          console.log('[Stripe Webhook] sendEmail finished for saleId=', sale.id);
+        } catch (emailErr) {
+          console.error('[Stripe Webhook] sendEmail error for saleId=', sale.id, emailErr && (emailErr.message || emailErr));
+        }
+      } else {
+        console.log('[Stripe Webhook] No address/email available to create Printful order or send email for saleId=', sale.id);
+      }
+    } catch (pfFlowErr) {
+      console.error('[Stripe Webhook] Error in Printful/email flow for saleId=', sale.id, pfFlowErr && (pfFlowErr.stack || pfFlowErr.message || pfFlowErr));
+    }
+
+    // Delete CheckoutCache only if details created and Printful succeeded
+    try {
+      const expectedCount = Array.isArray(cartItems) ? cartItems.length : 0;
+      if (checkoutCacheRowFound && checkoutCacheId) {
+        if (expectedCount > 0 && createdDetailsCount === expectedCount && printfulCreated) {
+          await CheckoutCache.destroy({ where: { id: checkoutCacheId } });
+          console.log(`[Stripe Webhook] Deleted CheckoutCache id=${checkoutCacheId} after successful processing`);
+        } else {
+          console.log(`[Stripe Webhook] Not deleting CheckoutCache id=${checkoutCacheId} because createdDetailsCount=${createdDetailsCount} != cartItems.length=${expectedCount} or printfulCreated=${printfulCreated}`);
+        }
+      }
+    } catch (delCacheErr) {
+      console.warn('[Stripe Webhook] Failed to delete CheckoutCache id=', checkoutCacheId, delCacheErr && (delCacheErr.message || delCacheErr));
+    }
+
+    // Remove source carts
+    if (sourceCarts && sourceCarts.length > 0) {
+      try {
+        for (const c of sourceCarts) {
+          try {
+            if (c && c.id) {
+              if (sourceIsCache) {
+                await CartCache.destroy({ where: { id: c.id } });
+              } else {
+                await Cart.destroy({ where: { id: c.id } });
+              }
+            }
+          } catch (delErr) {
+            console.warn('[Stripe Webhook] No se pudo eliminar item de carrito fuente id=', c && c.id, delErr && (delErr.message || delErr));
+          }
+        }
+      } catch (delAllErr) {
+        console.error('[Stripe Webhook] Error eliminando items de carrito fuente:', delAllErr && (delAllErr.stack || delAllErr.message || delAllErr));
+      }
+    }
+
+    console.log('[Stripe Webhook] Venta y detalles registrados correctamente, saleId=', sale.id);
+  } catch (err) {
+    console.error('[Stripe Webhook] Error registrando venta + detalles:', err && (err.stack || err.message || err));
   }
 
   res.json({ received: true });

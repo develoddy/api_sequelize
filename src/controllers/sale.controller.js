@@ -805,9 +805,8 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
 
 
 // Enviar correo electrónico de confirmación
-const sendEmail = async (saleId) => {
-    // Implementar la función de envío de correo electrónico
-    // Ejemplo: await sendEmailFunction(saleId);
+// Export a thin wrapper so other modules (webhook) can call the existing send_email implementation
+export const sendEmail = async (saleId) => {
     await send_email(saleId);
 };
 
