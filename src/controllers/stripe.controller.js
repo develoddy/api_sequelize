@@ -10,6 +10,7 @@ import { Guest } from '../models/Guest.js';
 import { User } from '../models/User.js';
 import { SaleAddress } from '../models/SaleAddress.js';
 import { File } from '../models/File.js';
+import { Option } from '../models/Option.js';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { sendEmail } from './sale.controller.js';
@@ -393,6 +394,48 @@ export const stripeWebhook = async (req, res) => {
             console.warn('[Stripe Webhook] Error fetching files for variedadId=', it.variedadId, e && e.message);
           }
 
+          // Build options for the item (needed for embroidered caps: thread colors, stitch color, etc.)
+          let itemOptions = {};
+          try {
+            if (it.variedadId) {
+              const optionRows = await Option.findAll({ where: { varietyId: it.variedadId } });
+              if (Array.isArray(optionRows) && optionRows.length > 0) {
+                for (const opt of optionRows) {
+                  const idKey = opt.idOption || opt.id || opt.name || null;
+                  if (!idKey) continue;
+                  let parsedVal = null;
+                  try {
+                    parsedVal = JSON.parse(opt.value);
+                  } catch (pe) {
+                    parsedVal = opt.value;
+                  }
+                  // normalize arrays
+                  if (Array.isArray(parsedVal)) {
+                    parsedVal = parsedVal.length > 0 ? parsedVal : parsedVal;
+                  }
+
+                  if (typeof idKey === 'string' && idKey.startsWith('thread_colors')) {
+                    const vals = Array.isArray(parsedVal) ? parsedVal : [parsedVal];
+                    const allowed = ['#FFFFFF','#000000','#96A1A8','#A67843','#FFCC00','#E25C27','#CC3366','#CC3333','#660000','#333366','#005397','#3399FF','#6B5294','#01784E','#7BA35A'];
+                    const filtered = vals.filter(v => typeof v === 'string' && allowed.includes(v));
+                    if (filtered.length > 0) {
+                      itemOptions[idKey] = filtered;
+                    } else {
+                      itemOptions[idKey] = [allowed[0]];
+                    }
+                  } else if (idKey === 'stitch_color') {
+                    const v = (parsedVal && typeof parsedVal === 'string') ? parsedVal : (Array.isArray(parsedVal) ? parsedVal[0] : null);
+                    itemOptions[idKey] = (v === 'black' ? 'black' : 'white');
+                  } else {
+                    itemOptions[idKey] = parsedVal;
+                  }
+                }
+              }
+            }
+          } catch (optErr) {
+            console.warn('[Stripe Webhook] Error fetching options for variedadId=', it.variedadId, optErr && optErr.message);
+          }
+
           let name = it.title || '';
           try {
             if (!name && it.productId) {
@@ -401,7 +444,9 @@ export const stripeWebhook = async (req, res) => {
             }
           } catch (e) { /* ignore */ }
 
-          pfItems.push({ variant_id: variant_id, quantity: cantidad, name: name || '', price: String(price_unitario), retail_price: String(price_unitario), files });
+          const itemPayload = { variant_id: variant_id, quantity: cantidad, name: name || '', price: String(price_unitario), retail_price: String(price_unitario), files };
+          if (itemOptions && Object.keys(itemOptions).length > 0) itemPayload.options = itemOptions;
+          pfItems.push(itemPayload);
         }
 
         const recipient = {
