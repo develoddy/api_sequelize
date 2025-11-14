@@ -11,7 +11,10 @@ export const Guest = sequelize.define( 'guests', {
     state: { type: DataTypes.INTEGER, defaultValue: 1 },  // 1: Activo, 0: Inactivo
 
     // NUEVA COLUMNA
-    birthday: { type: DataTypes.DATE, allowNull: true }
+    birthday: { type: DataTypes.DATE, allowNull: true },
+
+    // NUEVA COLUMNA
+    avatar: { type: DataTypes.STRING(250), allowNull: true }
     
 }, {
     timestamps: true,
