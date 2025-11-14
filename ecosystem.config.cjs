@@ -7,9 +7,12 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: "300M",
-      env_production: {
+      interpreter: "node",
+      node_args: "-r dotenv/config", // esto carga dotenv
+      env: {
         NODE_ENV: "production",
-        PORT: 3500
+        PORT: 3500,
+        DOTENV_CONFIG_PATH: ".env.production" // indica el archivo a usar
       }
     }
   ]
