@@ -17,9 +17,11 @@ import { createPrintfulOrder } from './proveedor/printful/productPrintful.contro
 import { createSaleReceipt } from './helpers/receipt.helper.js';
 import { sendEmail } from './sale.controller.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16', // o la que uses
-});
+import stripe from '../devtools/utils/stripe.js';
+
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+//   apiVersion: '2023-10-16', // o la que uses
+// });
 
 /**
  * POST /api/stripe/create-checkout-session
