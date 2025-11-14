@@ -9,6 +9,10 @@ export const Guest = sequelize.define( 'guests', {
     phone: { type: DataTypes.STRING(20), allowNull: true },  // Puede añadir su teléfono
     zipcode: { type: DataTypes.STRING(20), allowNull: true }, // Puede añadir su código postal
     state: { type: DataTypes.INTEGER, defaultValue: 1 },  // 1: Activo, 0: Inactivo
+
+    // NUEVA COLUMNA
+    birthday: { type: DataTypes.DATE, allowNull: true }
+    
 }, {
     timestamps: true,
     tableName: 'guests'
