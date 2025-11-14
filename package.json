@@ -7,8 +7,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db:migrate": "sequelize db:migrate --config config/config.cjs",
-    "db:migrate:undo": "sequelize db:migrate:undo --config config/config.cjs"
+    "db:migrate:dev": "NODE_ENV=development sequelize db:migrate --config config/config.cjs",
+    "db:migrate:prod": "NODE_ENV=production sequelize db:migrate --config config/config.cjs",
+    "db:migrate:undo:dev": "NODE_ENV=development sequelize db:migrate:undo --config config/config.cjs",
+    "db:migrate:undo:prod": "NODE_ENV=production sequelize db:migrate:undo --config config/config.cjs"
   },
   "keywords": [],
   "author": "",
