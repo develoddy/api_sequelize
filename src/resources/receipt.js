@@ -1,0 +1,92 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+export default {
+
+  receipt_item: (receipt) => {
+
+    if (!receipt) return {};
+
+    const sale = receipt.sale || {};
+    const guest = receipt.guest || {};
+    const user = receipt.user || null;
+
+    const saleDetails = (sale.sale_details || []).map(detail => ({
+      id: detail.id,
+      cantidad: detail.cantidad,
+      subtotal: detail.subtotal,
+      total: detail.total,
+      price_unitario: detail.price_unitario,
+      product: detail.product ? {
+        id: detail.product.id,
+        title: detail.product.title,
+        slug: detail.product.slug,
+        imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + detail.product.portada,
+        price_usd: detail.product.price_usd,
+        price_soles: detail.product.price_soles,
+        sku: detail.product.sku
+      } : null,
+      variedad: detail.variedade ? {
+        id: detail.variedade.id,
+        valor: detail.variedade.valor,
+        color: detail.variedade.color,
+        sku: detail.variedade.sku,
+        retail_price: detail.variedade.retail_price,
+        currency: detail.variedade.currency
+      } : null
+    }));
+
+    // Sale Addresses
+    const saleAddresses = (sale.sale_addresses || []).map(addr => ({
+      id: addr.id,
+      name: addr.name,
+      lastname: addr.surname,
+      email: addr.email,
+      phone: addr.telefono,
+      country: addr.pais,
+      city: addr.ciudad,
+      state: addr.region,
+      address: addr.address,
+      referencia: addr.referencia,
+      nota: addr.nota,
+      zipcode: addr.zipcode
+    }));
+
+    return {
+      id: receipt.id,
+      amount: receipt.amount,
+      paymentMethod: receipt.paymentMethod,
+      paymentDate: receipt.paymentDate,
+      status: receipt.status,
+      notes: receipt.notes,
+      createdAt: receipt.createdAt,
+      updatedAt: receipt.updatedAt,
+
+      user: user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      } : null,
+
+      guest: guest ? {
+        id: guest.id,
+        name: guest.name,
+        email: guest.email,
+        phone: guest.phone,
+        zipcode: guest.zipcode,
+      } : null,
+
+      sale: sale ? {
+        id: sale.id,
+        total: sale.total,
+        minDeliveryDate: sale.minDeliveryDate,
+        maxDeliveryDate: sale.maxDeliveryDate,
+        printfulOrderId: sale.printfulOrderId,
+        printfulStatus: sale.printfulStatus,
+        sale_details: saleDetails,
+        saleAddresses: saleAddresses
+      } : null
+    };
+  }
+
+};

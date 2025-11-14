@@ -1,0 +1,80 @@
+import app from './app.js';
+import { sequelize } from "./database/database.js";
+import * as dotenv from 'dotenv';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import { setupChatSocketIO } from './controllers/chat/socket.controller.js';
+
+dotenv.config();
+
+// Importación de modelos
+import './models/User.js';
+import './models/Variedad.js';
+import './models/Slider.js';
+import './models/Galeria.js';
+import './models/Categorie.js';
+import './models/Product.js';
+import './models/Sale.js';
+import './models/SaleDetail.js';
+import './models/SaleAddress.js';
+import './models/Review.js';
+import './models/DiscountCategorie.js';
+import './models/DiscountProduct.js';
+import './models/Discount.js';
+import './models/CuponeCategorie.js';
+import './models/CuponeProduct.js';
+import './models/Cupone.js';
+import './models/Cart.js';
+import './models/CartCache.js'; // Cart Guest
+import './models/Wishlist.js';
+import './models/AddressClient.js';
+import './models/AddressGuest.js'; // Address Guest
+import './models/ProductVariants.js';
+import './models/File.js';
+import './models/Option.js';
+import './models/chat/ChatConversation.js';
+import './models/chat/ChatMessage.js';
+
+// Importar las asociaciones aquí
+import './models/Associations.js';
+
+async function main() {
+    try {
+        // Sincronizar la base de datos
+        await sequelize.sync({ force: false });
+        // await sequelize.sync({ alter: true }); // Esto actualiza la tabla sin borrar datos
+        
+        const PORT = process.env.PORT || 3500;
+        
+        // Crear servidor HTTP usando la app Express
+        const server = http.createServer(app);
+        
+        // Configurar Socket.IO con CORS
+        const io = new SocketIOServer(server, {
+            cors: {
+                origin: [
+                    'http://localhost:4200',     // Frontend de e-commerce
+                    'http://localhost:4201',     // Panel de admin
+                    'http://localhost:4300',     // Otros orígenes si es necesario
+                    process.env.FRONTEND_URL,    // URL de producción del frontend
+                    process.env.ADMIN_URL        // URL de producción del admin
+                ].filter(Boolean), // Filtrar valores nulos o undefined
+                methods: ['GET', 'POST', 'PUT', 'DELETE'],
+                credentials: true
+            }
+        });
+        
+        // Configurar Socket.IO para chat
+        setupChatSocketIO(io);
+        
+        // Iniciar el servidor
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Socket.IO server started`);
+        });
+    } catch (error) {
+        console.error('Unable to connect to the database: :(', error);
+    }
+}
+
+main();
