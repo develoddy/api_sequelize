@@ -171,8 +171,12 @@ async function main() {
         // 🔐 SEGURIDAD DB - DEV vs PRODUCTION
         // -------------------------------------------
         if (isDev) {
-            console.log("🔧 DEV: sincronizando la base de datos (alter:true)");
-            await sequelize.sync({ alter: true }); // Solo dev
+            console.log("🔧 DEV: autenticando DB (sin alterar tablas automáticamente)");
+            await sequelize.authenticate();
+            console.log("✅ DEV: DB conectada");
+            console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
+            //console.log("🔧 DEV: sincronizando la base de datos (alter:true)");
+            ///await sequelize.sync({ alter: true }); // Solo dev
         } else {
             console.log("🔥 PROD: autenticando la base de datos. NO sync automático");
             await sequelize.authenticate();

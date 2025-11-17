@@ -711,7 +711,17 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 // - Usa validateThreadColors() para asegurar que los colores están permitidos por Printful.
 
 const prepareCreatePrintfulOrder = async (orderData, res) => {
-        const cleanItems = orderData.items.map(item => {
+
+    // 🔹 LOG DE DEBUG: ver qué llega en orderData
+    // console.log("===== DEBUG orderData recibido =====");
+    // console.log("external_id:", orderData.external_id);
+    // console.log("shipping:", orderData.shipping);
+    // console.log("recipient:", JSON.stringify(orderData.recipient, null, 2));
+    // console.log("items:", JSON.stringify(orderData.items, null, 2));
+    // console.log("retail_costs:", JSON.stringify(orderData.retail_costs, null, 2));
+    // console.log("===================================");
+
+    const cleanItems = orderData.items.map(item => {
         const cleanItem = {
             variant_id: item.variant_id,
             quantity: item.quantity,
@@ -788,16 +798,24 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
         return cleanItem;
     });
 
+    // LOG DE DEBUG antes de crear cleanOrder
+    // console.log("===== DEBUG cleanItems antes de crear cleanOrder =====");
+    // console.log(JSON.stringify(cleanItems, null, 2));
+    // console.log("=====================================================");
+
     const cleanOrder = {
         recipient: orderData.recipient,
         items: cleanItems,
-        retail_costs: orderData.retail_costs
+        retail_costs: orderData.retail_costs,
+        external_id: orderData.external_id || `order_${Date.now()}`,
+        shipping: orderData.shipping || "STANDARD",
+        //confirm: true // Lo más importante descomentar para que sea pedido real
     };
 
-    // console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
-    // console.log(JSON.stringify(cleanOrder, null, 2));
-    // console.log("========================================================");
-    // return { error: false, data: cleanOrder };
+    //console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
+    //console.log(JSON.stringify(cleanOrder, null, 2));
+    //console.log("========================================================");
+    //return { error: false, data: cleanOrder };
 
     let data = await createPrintfulOrder(cleanOrder);
 
@@ -940,17 +958,33 @@ export const list = async (req, res) => {
         let include = [
             { model: User },
             { model: Guest },
-            { model: SaleDetail, include: [ { model: Product }, { model: Variedad } ] }
+            { 
+                model: SaleDetail, 
+                include: [
+                    { 
+                        model: Product 
+                    }, 
+                    { 
+                        model: Variedad,
+                        attributes: ['id', 'valor', 'color', 'sku', 'retail_price', 'currency'],
+                        include: { 
+                            model: File,
+                            attributes: ['id', 'url', 'preview_url', 'thumbnail_url', 'filename', 'type', 'mime_type']
+                        }  
+                    } 
+                ] 
+            }
         ];
 
         if (q) {
             const qLike = { [Op.like]: `%${q}%` };
 
             // Buscar por productos relacionados
+
             const productMatches = await SaleDetail.findAll({
-                attributes: ['saleId'],
-                include: [{ model: Product, required: true, where: { [Op.or]: [ { title: qLike }, { sku: qLike } ] } }],
-                raw: true
+                 attributes: ['saleId'],
+                 include: [{ model: Product, required: true, where: { [Op.or]: [ { title: qLike }, { sku: qLike } ] } }],
+                 raw: true
             });
 
             const saleIdsFromProduct = Array.from(new Set(productMatches.map(pm => pm.saleId)));
@@ -984,6 +1018,8 @@ export const list = async (req, res) => {
             order: [[sortBy, order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']]
         });
 
+        
+
         // Mapear ventas para frontend
         const sales = await Promise.all(rows.map(async sale => {
             const s = sale.toJSON ? sale.toJSON() : sale;
@@ -994,14 +1030,43 @@ export const list = async (req, res) => {
                 limit: 5
             });
 
+            
+
             const items = details.map(d => {
                 const det = d.toJSON ? d.toJSON() : d;
+                
                 let image = null;
-                if (det.product && det.product.portada) {
-                    image = `${process.env.URL_BACKEND}/api/products/uploads/product/${det.product.portada}`;
-                } else if (det.variedad && det.variedad.Files && det.variedad.Files.length > 0) {
-                    image = det.variedad.Files[0].preview_url;
+                // if (det.product && det.product.portada) {
+                //     image = `${process.env.URL_BACKEND}/api/products/uploads/product/${det.product.portada}`;
+                // } else if (det.variedade && det.variedade.Files && det.variedade.Files.length > 0) {
+                //     image = det.variedade.Files[0].preview_url;
+                // }
+
+                // Colección segura
+                const files = det.variedade && det.variedade.files ? det.variedade.files : [];
+
+                // 1️⃣ Preview
+                const previewFile = files.find(f => f.type === 'preview');
+                if (previewFile?.preview_url) {
+                    image = previewFile.preview_url;
+                } else {
+                    // 2️⃣ Default
+                    const defaultFile = files.find(f => f.type === 'default');
+                    if (defaultFile?.preview_url) {
+                        image = defaultFile.preview_url;
+                    } else {
+                        // 3️⃣ Fallback universal
+                        const anyFile = files[0];
+                        if (anyFile) {
+                            image = anyFile.preview_url 
+                                || anyFile.thumbnail_url 
+                                || anyFile.url 
+                                || '';
+                        }
+                    }
                 }
+
+                console.log('[DEBUG Admin] det=', det);
                 return {
                     id: det.id,
                     productId: det.productId,
@@ -1009,8 +1074,9 @@ export const list = async (req, res) => {
                     sku: det.product ? det.product.sku : null,
                     cantidad: det.cantidad,
                     price_unitario: det.price_unitario,
+                    color: det.variedade ? det.variedade.color : null,
                     imagen: image,
-                    talla: det.variedad ? det.variedad.valor || det.variedad.name : null
+                    talla: det.variedade ? det.variedade.valor || det.variedade.name : null
                 };
             });
 

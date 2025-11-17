@@ -474,8 +474,15 @@ export const stripeWebhook = async (req, res) => {
         const pfOrder = {
           recipient,
           items: pfItems,
-          retail_costs: { subtotal: subtotal.toFixed(2), discount: '0.00', shipping: '0.00', tax: '0.00' }
+          retail_costs: { subtotal: subtotal.toFixed(2), discount: '0.00', shipping: '0.00', tax: '0.00' },
+
+          external_id: `sale_${sale.id}_${Date.now()}`,  // único para la venta de Stripe
+          shipping: 'STANDARD',                           // o el método que quieras
+          //confirm: true                                   // para que Printful cree la orden real
         };
+
+        // 🔹 Console log para depuración
+        console.log('[Stripe Webhook] pfOrder payload to send to Printful:', JSON.stringify(pfOrder, null, 2));
 
         // Persist recipient email to Guest/User if present
         try {

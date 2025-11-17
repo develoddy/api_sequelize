@@ -110,7 +110,7 @@
 <body>
 
   <div class="header">
-    <img src="https://tu-dominio.com/assets/logo.png" alt="Playmode Logo" />
+    <img src="<%= process.env.URL_BACKEND %>/assets/images/logo.png" alt="LujanDev" />
     <h1>Recibo de Venta</h1>
     <div class="meta">
       <p><strong>Fecha:</strong> <%= new Date(order.createdAt).toLocaleDateString('es-ES') %></p>
@@ -163,8 +163,8 @@
         <% order_detail.forEach(item => { %>
           <tr>
             <td>
-              <% if (item.product?.portada) { %>
-                <img src="<%= item.product.portada %>" alt="Producto">
+              <% if (item.finalImage) { %>
+                <img src="<%= item.finalImage %>" alt="<%= item.product?.title || 'Producto' %>">
               <% } else { %>
                 <span>-</span>
               <% } %>

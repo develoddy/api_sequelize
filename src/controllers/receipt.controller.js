@@ -3,6 +3,7 @@ import { User } from '../models/User.js';
 import { Guest } from '../models/Guest.js';
 import { Sale } from '../models/Sale.js';
 import { SaleDetail } from '../models/SaleDetail.js';
+import { File } from '../models/File.js';
 import { Product } from '../models/Product.js'; 
 import { Variedad } from '../models/Variedad.js';
 import { SaleAddress } from '../models/SaleAddress.js';
@@ -55,7 +56,13 @@ export const getById = async (req, res) => {
                 },
                 {
                   model: Variedad,
-                  attributes: ['id', 'valor', 'color', 'sku', 'retail_price', 'currency']
+                  attributes: ['id', 'valor', 'color', 'sku', 'retail_price', 'currency'],
+                  include: [
+                    {
+                      model: File,
+                      attributes: ['id', 'url', 'preview_url', 'thumbnail_url', 'filename', 'type', 'mime_type']
+                    }
+                  ]
                 }
               ]
             },
@@ -185,7 +192,20 @@ export const generatePdf = async (req, res) => {
           include: [
             { 
               model: SaleDetail, 
-              include: [Product, Variedad] 
+              include: [
+                {
+                  model: Product,
+                },
+                {
+                  model: Variedad,
+                  include: [
+                    {
+                      model: File,
+                      attributes: ['id', 'type', 'preview_url', 'thumbnail_url', 'url']
+                    }
+                  ]
+                }
+              ]
             },
             {
               model: SaleAddress, 
@@ -223,7 +243,7 @@ export const generatePdf = async (req, res) => {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
 
-    console.log('🔹 Sale obtenido:', JSON.stringify(sale, null, 2));
+    //console.log('🔹 Sale obtenido:', JSON.stringify(sale, null, 2));
 
     // 🛒 Preparar detalles de venta
     const saleDetails = sale.sale_details.map(detail => {
@@ -231,6 +251,16 @@ export const generatePdf = async (req, res) => {
       const variedad = d.variedad || d.variedade || null;
 
       const retailPrice = parseFloat(variedad?.retail_price ?? d.price_unitario ?? 0);
+
+      const variedadImage = getVariedadImage(variedad);
+
+      // fallback: si no hay variedad con imágenes → usar portada del producto
+      const finalImage =
+        variedadImage ||
+        (d.product?.portada
+          ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
+          : null);
+
       const finalPrice =
         d.discount != null
           ? parseFloat(d.discount)
@@ -246,20 +276,30 @@ export const generatePdf = async (req, res) => {
         ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
         : null;
 
-      return { ...d, variedad, originalPrice: retailPrice, unitPrice: finalPrice, total, product: { ...d.product, portada } };
+      //console.log("PRODUCT DEBUG:", d.product);
+
+      return { 
+        ...d, 
+        variedad, 
+        originalPrice: retailPrice, 
+        unitPrice: finalPrice, 
+        total, 
+        finalImage,
+        product: { ...d.product, portada } 
+      };
     });
 
-    console.log('🔹 Detalles de venta procesados:', JSON.stringify(saleDetails, null, 2));
+    //console.log('🔹 Detalles de venta procesados:', JSON.stringify(saleDetails, null, 2));
 
     // 🔹 Revisar si existen direcciones
-    console.log('🔹 sale.saleAddresses raw:', sale.saleAddresses);
+    //console.log('🔹 sale.saleAddresses raw:', sale.saleAddresses);
 
     const sale_address = (sale.sale_addresses && sale.sale_addresses.length > 0)
     ? sale.sale_addresses[0]
     : null;
 
 
-    console.log('🔹 sale_address asignado:', sale_address);
+    //console.log('🔹 sale_address asignado:', sale_address);
 
     const saleData = {
       ...sale.dataValues,
@@ -268,7 +308,7 @@ export const generatePdf = async (req, res) => {
     };
 
     const customerName = receipt.user?.name || receipt.guest?.name || 'Invitado';
-    console.log('🔹 customerName:', customerName);
+    //console.log('🔹 customerName:', customerName);
 
     // 📄 Leer template PDF
     const templatePath = path.resolve('src/mails/receipt_template.html');
@@ -282,7 +322,7 @@ export const generatePdf = async (req, res) => {
       customerName
     });
 
-    console.log('🔹 HTML generado (primeros 300 chars):', html.substring(0, 300));
+    //console.log('🔹 HTML generado (primeros 300 chars):', html.substring(0, 300));
 
     if (!html || html.trim().length < 100) {
       console.error('⚠️ HTML vacío o inválido');
@@ -316,3 +356,23 @@ export const generatePdf = async (req, res) => {
     res.status(500).json({ message: 'Error al generar el PDF' });
   }
 };
+
+
+// 🔹 Función para obtener la mejor imagen de la variedad
+function getVariedadImage(variedad) {
+  if (!variedad || !Array.isArray(variedad.files)) return null;
+
+  // 1️⃣ Buscar preview
+  const preview = variedad.files.find(f => f.type === 'preview');
+  if (preview?.preview_url) return preview.preview_url;
+
+  // 2️⃣ Buscar default
+  const def = variedad.files.find(f => f.type === 'default');
+  if (def?.preview_url) return def.preview_url;
+
+  // 3️⃣ Cualquier otra imagen
+  const any = variedad.files[0];
+  if (any) return any.preview_url || any.thumbnail_url || any.url;
+
+  return null;
+}

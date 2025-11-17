@@ -11,6 +11,9 @@ export default {
     const guest = receipt.guest || {};
     const user = receipt.user || null;
 
+     //console.log('Receipt sale_details:', sale.sale_details);
+    //console.log("Receipt sale_details", JSON.stringify(sale.sale_details, null, 2));
+
     const saleDetails = (sale.sale_details || []).map(detail => ({
       id: detail.id,
       cantidad: detail.cantidad,
@@ -32,7 +35,16 @@ export default {
         color: detail.variedade.color,
         sku: detail.variedade.sku,
         retail_price: detail.variedade.retail_price,
-        currency: detail.variedade.currency
+        currency: detail.variedade.currency,
+        files: (detail.variedade.files || []).map(f => ({
+          id: f.id,
+          url: f.url,
+          preview_url: f.preview_url,
+          thumbnail_url: f.thumbnail_url,
+          filename: f.filename,
+          type: f.type,
+          mime_type: f.mime_type
+        }))
       } : null
     }));
 
