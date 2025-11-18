@@ -31,6 +31,8 @@ import  {
   processGalleryImage,
 } from "./helper.js";
 
+// controllers/productPrintful.controller.js
+import { generarDescripcionPorCategoria } from '../../helpers/productDescription.helper.js';
 
 
 let idMapping = { products: {}, variedades: {} };
@@ -241,9 +243,11 @@ const createProduct = async (product, productDetail, category) => {
   // Traduce aquí con tu función de traducción (Google, DeepL, etc)
   const description_en = catalogResponse.product?.description || "Descripción no disponible";
 
-  //const description_es = "Descripción no disponible";
   // --- 🔥 DESCRIPCIÓN AUTOMÁTICA PERSONALIZADA ---
-  let description_es = generarDescripcionPorCategoria(category.title);
+  //let description_es = generarDescripcionPorCategoria(category.title);
+
+  const description_es = generarDescripcionPorCategoria(category.title, 'es'); // español o 'en' si necesitas inglés
+  //const description_en = generarDescripcionPorCategoria(category.title, 'en');
 
   return await Product.create({
     idProduct: product.id,
@@ -270,30 +274,29 @@ const createProduct = async (product, productDetail, category) => {
  * Genera una descripción en español automática con estilo “LujanDev”.
  * Detecta el tipo de prenda por nombre y devuelve texto creativo.
  */
-function generarDescripcionPorCategoria(title) {
-  if (!title) return "Diseño exclusivo LujanDev: donde el código se viste con elegancia.";
+// function generarDescripcionPorCategoria(title) {
+//   if (!title) return "Diseño exclusivo LujanDev: donde el código se viste con elegancia.";
 
-  const categoria = title.toLowerCase().trim();
+//   const categoria = title.toLowerCase().trim();
 
-  if (categoria.includes("shirt")) {
-    return "Camiseta premium para devs con estilo. Su tejido suave y su corte moderno la hacen perfecta para acompañarte en cada línea de código. Parte de la colección LujanDev.";
-  }
+//   if (categoria.includes("shirt")) {
+//     return "Camiseta premium para devs con estilo. Su tejido suave y su corte moderno la hacen perfecta para acompañarte en cada línea de código. Parte de la colección LujanDev.";
+//   }
 
-  if (categoria.includes("hoodie")) {
-    return "Sudadera tech de alto confort con diseño LujanDev. Ideal para mantenerte cómodo en largas sesiones de código o para salir con estilo al mundo real.";
-  }
+//   if (categoria.includes("hoodie")) {
+//     return "Sudadera tech de alto confort con diseño LujanDev. Ideal para mantenerte cómodo en largas sesiones de código o para salir con estilo al mundo real.";
+//   }
 
-  if (categoria.includes("mug")) {
-    return "Taza LujanDev, perfecta para programadores que necesitan combustible en forma de café. Diseño minimalista y duradero, ideal para tu setup.";
-  }
+//   if (categoria.includes("mug")) {
+//     return "Taza LujanDev, perfecta para programadores que necesitan combustible en forma de café. Diseño minimalista y duradero, ideal para tu setup.";
+//   }
 
-  if (categoria.includes("hat") || categoria.includes("cap")) {
-    return "Gorra tipo ‘dad hat’ con estilo urbano y ADN tech. Un accesorio icónico para devs que llevan el código hasta en la cabeza.";
-  }
+//   if (categoria.includes("hat") || categoria.includes("cap")) {
+//     return "Gorra tipo ‘dad hat’ con estilo urbano y ADN tech. Un accesorio icónico para devs que llevan el código hasta en la cabeza.";
+//   }
 
-  // Fallback genérico
-  return "Diseño exclusivo LujanDev: donde el código se viste con elegancia. Pensado para programadores que valoran el estilo tanto como la lógica.";
-}
+//   return "Diseño exclusivo LujanDev: donde el código se viste con elegancia. Pensado para programadores que valoran el estilo tanto como la lógica.";
+// }
 
 // Actualiza un producto solo si hay cambios
 const updateProductIfNeeded = async (existingProduct, product, productDetail, category) => {

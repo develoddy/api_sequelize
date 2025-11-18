@@ -306,6 +306,7 @@ export const update = async (req, res) => {
 export const apllyCupon = async (req, res) => {
     try {
         let data = req.body;
+        console.log("💡 [applyCupon] Datos recibidos del front:", data);
 
         // Validar la existencia del cupón
         let cupon = await Cupone.findOne({
@@ -317,6 +318,7 @@ export const apllyCupon = async (req, res) => {
         });
 
         if (!cupon) {
+            console.log("❌ [applyCupon] Cupón no encontrado:", data.code);
             res.status(200).json({
                 message: 403,
                 message_text: "El cupón ingresado no es válido. Por favor, inténtelo con otro cupón."
@@ -324,28 +326,37 @@ export const apllyCupon = async (req, res) => {
             return;
         }
 
+        console.log("✅ [applyCupon] Cupón encontrado:", cupon.code, cupon.type_discount, cupon.discount);
+
         // Parte operativa
         let carts = await Cart.findAll({
             where: { userId: data.user_id },
             include: [{ model: Product }]
         });
 
+        console.log(`💼 [applyCupon] Carrito encontrado (${carts.length} items)`);
+
 
         let products = cupon.cupones_products.map(cuponeProduct => cuponeProduct.productId);
         let categories = cupon.cupones_categories.map(cuponeCategorie => cuponeCategorie.categoryId);
+        console.log("📦 [applyCupon] Productos aplicables del cupón:", products);
+        console.log("🗂️ [applyCupon] Categorías aplicables del cupón:", categories);
 
         for (const cart of carts) {
-            let subtotal = 0;
-            let total = 0;
+            let subtotal = cart.price_unitario;
+            let total = subtotal * cart.cantidad;
 
-            if (products.length > 0 && products.includes(cart.product.id)) {
-                if ( cupon.type_discount == 1 ) { // Por porcentaje
+            const appliesToProduct = products.length === 0 || products.includes(cart.product.id);
+            const appliesToCategory = categories.length === 0 || categories.includes(cart.product.categoryId);
+
+            if (appliesToProduct || appliesToCategory) {
+                if (cupon.type_discount == 1) { // Porcentaje
                     subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
-                } else { // Por moneda
-                    subtotal = cart.price_unitario - cupon.discount;
+                } else { // Por monto fijo
+                    subtotal = parseFloat((cart.price_unitario - cupon.discount).toFixed(2));
                 }
 
-                total = subtotal * cart.cantidad;
+                total = parseFloat((subtotal * cart.cantidad).toFixed(2));
 
                 await Cart.update({
                     subtotal: subtotal,
@@ -356,28 +367,61 @@ export const apllyCupon = async (req, res) => {
                 }, {
                     where: { id: cart.id }
                 });
-            }
 
-
-            if (categories.length > 0 && categories.includes(cart.product.categoryId)) {
-                if ( cupon.type_discount == 1 ) { // Por porcentaje
-                    subtotal = cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01);
-                } else { // Por moneda
-                    subtotal = cart.price_unitario - cupon.discount;
-                }
-
-                total = subtotal * cart.cantidad;
-                await Cart.update({
-                    subtotal: subtotal,
-                    total: total,
-                    type_discount: cupon.type_discount,
-                    discount: cupon.discount,
-                    code_cupon: cupon.code,
-                }, {
-                    where: { id: cart.id }
-                });
+                console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+            } else {
+                console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title}`);
             }
         }
+
+        // for (const cart of carts) {
+        //     let subtotal = 0;
+        //     let total = 0;
+
+        //     if (products.length > 0 && products.includes(cart.product.id)) {
+        //         if ( cupon.type_discount == 1 ) { // Por porcentaje
+        //             subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
+        //         } else { // Por moneda
+        //             subtotal = cart.price_unitario - cupon.discount;
+        //         }
+
+        //         total = subtotal * cart.cantidad;
+
+        //         await Cart.update({
+        //             subtotal: subtotal,
+        //             total: total,
+        //             type_discount: cupon.type_discount,
+        //             discount: cupon.discount,
+        //             code_cupon: cupon.code,
+        //         }, {
+        //             where: { id: cart.id }
+        //         });
+
+        //         console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+        //     } else {
+        //         console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title}`);
+        //     }
+
+
+        //     if (categories.length > 0 && categories.includes(cart.product.categoryId)) {
+        //         if ( cupon.type_discount == 1 ) { // Por porcentaje
+        //             subtotal = cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01);
+        //         } else { // Por moneda
+        //             subtotal = cart.price_unitario - cupon.discount;
+        //         }
+
+        //         total = subtotal * cart.cantidad;
+        //         await Cart.update({
+        //             subtotal: subtotal,
+        //             total: total,
+        //             type_discount: cupon.type_discount,
+        //             discount: cupon.discount,
+        //             code_cupon: cupon.code,
+        //         }, {
+        //             where: { id: cart.id }
+        //         });
+        //     }
+        // }
 
         res.status(200).json({
             message: 200,
