@@ -35,14 +35,30 @@ const { EMAIL_USER, EMAIL_PASS, JWT_SECRET } = process.env;
 // Función para enviar el correo de restablecimiento de contraseña
 async function sendEmailResetPassword(email, token) {
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT),
+        secure: true, // true para puerto 465, false para otros puertos
         auth: {
             user: EMAIL_USER,
             pass: EMAIL_PASS,
         },
+        tls: {
+            rejectUnauthorized: false
+        },
+        logger: false,
+        debug: false
     });
 
-    const link = `${process.env.URL_FRONTEND}/auth/updatepassword/${token}/${email}`;
+    // Verificar conexión SMTP
+    try {
+        await transporter.verify();
+        console.log('[Reset Password] SMTP connection verified successfully');
+    } catch (error) {
+        console.error('[Reset Password] SMTP verification failed:', error);
+        throw new Error('SMTP configuration error');
+    }
+
+    const link = `${process.env.URL_FRONTEND}/es/es/auth/updatepassword/${token}/${email}`;
 
     // Leer el template HTML
     const htmlTemplate = await readHTMLFile(`${process.cwd()}/src/mails/email_resetpassword.html`);
@@ -55,46 +71,79 @@ async function sendEmailResetPassword(email, token) {
     });
 
     const mailOptions = {
-        from: EMAIL_USER,
+        from: `"Lujandev Support" <${EMAIL_USER}>`,
         to: email,
-        subject: 'Restablece tu contraseña',
+        subject: 'Restablece tu contraseña - Lujandev',
         html: renderedHTML
     };
 
-    await transporter.sendMail(mailOptions);
+    console.log('[Reset Password] Sending email to:', email);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('[Reset Password] Email sent successfully:', result.messageId);
+    
+    // Cerrar el transporter para evitar memory leaks
+    transporter.close();
+    
+    return result;
 }
 
 // Endpoint para solicitar el restablecimiento de contraseña
 export const requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
 
-    const { email } = req.body;
+        console.log('[Reset Password] Request received for email:', email);
 
-    // Aquí debes buscar el usuario por su correo electrónico
-    const user = await User.findOne({
+        if (!email) {
+            return res.status(400).send({ message: 'Email es requerido' });
+        }
+
+        // Aquí debes buscar el usuario por su correo electrónico
+        const user = await User.findOne({
             where: {
                 email: email,
                 state: 1
             }
         });
 
-    if (!user) {
-        return res.status(404).send({ message: 'Usuario no encontrado' });
-    }
+        if (!user) {
+            console.log('[Reset Password] User not found:', email);
+            return res.status(404).send({ message: 'Usuario no encontrado' });
+        }
 
-    // Comprobar si JWT_SECRET tiene un valor
-    if (!JWT_SECRET) {
-        return res.status(500).send({ message: 'Error del servidor: JWT_SECRET no está configurado.' });
-    }
+        console.log('[Reset Password] User found, ID:', user.id);
 
-    // Crear un token JWT
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
+        // Comprobar si JWT_SECRET tiene un valor
+        if (!JWT_SECRET) {
+            console.error('[Reset Password] JWT_SECRET not configured');
+            return res.status(500).send({ message: 'Error del servidor: JWT_SECRET no está configurado.' });
+        }
 
-    // Enviar el correo electrónico con el enlace de restablecimiento
-    try {
-        await sendEmailResetPassword(email, token);
-        res.status(200).send({ message: 'Correo de restablecimiento enviado' });
+        // Crear un token JWT
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
+        console.log('[Reset Password] Token generated successfully');
+
+        // Enviar el correo electrónico con el enlace de restablecimiento
+        try {
+            const emailResult = await sendEmailResetPassword(email, token);
+            console.log('[Reset Password] Email sent successfully to:', email);
+            res.status(200).send({ 
+                message: 'Correo de restablecimiento enviado exitosamente',
+                success: true 
+            });
+        } catch (emailError) {
+            console.error('[Reset Password] Email sending failed:', emailError);
+            res.status(500).send({ 
+                message: 'Error al enviar el correo: ' + emailError.message,
+                success: false 
+            });
+        }
     } catch (error) {
-        res.status(500).send({ message: 'Error al enviar el correo: '+ error });
+        console.error('[Reset Password] General error:', error);
+        res.status(500).send({ 
+            message: 'Error interno del servidor: ' + error.message,
+            success: false 
+        });
     }
 };
 

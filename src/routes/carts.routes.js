@@ -10,6 +10,7 @@ import {
     remove,
     removeAll,
     apllyCupon,
+    removeCupon,
     mergeCart
 } from "../controllers/carts.controller.js";
 
@@ -21,7 +22,7 @@ router.put("/update", auth.verifyEcommerce, update);
 router.delete("/delete/:id", auth.verifyEcommerce, remove);
 router.delete('/delete-all/:user_id', auth.verifyEcommerce, removeAll);
 router.post("/aplly_cupon", auth.verifyEcommerce, apllyCupon);
-
+router.post("/remove_cupon", auth.verifyEcommerce, removeCupon);
 
 router.post("/merge", auth.verifyEcommerce, mergeCart);
 

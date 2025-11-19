@@ -349,7 +349,35 @@ export const apllyCupon = async (req, res) => {
             const appliesToProduct = products.length === 0 || products.includes(cart.product.id);
             const appliesToCategory = categories.length === 0 || categories.includes(cart.product.categoryId);
 
-            if (appliesToProduct || appliesToCategory) {
+            // NUEVA VALIDACIÓN MEJORADA: Solo aplicar cupón si el producto NO tiene campaign discount REAL
+            const hasExistingCampaignDiscount = cart.discount && cart.type_discount && !cart.code_cupon;
+            const isEligibleForCoupon = !hasExistingCampaignDiscount;
+
+            // DEBUG COMPLETO
+            console.log(`🔍 [applyCupon] Analizando ${cart.product.title}:`);
+            console.log(`   - discount: ${cart.discount}`);
+            console.log(`   - code_cupon: ${cart.code_cupon}`);
+            console.log(`   - type_discount: ${cart.type_discount}`);
+            console.log(`   - appliesToProduct: ${appliesToProduct}`);
+            console.log(`   - appliesToCategory: ${appliesToCategory}`);
+            console.log(`   - hasExistingCampaignDiscount: ${hasExistingCampaignDiscount}`);
+            console.log(`   - isEligibleForCoupon: ${isEligibleForCoupon}`);
+
+            // LIMPIEZA: Si tiene discount pero no type_discount, limpiar datos residuales
+            if (cart.discount && !cart.type_discount && !cart.code_cupon) {
+                console.log(`🧹 [applyCupon] Limpiando datos residuales de ${cart.product.title}`);
+                await Cart.update({
+                    discount: null,
+                    subtotal: cart.price_unitario,
+                    total: cart.price_unitario * cart.cantidad
+                }, {
+                    where: { id: cart.id }
+                });
+                // Actualizar valores locales para esta iteración
+                cart.discount = null;
+            }
+
+            if ((appliesToProduct || appliesToCategory) && isEligibleForCoupon) {
                 if (cupon.type_discount == 1) { // Porcentaje
                     subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
                 } else { // Por monto fijo
@@ -369,8 +397,10 @@ export const apllyCupon = async (req, res) => {
                 });
 
                 console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+            } else if ((appliesToProduct || appliesToCategory) && !isEligibleForCoupon) {
+                console.log(`🚫 [applyCupon] ${cart.product.title} NO elegible - ya tiene campaign discount`);
             } else {
-                console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title}`);
+                console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title} - producto/categoría no incluida`);
             }
         }
 
@@ -430,6 +460,86 @@ export const apllyCupon = async (req, res) => {
     } catch (error) {
         res.status(500).send({
             message: "debug: CartController applyCupon OCURRIÓ UN PROBLEMA"
+        });
+        console.log(error);
+    }
+}
+
+export const removeCupon = async (req, res) => {
+    try {
+        let data = req.body;
+        console.log("🗑️ [removeCupon] Datos recibidos del front:", data);
+
+        if (!data.user_id) {
+            res.status(200).json({
+                message: 403,
+                message_text: "ID de usuario requerido para remover cupón."
+            });
+            return;
+        }
+
+        // Obtener todos los carritos del usuario
+        let carts = await Cart.findAll({
+            where: { userId: data.user_id },
+            include: [{ model: Product }]
+        });
+
+        console.log(`🛒 [removeCupon] Carrito encontrado (${carts.length} items)`);
+
+        if (carts.length === 0) {
+            res.status(200).json({
+                message: 403,
+                message_text: "No se encontraron productos en el carrito."
+            });
+            return;
+        }
+
+        // Verificar si hay cupones aplicados
+        const cartsWithCoupons = carts.filter(cart => cart.code_cupon && cart.code_cupon.trim() !== '');
+        
+        if (cartsWithCoupons.length === 0) {
+            res.status(200).json({
+                message: 403,
+                message_text: "No hay ningún cupón aplicado para remover."
+            });
+            return;
+        }
+
+        console.log(`🎫 [removeCupon] Productos con cupón encontrados: ${cartsWithCoupons.length}`);
+
+        // Remover cupones SOLO de productos que tienen cupón aplicado
+        // PRESERVAR campaign discounts en productos que no tienen cupón
+        for (const cart of carts) {
+            if (cart.code_cupon && cart.code_cupon.trim() !== '') {
+                // Este producto tiene cupón aplicado -> removerlo
+                let subtotal = cart.price_unitario;
+                let total = subtotal * cart.cantidad;
+
+                await Cart.update({
+                    subtotal: subtotal,
+                    total: total,
+                    type_discount: null,
+                    discount: null,
+                    code_cupon: null,
+                }, {
+                    where: { id: cart.id }
+                });
+
+                console.log(`✅ [removeCupon] Cupón removido de ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+            } else if (cart.discount && !cart.code_cupon) {
+                // Este producto tiene campaign discount SIN cupón -> PRESERVAR
+                console.log(`ℹ️ [removeCupon] Preservando campaign discount en ${cart.product.title}: discount=${cart.discount}`);
+                // NO hacer nada - mantener el campaign discount intacto
+            }
+        }
+
+        res.status(200).json({
+            message: 200,
+            message_text: "El cupón ha sido removido correctamente.",
+        });
+    } catch (error) {
+        res.status(500).send({
+            message: "debug: CartController removeCupon OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
     }
