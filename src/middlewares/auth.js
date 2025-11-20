@@ -3,7 +3,7 @@ import token from '../services/token.js';
 export default {
     verifyEcommerce: async(req, res, next) => {
         if ( !req.headers.token ) {
-            res.status(401).send({message: 'No has enviado el token'});
+            return res.status(401).send({message: 'No has enviado el token'});
         }
 
         const response = await token.decode( req.headers.token );
@@ -17,6 +17,8 @@ export default {
         }
 
         if (response.rol === "cliente" || response.rol === "admin") {
+            // ✅ Agregar el usuario decodificado al request para que esté disponible en los controllers
+            req.user = response;
             next();
         } else {
             return res.status(403).json({ message: "Acceso denegado" });

@@ -6,7 +6,9 @@ import {
   create,
   update,
   getBySale,
-  generatePdf
+  generatePdf,
+  getClientReceiptBySale,
+  generateClientReceiptPdf
 } from '../controllers/receipt.controller.js';
 
 const router = Router();
@@ -23,5 +25,11 @@ router.get('/:id', auth.verifyAdmin, getById);
 router.patch('/:id', auth.verifyAdmin, update);
 
 router.get('/:id/pdf', auth.verifyAdmin, generatePdf);
+
+// 🛒 RUTAS PARA CLIENTES AUTENTICADOS
+// Obtener recibo de una venta específica (solo el dueño)
+router.get('/client/sale/:saleId', auth.verifyEcommerce, getClientReceiptBySale);
+// Descargar PDF del recibo (solo el dueño)
+router.get('/client/:id/pdf', auth.verifyEcommerce, generateClientReceiptPdf);
 
 export default router;

@@ -376,3 +376,251 @@ function getVariedadImage(variedad) {
 
   return null;
 }
+
+// 🛒 ================ MÉTODOS PARA CLIENTES AUTENTICADOS ================ 🛒
+
+/**
+ * Obtener recibo de una venta específica para clientes autenticados
+ * Solo permite acceso al dueño de la venta
+ */
+export const getClientReceiptBySale = async (req, res) => {
+  try {
+    const { saleId } = req.params;
+    const userId = req.user.id; // Del middleware auth.verifyEcommerce (usa 'id' no '_id')
+    
+    console.log(`[Client Receipt] Usuario ${userId} solicitando recibo para venta ${saleId}`);
+
+    // Verificar que la venta pertenece al usuario autenticado
+    const sale = await Sale.findOne({
+      where: { 
+        id: saleId,
+        userId: userId 
+      }
+    });
+
+    if (!sale) {
+      return res.status(404).json({ 
+        message: 'Venta no encontrada o no tienes permisos para acceder a este recibo' 
+      });
+    }
+
+    // Obtener el recibo de esta venta
+    const receipt = await Receipt.findOne({
+      where: { saleId },
+      include: [
+        { model: User },
+        { model: Guest },
+        {
+          model: Sale,
+          include: [
+            {
+              model: SaleDetail,
+              include: [
+                {
+                  model: Product,
+                  attributes: ['id', 'title', 'slug', 'portada', 'sku', 'price_usd', 'price_soles']
+                },
+                {
+                  model: Variedad,
+                  attributes: ['id', 'valor', 'color', 'sku', 'retail_price', 'currency'],
+                  include: [
+                    {
+                      model: File,
+                      attributes: ['id', 'url', 'preview_url', 'thumbnail_url', 'filename', 'type', 'mime_type']
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              model: SaleAddress,
+              attributes: [
+                'id', 'name', 'surname', 'email', 'telefono', 'pais', 'ciudad', 
+                'region', 'address', 'referencia', 'nota', 'zipcode'
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!receipt) {
+      return res.status(404).json({ message: 'Recibo no encontrado para esta venta' });
+    }
+
+    const receiptResource = ReceiptResource.receipt_item(receipt);
+
+    return res.json({ 
+      success: true, 
+      receipt: receiptResource 
+    }); 
+    
+  } catch (error) {
+    console.error('[Client Receipt] Error:', error);
+    res.status(500).json({ message: 'Error al obtener el recibo' });
+  }
+};
+
+/**
+ * Generar y descargar PDF del recibo para clientes autenticados
+ * Solo permite acceso al dueño del recibo
+ */
+export const generateClientReceiptPdf = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id; // Del middleware auth.verifyEcommerce (usa 'id' no '_id')
+
+    console.log(`[Client Receipt PDF] Usuario ${userId} solicitando PDF del recibo ${id}`);
+
+    // Obtener recibo con verificación de ownership
+    const receipt = await Receipt.findByPk(id, {
+      include: [
+        { model: User },
+        { model: Guest },
+        {
+          model: Sale,
+          where: { userId: userId }, // Verificar que la venta pertenece al usuario
+          include: [
+            {
+              model: SaleDetail,
+              include: [
+                {
+                  model: Product,
+                  attributes: ['id', 'title', 'slug', 'portada', 'sku', 'price_usd', 'price_soles']
+                },
+                {
+                  model: Variedad,
+                  attributes: ['id', 'valor', 'color', 'sku', 'retail_price', 'currency'],
+                  include: [
+                    {
+                      model: File,
+                      attributes: ['id', 'url', 'preview_url', 'thumbnail_url', 'filename', 'type', 'mime_type']
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              model: SaleAddress,
+              attributes: [
+                'id', 'name', 'surname', 'email', 'telefono', 'pais', 'ciudad',
+                'region', 'address', 'referencia', 'nota', 'zipcode'
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!receipt || !receipt.sale) {
+      return res.status(404).json({ 
+        message: 'Recibo no encontrado o no tienes permisos para acceder a este recibo' 
+      });
+    }
+
+    // Usar la misma lógica del PDF existente
+    const sale = receipt.sale;
+    const rawSaleDetails = sale.sale_details || [];
+    const sale_address = sale.sale_addresses && sale.sale_addresses.length > 0 
+      ? sale.sale_addresses[0] 
+      : null;
+
+    // Transformar saleDetails usando la misma lógica que el método admin
+    const saleDetails = rawSaleDetails.map(d => {
+      // Obtener la mejor imagen de la variedad
+      let finalImage = getVariedadImage(d.variedade);
+      
+      // Preparar datos de variedad
+      const variedad = d.variedade ? {
+        id: d.variedade.id,
+        valor: d.variedade.valor,
+        color: d.variedade.color,
+        sku: d.variedade.sku,
+        retail_price: d.variedade.retail_price,
+        currency: d.variedade.currency,
+        files: d.variedade.files || []
+      } : null;
+
+      // Calcular precios como en el método admin
+      const retailPrice = parseFloat(variedad?.retail_price ?? d.product?.price_usd ?? 0);
+      const finalPrice = parseFloat(d.price_unitario ?? retailPrice);
+      const cantidad = parseFloat(d.cantidad ?? 1);
+      const total = parseFloat((finalPrice * cantidad).toFixed(2));
+
+      // Construir URL de portada si existe
+      const portada = d.product?.portada 
+        ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
+        : null;
+
+      return { 
+        ...d.dataValues, 
+        variedad, 
+        originalPrice: retailPrice, 
+        unitPrice: finalPrice, 
+        total, 
+        finalImage,
+        product: d.product ? { 
+          ...d.product.dataValues, 
+          portada 
+        } : null
+      };
+    });
+
+    const saleData = {
+      ...sale.dataValues,
+      sale_details: saleDetails,
+      sale_address
+    };
+
+    const customerName = receipt.user?.name || receipt.guest?.name || 'Cliente';
+
+    // Leer template PDF
+    const templatePath = path.resolve('src/mails/receipt_template.html');
+    const templateContent = fs.readFileSync(templatePath, 'utf8');
+
+    // Renderizar HTML con EJS
+    const html = ejs.render(templateContent, {
+      order: saleData,
+      address_sale: sale_address,
+      order_detail: saleDetails,
+      customerName
+    });
+
+    if (!html || html.trim().length < 100) {
+      console.error('⚠️ HTML vacío o inválido para cliente');
+      return res.status(500).json({ message: 'Error generando el contenido del recibo' });
+    }
+
+    // Generar PDF con Puppeteer
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
+      }
+    });
+
+    await browser.close();
+
+    console.log(`✅ PDF generado exitosamente para cliente - Recibo ${id}`);
+
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=recibo-pedido-${receipt.saleId}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
+
+  } catch (error) {
+    console.error('❌ Error generando PDF para cliente:', error);
+    res.status(500).json({ message: 'Error al generar el PDF del recibo' });
+  }
+};
