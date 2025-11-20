@@ -272,12 +272,90 @@ export const generatePdf = async (req, res) => {
 
     //console.log('🔹 Sale obtenido:', JSON.stringify(sale, null, 2));
 
-    // 🛒 Preparar detalles de venta
+    // 🛒 Preparar detalles de venta - USAR DATOS YA CALCULADOS Y GUARDADOS
+    console.log('🔍 DEBUG PDF: Estructura completa del primer detalle:');
+    console.log(JSON.stringify(sale.sale_details[0], null, 2));
+    
+    // Debug específico de campos de descuento para todos los productos
+    sale.sale_details.forEach((detail, index) => {
+      const d = detail.toJSON();
+      console.log(`🔍 Producto ${index + 1} - Campos de descuento:`, {
+        product_title: d.product?.title,
+        price_unitario: d.price_unitario,
+        code_cupon: d.code_cupon,
+        code_discount: d.code_discount,
+        discount: d.discount,
+        type_discount: d.type_discount,
+        cantidad: d.cantidad,
+        variedad_retail_price: d.variedad?.retail_price || d.variedade?.retail_price,
+        product_price_usd: d.product?.price_usd
+      });
+    });
+    
     const saleDetails = sale.sale_details.map(detail => {
       const d = detail.toJSON();
       const variedad = d.variedad || d.variedade || null;
 
-      const retailPrice = parseFloat(variedad?.retail_price ?? d.price_unitario ?? 0);
+      // 🚫 NO RECALCULAR - USAR VALORES YA GUARDADOS EN LA BD
+      
+      // 1. PRECIO FINAL UNITARIO: usar price_unitario tal como está guardado
+      const finalUnitPrice = parseFloat(d.price_unitario || 0);
+      
+      // 2. PRECIO ORIGINAL: usar el campo disponible en BD o calcular mínimo necesario
+      let originalUnitPrice = 0;
+      if (variedad?.retail_price) {
+        originalUnitPrice = parseFloat(variedad.retail_price);
+      } else if (d.product?.price_usd) {
+        originalUnitPrice = parseFloat(d.product.price_usd);
+      } else {
+        // Fallback: si no hay precio original, asumir que finalPrice es correcto
+        originalUnitPrice = finalUnitPrice;
+      }
+      
+      // 3. CANTIDAD
+      const cantidad = parseFloat(d.cantidad || 1);
+      
+      // 4. TOTAL (precio final * cantidad)
+      const total = parseFloat((finalUnitPrice * cantidad).toFixed(2));
+      
+      // 5. DETECTAR DESCUENTO APLICADO (simple verificación)
+      const hasDiscount = (originalUnitPrice > finalUnitPrice) || d.code_cupon || d.code_discount || d.discount;
+      
+      // 6. AHORRO POR UNIDAD (diferencia real entre precios guardados)
+      const discountAmountPerUnit = hasDiscount ? (originalUnitPrice - finalUnitPrice) : 0;
+      
+      // 7. PORCENTAJE (basado en diferencia real)
+      let discountPercentage = 0;
+      if (hasDiscount && originalUnitPrice > 0) {
+        if (d.code_cupon) {
+          // Para cupones, extraer del código si es posible
+          const cuponMatch = d.code_cupon.toUpperCase().match(/(\d+)/);
+          discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : Math.round((discountAmountPerUnit / originalUnitPrice) * 100);
+        } else {
+          // Para otros descuentos, calcular basado en diferencia real
+          discountPercentage = Math.round((discountAmountPerUnit / originalUnitPrice) * 100);
+        }
+      }
+      
+      // 8. TIPO DE DESCUENTO
+      let discountType = '';
+      if (hasDiscount) {
+        if (d.code_cupon) {
+          discountType = `Cupón ${d.code_cupon}`;
+        } else if (d.code_discount) {
+          discountType = 'Flash Sale';
+        } else if (d.discount) {
+          discountType = 'Campaign Discount';
+        } else {
+          discountType = 'Descuento';
+        }
+      }
+      
+      // 🔍 DEBUG DETALLADO POR PRODUCTO
+      console.log(`📊 Producto: ${d.product?.title}`);
+      console.log(`   Original: ${originalUnitPrice}, Final: ${finalUnitPrice}`);
+      console.log(`   Ahorro: ${discountAmountPerUnit}, Porcentaje: ${discountPercentage}%`);
+      console.log(`   Tipo: ${discountType}, hasDiscount: ${hasDiscount}`);
 
       const variedadImage = getVariedadImage(variedad);
 
@@ -287,16 +365,6 @@ export const generatePdf = async (req, res) => {
         (d.product?.portada
           ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
           : null);
-
-      const finalPrice =
-        d.discount != null
-          ? parseFloat(d.discount)
-          : d.code_discount != null
-          ? parseFloat(d.code_discount)
-          : retailPrice;
-
-      const cantidad = parseFloat(d.cantidad ?? 1);
-      const total = parseFloat((finalPrice * cantidad).toFixed(2));
 
       // Construir URL de portada si existe
       const portada = d.product?.portada 
@@ -308,11 +376,16 @@ export const generatePdf = async (req, res) => {
       return { 
         ...d, 
         variedad, 
-        originalPrice: retailPrice, 
-        unitPrice: finalPrice, 
+        originalPrice: originalUnitPrice, 
+        unitPrice: finalUnitPrice, 
         total, 
         finalImage,
-        product: { ...d.product, portada } 
+        product: { ...d.product, portada },
+        // Campos adicionales para el template - USAR VALORES REALES
+        hasDiscountApplied: hasDiscount,
+        discountPercentage: discountPercentage,
+        discountAmount: discountAmountPerUnit, // POR UNIDAD
+        discountType: discountType
       };
     });
 
@@ -328,18 +401,18 @@ export const generatePdf = async (req, res) => {
 
     //console.log('🔹 sale_address asignado:', sale_address);
 
-    // 💰 Aplicar redondeo .95 a los detalles de la venta
+    // 💰 Aplicar redondeo .95 solo a precios unitarios, NO a totales individuales
     const saleDetailsWithRounding = saleDetails.map(detail => ({
       ...detail,
       unitPrice: applyRoundingTo95(detail.unitPrice || 0),
-      total: applyRoundingTo95(detail.total || 0)
+      total: parseFloat(detail.total || 0) // ✅ Mantener total exacto del producto
     }));
 
-    // 💰 Aplicar redondeo .95 al total de la venta
+    // 💰 Total debe ser suma exacta, NO aplicar redondeo .95
     const saleData = {
       ...sale.dataValues,
-      total: applyRoundingTo95(sale.dataValues.total || 0),
-      shipping_cost: applyRoundingTo95(sale.dataValues.shipping_cost || 0),
+      total: parseFloat(sale.dataValues.total || 0), // ✅ Suma exacta de productos
+      shipping_cost: 0.00, // ✅ ENVÍO GRATIS - siempre mostrar 0.00€
       sale_details: saleDetailsWithRounding,
       sale_address
     };
@@ -507,7 +580,7 @@ export const generateClientReceiptPdf = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id; // Del middleware auth.verifyEcommerce (usa 'id' no '_id')
 
-    console.log(`[Client Receipt PDF] Usuario ${userId} solicitando PDF del recibo ${id}`);
+    console.log(`🔍 [Client Receipt PDF] Usuario ${userId} solicitando PDF del recibo ${id}`);
 
     // Obtener recibo con verificación de ownership
     const receipt = await Receipt.findByPk(id, {
@@ -562,6 +635,11 @@ export const generateClientReceiptPdf = async (req, res) => {
       ? sale.sale_addresses[0] 
       : null;
 
+    // Debug solo en desarrollo
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 DEBUG CLIENT PDF: Generando recibo para', rawSaleDetails.length, 'productos');
+    }
+
     // Transformar saleDetails usando la misma lógica que el método admin
     const saleDetails = rawSaleDetails.map(d => {
       // Obtener la mejor imagen de la variedad
@@ -578,11 +656,66 @@ export const generateClientReceiptPdf = async (req, res) => {
         files: d.variedade.files || []
       } : null;
 
-      // Calcular precios como en el método admin
-      const retailPrice = parseFloat(variedad?.retail_price ?? d.product?.price_usd ?? 0);
-      const finalPrice = parseFloat(d.price_unitario ?? retailPrice);
-      const cantidad = parseFloat(d.cantidad ?? 1);
-      const total = parseFloat((finalPrice * cantidad).toFixed(2));
+      // 🔧 RECALCULAR PARA COINCIDIR CON FRONTEND (que aplica redondeo .95)
+      
+      // 1. PRECIO ORIGINAL: usar el campo disponible en BD
+      let originalUnitPrice = 0;
+      if (variedad?.retail_price) {
+        originalUnitPrice = parseFloat(variedad.retail_price);
+      } else if (d.product?.price_usd) {
+        originalUnitPrice = parseFloat(d.product.price_usd);
+      }
+      
+      // 2. DETECTAR TIPO DE DESCUENTO
+      let discountType = '';
+      let discountPercentage = 0;
+      let hasDiscount = false;
+      
+      if (d.code_cupon) {
+        hasDiscount = true;
+        discountType = `Cupón ${d.code_cupon}`;
+        // Para cupones, extraer porcentaje del código
+        const cuponMatch = d.code_cupon.toUpperCase().match(/(\d+)/);
+        discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : 50;
+      } else if (d.code_discount || d.discount) {
+        hasDiscount = true;
+        if (d.code_discount) {
+          discountType = 'Flash Sale';
+        } else {
+          discountType = 'Campaign Discount';
+        }
+        // Para flash sales, usar porcentaje guardado
+        discountPercentage = parseInt(d.discount || 10);
+      }
+      
+      // 3. CALCULAR PRECIO FINAL CORRECTO (como lo hace el frontend)
+      let finalUnitPrice = originalUnitPrice;
+      let discountAmountPerUnit = 0;
+      
+      if (hasDiscount && discountPercentage > 0) {
+        // Calcular descuento basado en porcentaje
+        discountAmountPerUnit = (originalUnitPrice * discountPercentage) / 100;
+        finalUnitPrice = originalUnitPrice - discountAmountPerUnit;
+        
+        // Aplicar redondeo .95 (como hace el frontend)
+        finalUnitPrice = Math.floor(finalUnitPrice) + 0.95;
+        
+        // Recalcular ahorro real basado en precio final con redondeo
+        // El ahorro también debe terminar en .95 para ser consistente
+        discountAmountPerUnit = originalUnitPrice - finalUnitPrice;
+        // Redondear el ahorro para que termine en .95
+        discountAmountPerUnit = Math.floor(discountAmountPerUnit) + 0.95;
+      }
+      
+      // 4. CANTIDAD Y TOTAL
+      const cantidad = parseFloat(d.cantidad || 1);
+      const total = parseFloat((finalUnitPrice * cantidad).toFixed(2));
+      
+      // 🔍 DEBUG DETALLADO POR PRODUCTO (CLIENTE)
+      console.log(`📊 Cliente Producto: ${d.product?.title}`);
+      console.log(`   Original: ${originalUnitPrice}, Final calculado: ${finalUnitPrice}`);
+      console.log(`   BD Final: ${d.price_unitario}, Ahorro calculado: ${discountAmountPerUnit}`);
+      console.log(`   Porcentaje: ${discountPercentage}%, Tipo: ${discountType}`);
 
       // Construir URL de portada si existe
       const portada = d.product?.portada 
@@ -592,29 +725,34 @@ export const generateClientReceiptPdf = async (req, res) => {
       return { 
         ...d.dataValues, 
         variedad, 
-        originalPrice: retailPrice, 
-        unitPrice: finalPrice, 
+        originalPrice: originalUnitPrice, 
+        unitPrice: finalUnitPrice, 
         total, 
         finalImage,
         product: d.product ? { 
           ...d.product.dataValues, 
           portada 
-        } : null
+        } : null,
+        // Campos adicionales para el template - VALORES RECALCULADOS CORRECTOS
+        hasDiscountApplied: hasDiscount,
+        discountPercentage: discountPercentage,
+        discountAmount: discountAmountPerUnit, // POR UNIDAD
+        discountType: discountType
       };
     });
 
-    // 💰 Aplicar redondeo .95 a los detalles de la venta
+    // 💰 Aplicar redondeo .95 solo a precios unitarios, NO a totales individuales
     const saleDetailsWithRounding = saleDetails.map(detail => ({
       ...detail,
       unitPrice: applyRoundingTo95(detail.unitPrice || 0),
-      total: applyRoundingTo95(detail.total || 0)
+      total: parseFloat(detail.total || 0) // ✅ Mantener total exacto del producto
     }));
 
-    // 💰 Aplicar redondeo .95 al total de la venta
+    // 💰 Total debe ser suma exacta, NO aplicar redondeo .95
     const saleData = {
       ...sale.dataValues,
-      total: applyRoundingTo95(sale.dataValues.total || 0),
-      shipping_cost: applyRoundingTo95(sale.dataValues.shipping_cost || 0),
+      total: parseFloat(sale.dataValues.total || 0), // ✅ Suma exacta de productos
+      shipping_cost: 0.00, // ✅ ENVÍO GRATIS - siempre mostrar 0.00€
       sale_details: saleDetailsWithRounding,
       sale_address
     };
@@ -658,7 +796,7 @@ export const generateClientReceiptPdf = async (req, res) => {
 
     await browser.close();
 
-    console.log(`✅ PDF generado exitosamente para cliente - Recibo ${id}`);
+    console.log(`✅ PDF generado exitosamente para cliente - Recibo ID: ${id} | Sale ID: ${sale.id}`);
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');

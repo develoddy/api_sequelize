@@ -27,6 +27,20 @@ import smtpTransport from 'nodemailer-smtp-transport';
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
 
+/**
+ * Aplica redondeo .95 para mantener consistencia con el frontend
+ * @param {number} price - Precio a redondear
+ * @returns {number} Precio con redondeo .95
+ */
+function applyRoundingTo95(price) {
+  if (!price || price <= 0) {
+    return 0.95;
+  }
+  
+  const integerPart = Math.floor(price);
+  return parseFloat((integerPart + 0.95).toFixed(2));
+}
+
 
 async function send_email(sale_id) {
     try {
@@ -730,11 +744,64 @@ const updateStock = async (cart) => {
 
 // Crear detalles de venta
 const createSaleDetail = async (cart, saleId) => {
-    // Ensure numeric/default fields to avoid DB constraint errors
-    const price_unitario = cart.price_unitario != null ? Number(cart.price_unitario) : Number(cart.price || 0);
+    console.log('[PayPal] 🔍 Processing cart item:', {
+        productId: cart.productId,
+        variedadId: cart.variedadId,
+        price_unitario: cart.price_unitario,
+        discount: cart.discount,
+        code_cupon: cart.code_cupon,
+        code_discount: cart.code_discount
+    });
+
+    // 🔍 Obtener precio original de la variedad para cálculos correctos
+    let originalPrice = null;
+    if (cart.variedadId) {
+        try {
+            const variedad = await Variedad.findByPk(cart.variedadId);
+            if (variedad) {
+                originalPrice = parseFloat(variedad.retail_price || 0);
+                console.log('[PayPal] 📊 Original price from variedad:', originalPrice);
+            }
+        } catch (err) {
+            console.error('[PayPal] Error getting variedad:', err);
+        }
+    }
+
+    // Si no se pudo obtener precio original, usar el del carrito
+    if (!originalPrice || originalPrice <= 0) {
+        originalPrice = parseFloat(cart.price_unitario || cart.price || 0);
+    }
+
+    // 💰 Aplicar lógica de precios con redondeo .95 (IGUAL QUE STRIPE)
+    let finalPrice = parseFloat(cart.price_unitario || cart.price || 0);
+    
+    // Si hay descuento, recalcular con .95
+    const hasDiscount = (cart.code_cupon || cart.code_discount || cart.discount > 0);
+    if (hasDiscount && originalPrice > 0) {
+        const discountPercentage = parseFloat(cart.discount || 0);
+        if (discountPercentage > 0) {
+            const discountAmount = (originalPrice * discountPercentage) / 100;
+            const calculatedFinalPrice = originalPrice - discountAmount;
+            finalPrice = applyRoundingTo95(calculatedFinalPrice);
+            
+            console.log('[PayPal] 🧮 Price calculation:', {
+                original: originalPrice,
+                discountPercentage: discountPercentage + '%',
+                discountAmount: discountAmount.toFixed(2),
+                calculatedFinal: calculatedFinalPrice.toFixed(2),
+                finalWithRounding: finalPrice
+            });
+        }
+    } else if (originalPrice > 0) {
+        // Sin descuento, aplicar redondeo .95 al precio original
+        finalPrice = applyRoundingTo95(originalPrice);
+        console.log('[PayPal] 💰 No discount, applying .95 rounding:', originalPrice, '->', finalPrice);
+    }
+
+    // Ensure numeric fields
     const cantidad = cart.cantidad != null ? Number(cart.cantidad) : 1;
-    const subtotalVal = cart.subtotal != null ? Number(cart.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
-    const totalVal = cart.total != null ? Number(cart.total) : subtotalVal;
+    const subtotalVal = parseFloat((finalPrice * cantidad).toFixed(2));
+    const totalVal = subtotalVal;
 
     const saleDetailData = {
         type_discount: cart.type_discount || 1,
@@ -742,7 +809,7 @@ const createSaleDetail = async (cart, saleId) => {
         cantidad: cantidad,
         code_cupon: cart.code_cupon || null,
         code_discount: cart.code_discount || null,
-        price_unitario: price_unitario,
+        price_unitario: finalPrice, // ✅ Usar precio corregido con .95
         subtotal: subtotalVal,
         total: totalVal,
         saleId: saleId,
@@ -750,8 +817,7 @@ const createSaleDetail = async (cart, saleId) => {
         variedadId: cart.variedadId || null
     };
 
-    // Log the payload used to create the SaleDetail
-    console.log('[createSaleDetail] creating sale detail', saleDetailData);
+    console.log('[PayPal] 📦 Final SaleDetail data:', saleDetailData);
 
     const created = await SaleDetail.create(saleDetailData);
     return created;

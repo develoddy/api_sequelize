@@ -105,6 +105,14 @@
       margin-top: 40px;
       padding-top: 10px;
     }
+
+    .discount-info {
+      background-color: #f8f9fa;
+      padding: 4px 8px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border-left: 3px solid #28a745;
+    }
   </style>
 </head>
 <body>
@@ -154,7 +162,7 @@
           <th>Imagen</th>
           <th>Producto</th>
           <th>SKU</th>
-          <th>Precio Unitario</th>
+          <th>Precio Final</th>
           <th>Cantidad</th>
           <th>Total</th>
         </tr>
@@ -173,8 +181,18 @@
                 <div class="ms-5">
                     <div class="fw-bold"><%= item.product?.title || 'Producto' %></div>
                     <div class="fs-7" style="color: #555;">
-                    <small>Variante: <%= item.variedad?.valor || 'N/A' %> / <%= item.variedad?.color || 'N/A' %></small>
+                        <small>Variante: <%= item.variedad?.valor || 'N/A' %> / <%= item.variedad?.color || 'N/A' %></small>
                     </div>
+                    <% 
+                    // 🔧 USAR DATOS PRE-CALCULADOS DEL CONTROLADOR (MISMA LÓGICA QUE LIST-PURCHASES)
+                    if (item.hasDiscountApplied && item.discountAmount > 0) {
+                    %>
+                    <div class="discount-info">
+                        <small style="color: #28a745; font-weight: bold;">✓ <%= item.discountType %> - <%= item.discountPercentage %>% de descuento aplicado</small><br>
+                        <small style="color: #666; text-decoration: line-through;">Precio original: <%= item.originalPrice.toFixed(2) %> €</small><br>
+                        <small style="color: #28a745; font-weight: bold;">Ahorro: <%= item.discountAmount.toFixed(2) %> €</small>
+                    </div>
+                    <% } %>
                 </div>
             </td>
 

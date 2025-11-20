@@ -25,6 +25,33 @@ import stripe from '../devtools/utils/stripe.js';
 // });
 
 /**
+ * 🔧 Aplica el algoritmo de redondeo hacia arriba al .95 más cercano
+ * @param {number} price - Precio a redondear
+ * @returns {number} Precio redondeado terminado en .95
+ */
+const applyRoundingTo95 = (price) => {
+  if (!price || price <= 0) {
+    return 0.95; // Precio mínimo
+  }
+
+  const integerPart = Math.floor(price);
+  const decimalPart = price - integerPart;
+
+  // Si ya termina en .95, mantenerlo
+  if (Math.abs(decimalPart - 0.95) < 0.001) {
+    return parseFloat(price.toFixed(2));
+  }
+
+  // Si el decimal es menor a .95, redondear al .95 del mismo entero
+  // Si es mayor o igual a .95, redondear al .95 del siguiente entero
+  if (decimalPart < 0.95) {
+    return parseFloat((integerPart + 0.95).toFixed(2));
+  } else {
+    return parseFloat(((integerPart + 1) + 0.95).toFixed(2));
+  }
+};
+
+/**
  * POST /api/stripe/create-checkout-session
  * Crea una sesión de pago de Stripe Checkout
  */
@@ -97,12 +124,16 @@ export const createCheckoutSession = async (req, res) => {
     });
 
 
-    // Debug: Log cart payload to see coupon structure
+    // Debug: Log cart payload to see coupon structure and finalPrice
     console.log('[Stripe] Cart payload preview (first item):', cart && cart[0] ? {
       code_cupon: cart[0].code_cupon,
       code_discount: cart[0].code_discount,
       discount: cart[0].discount,
-      type_discount: cart[0].type_discount
+      type_discount: cart[0].type_discount,
+      finalPrice: cart[0].finalPrice,  // 🔍 DEBUG: Check if finalPrice arrives
+      originalPrice: cart[0].originalPrice,
+      hasDiscount: cart[0].hasDiscount,
+      price_unitario: cart[0].price_unitario
     } : 'no items');
 
     // Normalize/sanitize cart items to ensure productId and variedadId are present
@@ -111,6 +142,9 @@ export const createCheckoutSession = async (req, res) => {
       variedadId: item.variedad?.id ?? item.variedadId ?? null,
       cantidad: item.cantidad ?? item.quantity ?? 1,
       price_unitario: item.price_unitario ?? item.variedad?.retail_price ?? item.product?.price_usd ?? item.price ?? 0,
+      finalPrice: item.finalPrice ?? null,  // 🔧 PRESERVE finalPrice from frontend
+      originalPrice: item.originalPrice ?? null,  // 🔧 PRESERVE originalPrice from frontend
+      hasDiscount: item.hasDiscount ?? false,  // 🔧 PRESERVE hasDiscount from frontend
       discount: item.discount ?? 0,
       type_discount: item.type_discount ?? null,
       code_cupon: item.code_cupon ?? null,
@@ -326,7 +360,32 @@ export const stripeWebhook = async (req, res) => {
           price_unitario: item.price_unitario
         });
 
-        const price_unitario = item.price_unitario != null ? Number(item.price_unitario) : (item.price != null ? Number(item.price) : 0);
+        // 🔧 USAR PRECIO FINAL CALCULADO EN FRONTEND (con redondeo .95 y descuentos aplicados)
+        console.log(`[Stripe Webhook] 🔍 DEBUG ITEM ${index + 1}:`, {
+          finalPrice: item.finalPrice,
+          price_unitario: item.price_unitario,
+          originalPrice: item.originalPrice,
+          hasDiscount: item.hasDiscount,
+          productTitle: item.product?.title,
+          type_discount: item.type_discount,
+          discount: item.discount,
+          code_cupon: item.code_cupon,
+          code_discount: item.code_discount
+        });
+        
+        // 🔧 USAR finalPrice si llega del frontend, o calcular redondeo .95 como fallback
+        let price_unitario;
+        if (item.finalPrice != null) {
+          price_unitario = Number(item.finalPrice);
+        } else {
+          // Fallback: aplicar redondeo .95 en backend si finalPrice no llega
+          const rawPrice = item.price_unitario != null ? Number(item.price_unitario) : 
+                          (item.price != null ? Number(item.price) : 0);
+          price_unitario = applyRoundingTo95(rawPrice);
+          console.log(`[Stripe Webhook] ⚠️ finalPrice not received, applied .95 rounding: ${rawPrice} -> ${price_unitario}`);
+        }
+        
+        console.log(`[Stripe Webhook] 💰 Precios para ${index + 1}: finalPrice=${item.finalPrice}, price_unitario=${item.price_unitario}, usando=${price_unitario}`);
         const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
         
         // Fix: Manejar discount y type_discount correctamente

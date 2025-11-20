@@ -440,15 +440,22 @@ export const apllyCupon = async (req, res) => {
 
                 total = parseFloat((subtotal * cart.cantidad).toFixed(2));
 
+                // 🔧 APLICAR REDONDEO .95 AL PRECIO FINAL DEL CUPÓN
+                const finalPriceWithRounding = Math.floor(subtotal) + 0.95;
+                const finalTotal = parseFloat((finalPriceWithRounding * cart.cantidad).toFixed(2));
+
                 await Cart.update({
-                    subtotal: subtotal,
-                    total: total,
+                    price_unitario: finalPriceWithRounding,  // ⚠️ ACTUALIZAR PRECIO UNITARIO
+                    subtotal: finalPriceWithRounding,        // Usar precio con redondeo  
+                    total: finalTotal,                       // Total recalculado
                     type_discount: cupon.type_discount,
                     discount: cupon.discount,
                     code_cupon: cupon.code,
                 }, {
                     where: { id: cart.id }
                 });
+
+                console.log(`💰 [applyCupon] CUPÓN aplicado con redondeo .95: ${cart.price_unitario} → ${finalPriceWithRounding}`);
 
                 console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
             } else if ((appliesToProduct || appliesToCategory) && !isEligibleForCoupon) {
@@ -565,11 +572,30 @@ export const removeCupon = async (req, res) => {
         // PRESERVAR campaign discounts en productos que no tienen cupón
         for (const cart of carts) {
             if (cart.code_cupon && cart.code_cupon.trim() !== '') {
-                // Este producto tiene cupón aplicado -> removerlo
-                let subtotal = cart.price_unitario;
+                // 🔧 RESTAURAR PRECIO ORIGINAL (obtener de variedad o producto)
+                let originalPrice = cart.price_unitario;
+                
+                // Buscar precio original desde variedad o producto
+                if (cart.variedadId) {
+                    try {
+                        const variedad = await (await import('../models/Variedad.js')).Variedad.findByPk(cart.variedadId);
+                        if (variedad && variedad.retail_price) {
+                            originalPrice = parseFloat(variedad.retail_price);
+                        }
+                    } catch (e) {
+                        console.log('Error obteniendo precio de variedad:', e.message);
+                    }
+                }
+                
+                if (originalPrice === cart.price_unitario && cart.product?.price_usd) {
+                    originalPrice = parseFloat(cart.product.price_usd);
+                }
+
+                let subtotal = originalPrice;
                 let total = subtotal * cart.cantidad;
 
                 await Cart.update({
+                    price_unitario: originalPrice,  // ⚠️ RESTAURAR PRECIO UNITARIO ORIGINAL
                     subtotal: subtotal,
                     total: total,
                     type_discount: null,
@@ -579,7 +605,7 @@ export const removeCupon = async (req, res) => {
                     where: { id: cart.id }
                 });
 
-                console.log(`✅ [removeCupon] Cupón removido de ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+                console.log(`✅ [removeCupon] Cupón removido de ${cart.product.title}: ${cart.price_unitario} → ${originalPrice}`);
             } else if (cart.discount && !cart.code_cupon) {
                 // Este producto tiene campaign discount SIN cupón -> PRESERVAR
                 console.log(`ℹ️ [removeCupon] Preservando campaign discount en ${cart.product.title}: discount=${cart.discount}`);
