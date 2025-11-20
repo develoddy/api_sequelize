@@ -18,6 +18,33 @@ import path from 'path';
 import ejs from 'ejs';
 
 /**
+ * 💰 HELPER: Aplica redondeo .95 para consistencia con frontend
+ * @param {number} price - Precio a redondear
+ * @returns {number} Precio redondeado terminando en .95
+ */
+const applyRoundingTo95 = (price) => {
+  if (price < 0.95) {
+    return 0.95; // Precio mínimo
+  }
+
+  const integerPart = Math.floor(price);
+  const decimalPart = price - integerPart;
+
+  // Si ya termina en .95, mantenerlo
+  if (Math.abs(decimalPart - 0.95) < 0.001) {
+    return parseFloat(price.toFixed(2));
+  }
+
+  // Si el decimal es menor a .95, redondear al .95 del mismo entero
+  // Si es mayor o igual a .95, redondear al .95 del siguiente entero
+  if (decimalPart < 0.95) {
+    return parseFloat((integerPart + 0.95).toFixed(2));
+  } else {
+    return parseFloat(((integerPart + 1) + 0.95).toFixed(2));
+  }
+};
+
+/**
  * Lista todos los recibos
  */
 export const getList = async (req, res) => {
@@ -301,9 +328,19 @@ export const generatePdf = async (req, res) => {
 
     //console.log('🔹 sale_address asignado:', sale_address);
 
+    // 💰 Aplicar redondeo .95 a los detalles de la venta
+    const saleDetailsWithRounding = saleDetails.map(detail => ({
+      ...detail,
+      unitPrice: applyRoundingTo95(detail.unitPrice || 0),
+      total: applyRoundingTo95(detail.total || 0)
+    }));
+
+    // 💰 Aplicar redondeo .95 al total de la venta
     const saleData = {
       ...sale.dataValues,
-      sale_details: saleDetails,
+      total: applyRoundingTo95(sale.dataValues.total || 0),
+      shipping_cost: applyRoundingTo95(sale.dataValues.shipping_cost || 0),
+      sale_details: saleDetailsWithRounding,
       sale_address
     };
 
@@ -318,7 +355,7 @@ export const generatePdf = async (req, res) => {
     const html = ejs.render(templateContent, {
       order: saleData,
       address_sale: sale_address,
-      order_detail: saleDetails,
+      order_detail: saleDetailsWithRounding,
       customerName
     });
 
@@ -566,9 +603,19 @@ export const generateClientReceiptPdf = async (req, res) => {
       };
     });
 
+    // 💰 Aplicar redondeo .95 a los detalles de la venta
+    const saleDetailsWithRounding = saleDetails.map(detail => ({
+      ...detail,
+      unitPrice: applyRoundingTo95(detail.unitPrice || 0),
+      total: applyRoundingTo95(detail.total || 0)
+    }));
+
+    // 💰 Aplicar redondeo .95 al total de la venta
     const saleData = {
       ...sale.dataValues,
-      sale_details: saleDetails,
+      total: applyRoundingTo95(sale.dataValues.total || 0),
+      shipping_cost: applyRoundingTo95(sale.dataValues.shipping_cost || 0),
+      sale_details: saleDetailsWithRounding,
       sale_address
     };
 
@@ -582,7 +629,7 @@ export const generateClientReceiptPdf = async (req, res) => {
     const html = ejs.render(templateContent, {
       order: saleData,
       address_sale: sale_address,
-      order_detail: saleDetails,
+      order_detail: saleDetailsWithRounding,
       customerName
     });
 
