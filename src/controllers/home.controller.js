@@ -432,8 +432,11 @@ export const profile_client = async (req, res) => {
 
         let user_id = req.body.user_id;
 
-        // Obtener órdenes del usuario
-        let Orders = await Sale.findAll({ where: { userId: user_id } });
+        // Obtener órdenes del usuario ordenadas por fecha de creación descendente (más recientes primero)
+        let Orders = await Sale.findAll({ 
+            where: { userId: user_id },
+            order: [['createdAt', 'DESC']]
+        });
 
         let sale_orders = [];
 
