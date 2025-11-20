@@ -30,6 +30,13 @@ import { createSaleReceipt } from './helpers/receipt.helper.js';
 
 async function send_email(sale_id) {
     try {
+        // Función para aplicar redondeo .95 (mismo que el frontend)
+        const applyRoundingTo95 = (price) => {
+            if (price <= 0) return 0;
+            const integerPart = Math.floor(price);
+            return parseFloat((integerPart + 0.95).toFixed(2));
+        };
+
         const readHTMLFile = (path, callback) => {
             fs.readFile( path, { encoding: 'utf-8' }, ( err, html ) => {
                 if (err) {
@@ -103,19 +110,77 @@ async function send_email(sale_id) {
                 // Sequelize toJSON devuelve la variedad en d.variedade, renombramos a d.variedad
                 d.variedad = d.variedad ?? d.variedade ?? null;
                 
+                
                 // Precio original (sin descuento)
                 const originalPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario);
                 d.originalPrice = originalPrice;
                 
-                // Precio final considerando descuento
-                const finalPrice = parseFloat(d.discount || d.code_discount || originalPrice);
-                d.unitPrice = finalPrice;
+                // ✅ LÓGICA CORREGIDA: Calcular precio final usando la misma lógica del frontend
+                let finalPrice = originalPrice;
+                
+                // Si hay descuento aplicado, calcular según el tipo
+                if (d.type_discount && (d.discount || d.code_discount)) {
+                    const discountValue = parseFloat(d.discount) || 0;
+                    
+                    if (d.code_cupon) {
+                        // CUPONES REALES: usar type_discount para determinar cómo calcular
+                        if (d.type_discount === 1) {
+                            // Cupón porcentual
+                            finalPrice = originalPrice * (1 - discountValue / 100);
+                        } else if (d.type_discount === 2) {
+                            // Cupón monto fijo
+                            finalPrice = originalPrice - discountValue;
+                        }
+                    } else if (d.code_discount && !d.code_cupon) {
+                        // FLASH SALES: usar type_discount del Flash Sale
+                        if (d.type_discount === 1) {
+                            // Flash Sale porcentual
+                            finalPrice = originalPrice * (1 - discountValue / 100);
+                        } else if (d.type_discount === 2) {
+                            // Flash Sale monto fijo
+                            finalPrice = originalPrice - discountValue;
+                        }
+                    } else if (!d.code_cupon && !d.code_discount && d.discount) {
+                        // CAMPAIGN DISCOUNTS: discount contiene el precio final O el porcentaje
+                        
+                        // Para Campaign Discounts, necesitamos determinar si es precio final o porcentaje
+                        if (d.type_discount === 1) {
+                            // Si type_discount es 1 y el valor parece un precio final (mayor que 5 y menor que original)
+                            if (discountValue > 5 && discountValue < originalPrice) {
+                                // Tratar como precio final
+                                finalPrice = discountValue;
+                            } else if (discountValue <= 100) {
+                                // Tratar como porcentaje
+                                finalPrice = originalPrice * (1 - discountValue / 100);
+                            }
+                        } else if (d.type_discount === 2) {
+                            // Descuento fijo
+                            finalPrice = originalPrice - discountValue;
+                        }
+                    }
+                }
+                
+                // Asegurar que el precio final no sea negativo y aplicar redondeo .95
+                finalPrice = Math.max(0, finalPrice);
+                
+                // Aplicar redondeo .95 para cupones y flash sales (como en el frontend)
+                if (d.code_cupon || (d.code_discount && !d.code_cupon)) {
+                    finalPrice = applyRoundingTo95(finalPrice);
+                }
+                
+                d.unitPrice = parseFloat(finalPrice.toFixed(2));
                 
                 // Indicar si tiene descuento (comparando precio original vs precio final)
-                d.hasDiscount = finalPrice < originalPrice;
+                d.hasDiscount = d.unitPrice < originalPrice;
+                
+                // Calcular descuento total aplicado (por todas las unidades)
+                const discountPerUnit = originalPrice - d.unitPrice;
+                d.totalDiscount = parseFloat((discountPerUnit * d.cantidad).toFixed(2));
                 
                 // calcular total por cantidad usando precio final
-                d.total = parseFloat((finalPrice * d.cantidad).toFixed(2));
+                d.total = parseFloat((d.unitPrice * d.cantidad).toFixed(2));
+                
+                
                 return d;
             });
             
@@ -124,6 +189,15 @@ async function send_email(sale_id) {
             enrichedOrder.total = enrichedOrderDetails
                 .reduce((sum, d) => sum + d.total, 0)
                 .toFixed(2);
+            
+            // Calcular subtotal original (sin descuentos) y descuento total
+            const originalSubtotal = enrichedOrderDetails
+                .reduce((sum, d) => sum + (d.originalPrice * d.cantidad), 0);
+            const totalDiscount = enrichedOrderDetails
+                .reduce((sum, d) => sum + (d.totalDiscount || 0), 0);
+            
+            enrichedOrder.originalSubtotal = parseFloat(originalSubtotal.toFixed(2));
+            enrichedOrder.totalDiscount = parseFloat(totalDiscount.toFixed(2));
             
             const rest_html = ejs.render(html, {
                 order: enrichedOrder,

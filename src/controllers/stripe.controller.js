@@ -113,7 +113,8 @@ export const createCheckoutSession = async (req, res) => {
       price_unitario: item.price_unitario ?? item.variedad?.retail_price ?? item.product?.price_usd ?? item.price ?? 0,
       discount: item.discount ?? 0,
       type_discount: item.type_discount ?? null,
-      code_cupon: item.code_cupon ?? null,  // CORRECTED: use code_cupon not code_discount
+      code_cupon: item.code_cupon ?? null,
+      code_discount: item.code_discount ?? null,  // ADD: preserve Flash Sale IDs
       title: item.product?.title ?? item.title ?? '',
       // Preserve any additional fields that might be useful later
       subtotal: item.subtotal ?? null,
@@ -285,7 +286,8 @@ export const stripeWebhook = async (req, res) => {
           price_unitario: c.price_unitario,
           discount: c.discount,
           type_discount: c.type_discount,
-          code_cupon: c.code_cupon  // CORRECTED: use code_cupon
+          code_cupon: c.code_cupon,
+          code_discount: c.code_discount  // ADD: preserve Flash Sale IDs from DB
         }));
         console.log('[Stripe Webhook] Loaded carts from DB for userId=', userId, 'count=', carts.length);
       } else if (guestId) {
@@ -300,7 +302,8 @@ export const stripeWebhook = async (req, res) => {
           price_unitario: c.price_unitario,
           discount: c.discount,
           type_discount: c.type_discount,
-          code_cupon: c.code_cupon  // CORRECTED: use code_cupon
+          code_cupon: c.code_cupon,
+          code_discount: c.code_discount  // ADD: preserve Flash Sale IDs from CartCache
         }));
         console.log('[Stripe Webhook] Loaded carts from CartCache for guestId=', guestId, 'count=', cartsCache.length);
       }
@@ -330,6 +333,7 @@ export const stripeWebhook = async (req, res) => {
         const discount = item.discount != null ? Number(item.discount) : 0;
         const type_discount = item.type_discount || 1; // 1 = porcentaje (valor por defecto)
         const code_cupon = item.code_cupon || null;
+        const code_discount = item.code_discount || null;  // ADD: preserve Flash Sale IDs
 
         const subtotal = item.subtotal != null ? Number(item.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
         const total = item.total != null ? Number(item.total) : subtotal;
@@ -355,7 +359,8 @@ export const stripeWebhook = async (req, res) => {
           price_unitario: price_unitario,
           discount: discount,
           type_discount: type_discount,
-          code_cupon: code_cupon,  // CORRECTED
+          code_cupon: code_cupon,
+          code_discount: code_discount,  // ADD: Flash Sale IDs for email detection
           subtotal: subtotal,
           total: total,
         };
@@ -364,7 +369,8 @@ export const stripeWebhook = async (req, res) => {
           saleId: sale.id, 
           productId: resolvedProductId,
           variedadId: item.variedadId,
-          code_cupon: code_cupon, 
+          code_cupon: code_cupon,
+          code_discount: code_discount,  // ADD: Flash Sale ID logging
           discount: discount, 
           type_discount: type_discount,
           price_unitario: price_unitario,
