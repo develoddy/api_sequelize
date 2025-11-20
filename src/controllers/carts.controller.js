@@ -308,9 +308,21 @@ export const apllyCupon = async (req, res) => {
         let data = req.body;
         console.log("💡 [applyCupon] Datos recibidos del front:", data);
 
-        // Validar la existencia del cupón
+        // Validar la existencia del cupón y sus condiciones
+        const { Op } = await import('sequelize');
+        
         let cupon = await Cupone.findOne({
-            where: { code: data.code },
+            where: {
+                code: data.code,
+                state: 1, // Solo cupones activos
+                [Op.or]: [
+                    { type_count: 1 }, // Cupones ilimitados
+                    { 
+                        type_count: 2,     // Cupones limitados
+                        num_use: { [Op.gt]: 0 } // Con usos restantes
+                    }
+                ]
+            },
             include: [
                 { model: CuponeProduct, attributes: ['productId'] },
                 { model: CuponeCategorie, attributes: ['categoryId'] }
@@ -318,15 +330,57 @@ export const apllyCupon = async (req, res) => {
         });
 
         if (!cupon) {
-            console.log("❌ [applyCupon] Cupón no encontrado:", data.code);
-            res.status(200).json({
+            console.log("❌ [applyCupon] Cupón no encontrado o sin usos disponibles:", data.code);
+            
+            // Verificar si existe pero está agotado o inactivo
+            const cuponExists = await Cupone.findOne({
+                where: { code: data.code }
+            });
+            
+            if (cuponExists) {
+                if (cuponExists.state !== 1) {
+                    return res.status(200).json({
+                        message: 403,
+                        message_text: "Este cupón no está disponible en este momento."
+                    });
+                } else if (cuponExists.type_count === 2 && cuponExists.num_use <= 0) {
+                    return res.status(200).json({
+                        message: 403,
+                        message_text: "Este cupón ha alcanzado el límite de usos permitidos."
+                    });
+                }
+            }
+            
+            return res.status(200).json({
                 message: 403,
                 message_text: "El cupón ingresado no es válido. Por favor, inténtelo con otro cupón."
             });
-            return;
         }
 
-        console.log("✅ [applyCupon] Cupón encontrado:", cupon.code, cupon.type_discount, cupon.discount);
+        console.log("✅ [applyCupon] Cupón encontrado:", {
+            code: cupon.code,
+            type_discount: cupon.type_discount,
+            discount: cupon.discount,
+            type_count: cupon.type_count,
+            num_use: cupon.num_use,
+            state: cupon.state
+        });
+
+        // Verificar si el cupón ya está aplicado en algún item del carrito
+        const existingCoupon = await Cart.findOne({
+            where: { 
+                userId: data.user_id,
+                code_cupon: data.code
+            }
+        });
+
+        if (existingCoupon) {
+            console.log(`⚠️ [applyCupon] Cupón ya aplicado previamente:`, data.code);
+            return res.status(200).json({
+                message: 403,
+                message_text: "Este cupón ya ha sido aplicado a tu carrito."
+            });
+        }
 
         // Parte operativa
         let carts = await Cart.findAll({

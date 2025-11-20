@@ -12,6 +12,7 @@ import { User } from '../models/User.js';
 import { SaleAddress } from '../models/SaleAddress.js';
 import { File } from '../models/File.js';
 import { Option } from '../models/Option.js';
+import { Cupone } from '../models/Cupone.js';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
@@ -96,6 +97,14 @@ export const createCheckoutSession = async (req, res) => {
     });
 
 
+    // Debug: Log cart payload to see coupon structure
+    console.log('[Stripe] Cart payload preview (first item):', cart && cart[0] ? {
+      code_cupon: cart[0].code_cupon,
+      code_discount: cart[0].code_discount,
+      discount: cart[0].discount,
+      type_discount: cart[0].type_discount
+    } : 'no items');
+
     // Normalize/sanitize cart items to ensure productId and variedadId are present
     const sanitizedCart = (Array.isArray(cart) ? cart : []).map((item) => ({
       productId: item.product?.id ?? item.productId ?? null,
@@ -103,7 +112,8 @@ export const createCheckoutSession = async (req, res) => {
       cantidad: item.cantidad ?? item.quantity ?? 1,
       price_unitario: item.price_unitario ?? item.variedad?.retail_price ?? item.product?.price_usd ?? item.price ?? 0,
       discount: item.discount ?? 0,
-      code_discount: item.code_discount ?? null,
+      type_discount: item.type_discount ?? null,
+      code_cupon: item.code_cupon ?? null,  // CORRECTED: use code_cupon not code_discount
       title: item.product?.title ?? item.title ?? '',
       // Preserve any additional fields that might be useful later
       subtotal: item.subtotal ?? null,
@@ -274,7 +284,8 @@ export const stripeWebhook = async (req, res) => {
           cantidad: c.cantidad,
           price_unitario: c.price_unitario,
           discount: c.discount,
-          code_discount: c.code_discount
+          type_discount: c.type_discount,
+          code_cupon: c.code_cupon  // CORRECTED: use code_cupon
         }));
         console.log('[Stripe Webhook] Loaded carts from DB for userId=', userId, 'count=', carts.length);
       } else if (guestId) {
@@ -288,7 +299,8 @@ export const stripeWebhook = async (req, res) => {
           cantidad: c.cantidad,
           price_unitario: c.price_unitario,
           discount: c.discount,
-          code_discount: c.code_discount
+          type_discount: c.type_discount,
+          code_cupon: c.code_cupon  // CORRECTED: use code_cupon
         }));
         console.log('[Stripe Webhook] Loaded carts from CartCache for guestId=', guestId, 'count=', cartsCache.length);
       }
@@ -298,12 +310,26 @@ export const stripeWebhook = async (req, res) => {
 
     // Create SaleDetails
     let createdDetailsCount = 0;
-    for (const item of cartItems) {
+    const expectedCount = Array.isArray(cartItems) ? cartItems.length : 0;
+    
+    console.log(`[Stripe Webhook] 📦 Iniciando creación de ${expectedCount} SaleDetails para saleId=${sale.id}`);
+    
+    for (const [index, item] of cartItems.entries()) {
       try {
+        console.log(`[Stripe Webhook] 📦 Processing item ${index + 1}/${expectedCount}:`, {
+          productId: item.productId,
+          variedadId: item.variedadId,
+          cantidad: item.cantidad,
+          price_unitario: item.price_unitario
+        });
+
         const price_unitario = item.price_unitario != null ? Number(item.price_unitario) : (item.price != null ? Number(item.price) : 0);
         const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
+        
+        // Fix: Manejar discount y type_discount correctamente
         const discount = item.discount != null ? Number(item.discount) : 0;
-        const code_discount = item.code_discount || null;
+        const type_discount = item.type_discount || 1; // 1 = porcentaje (valor por defecto)
+        const code_cupon = item.code_cupon || null;
 
         const subtotal = item.subtotal != null ? Number(item.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
         const total = item.total != null ? Number(item.total) : subtotal;
@@ -328,22 +354,67 @@ export const stripeWebhook = async (req, res) => {
           cantidad: cantidad,
           price_unitario: price_unitario,
           discount: discount,
-          code_discount: code_discount,
+          type_discount: type_discount,
+          code_cupon: code_cupon,  // CORRECTED
           subtotal: subtotal,
           total: total,
         };
 
-        console.log('[Stripe Webhook] creating SaleDetail payload:', detailPayload);
+        console.log('[Stripe Webhook] 🎟️ SaleDetail values before create:', { 
+          saleId: sale.id, 
+          productId: resolvedProductId,
+          variedadId: item.variedadId,
+          code_cupon: code_cupon, 
+          discount: discount, 
+          type_discount: type_discount,
+          price_unitario: price_unitario,
+          cantidad: cantidad,
+          subtotal: subtotal,
+          total: total
+        });
 
-        await SaleDetail.create(detailPayload);
+        console.log('[Stripe Webhook] 📦 Final SaleDetail payload:', detailPayload);
+
+        const createdDetail = await SaleDetail.create(detailPayload);
         createdDetailsCount++;
-        console.log(`[Stripe Webhook] SaleDetail creado: { saleId: ${sale.id}, productId: ${detailPayload.productId}, variedadId: ${detailPayload.variedadId} }`);
+        console.log(`[Stripe Webhook] ✅ SaleDetail ${createdDetailsCount}/${expectedCount} creado exitosamente:`, {
+          saleDetailId: createdDetail.id,
+          saleId: sale.id, 
+          productId: detailPayload.productId, 
+          variedadId: detailPayload.variedadId,
+          cantidad: detailPayload.cantidad,
+          total: detailPayload.total
+        });
       } catch (detailErr) {
-        console.error('[Stripe Webhook] Error creando SaleDetail para saleId=' + sale.id + ' item=', item, detailErr && (detailErr.stack || detailErr.message || detailErr));
+        console.error(`[Stripe Webhook] ❌ ERROR creando SaleDetail ${index + 1}/${expectedCount} para saleId=${sale.id}:`);
+        console.error('[Stripe Webhook] Item que falló:', item);
+        console.error('[Stripe Webhook] Error details:', detailErr && (detailErr.stack || detailErr.message || detailErr));
+        
+        // Este error es crítico - no continuar con la limpieza
+        console.error(`[Stripe Webhook] ❌ CRÍTICO: Falló creación de SaleDetail, NO se limpiará el carrito`);
       }
     }
 
     console.log('[Stripe Webhook] Created SaleDetails count=', createdDetailsCount, 'for saleId=', sale.id);
+
+    // Verificar que se crearon TODOS los SaleDetails esperados
+    const saleDetailsCreationSuccess = (expectedCount > 0 && createdDetailsCount === expectedCount);
+    console.log(`[Stripe Webhook] 📊 SaleDetails verification: expected=${expectedCount}, created=${createdDetailsCount}, success=${saleDetailsCreationSuccess}`);
+
+    if (!saleDetailsCreationSuccess) {
+      console.error(`[Stripe Webhook] ❌ ERROR: No se crearon todos los SaleDetails. Expected: ${expectedCount}, Created: ${createdDetailsCount}`);
+      console.error(`[Stripe Webhook] ❌ NO SE LIMPIARÁ EL CARRITO para preservar datos para debugging`);
+      return res.status(500).json({ 
+        received: false, 
+        error: 'SaleDetails creation failed',
+        expected: expectedCount,
+        created: createdDetailsCount
+      });
+    }
+
+    // Decrementar cupones solo si todos los SaleDetails se crearon exitosamente
+    console.log(`🎟️ [Stripe Webhook] Iniciando decremento de cupones para ${cartItems.length} items`);
+    await decrementCouponUsageForStripe(cartItems);
 
     // === Printful + email flow ===
     try {
@@ -593,40 +664,66 @@ export const stripeWebhook = async (req, res) => {
       console.error('[Stripe Webhook] Error in Printful/email flow for saleId=', sale.id, pfFlowErr && (pfFlowErr.stack || pfFlowErr.message || pfFlowErr));
     }
 
-    // Delete CheckoutCache only if details created and Printful succeeded
+    // === IMPORTANTE: Solo limpiar si TODOS los SaleDetails se crearon correctamente ===
+    // Delete CheckoutCache if ALL sale details were created successfully
     try {
-      const expectedCount = Array.isArray(cartItems) ? cartItems.length : 0;
-      if (checkoutCacheRowFound && checkoutCacheId) {
-        if (expectedCount > 0 && createdDetailsCount === expectedCount && printfulCreated) {
-          await CheckoutCache.destroy({ where: { id: checkoutCacheId } });
-          console.log(`[Stripe Webhook] Deleted CheckoutCache id=${checkoutCacheId} after successful processing`);
-        } else {
-          console.log(`[Stripe Webhook] Not deleting CheckoutCache id=${checkoutCacheId} because createdDetailsCount=${createdDetailsCount} != cartItems.length=${expectedCount} or printfulCreated=${printfulCreated}`);
-        }
+      if (checkoutCacheRowFound && checkoutCacheId && saleDetailsCreationSuccess) {
+        await CheckoutCache.destroy({ where: { id: checkoutCacheId } });
+        console.log(`[Stripe Webhook] ✅ Deleted CheckoutCache id=${checkoutCacheId} after successful sale processing`);
+      } else if (checkoutCacheRowFound && checkoutCacheId) {
+        console.log(`[Stripe Webhook] ⚠️ NOT deleting CheckoutCache id=${checkoutCacheId} - SaleDetails creation incomplete`);
       }
     } catch (delCacheErr) {
       console.warn('[Stripe Webhook] Failed to delete CheckoutCache id=', checkoutCacheId, delCacheErr && (delCacheErr.message || delCacheErr));
     }
 
-    // Remove source carts
-    if (sourceCarts && sourceCarts.length > 0) {
-      try {
-        for (const c of sourceCarts) {
-          try {
-            if (c && c.id) {
-              if (sourceIsCache) {
-                await CartCache.destroy({ where: { id: c.id } });
-              } else {
-                await Cart.destroy({ where: { id: c.id } });
+    // === LIMPIEZA DE CARRITO: Solo si TODOS los SaleDetails se crearon correctamente ===
+    if (saleDetailsCreationSuccess) {
+      // Remove source carts after successful sale creation
+      if (sourceCarts && sourceCarts.length > 0) {
+        try {
+          console.log(`[Stripe Webhook] 🧹 Limpiando ${sourceCarts.length} items del carrito después de venta exitosa`);
+          for (const c of sourceCarts) {
+            try {
+              if (c && c.id) {
+                if (sourceIsCache) {
+                  await CartCache.destroy({ where: { id: c.id } });
+                  console.log(`[Stripe Webhook] ✅ CartCache eliminado: ${c.id}`);
+                } else {
+                  await Cart.destroy({ where: { id: c.id } });
+                  console.log(`[Stripe Webhook] ✅ Cart eliminado: ${c.id}`);
+                }
               }
+            } catch (delErr) {
+              console.warn('[Stripe Webhook] No se pudo eliminar item de carrito fuente id=', c && c.id, delErr && (delErr.message || delErr));
             }
-          } catch (delErr) {
-            console.warn('[Stripe Webhook] No se pudo eliminar item de carrito fuente id=', c && c.id, delErr && (delErr.message || delErr));
+          }
+          console.log(`[Stripe Webhook] 🎉 Carrito limpiado completamente después de pago Stripe`);
+        } catch (delAllErr) {
+          console.error('[Stripe Webhook] Error eliminando items de carrito fuente:', delAllErr && (delAllErr.stack || delAllErr.message || delAllErr));
+        }
+      }
+
+      // Limpieza adicional: asegurar que todos los carritos del usuario/guest se limpien
+      try {
+        if (userId) {
+          const remainingCarts = await Cart.destroy({ where: { userId } });
+          if (remainingCarts > 0) {
+            console.log(`[Stripe Webhook] 🧹 Limpieza adicional: eliminados ${remainingCarts} Cart items para userId=${userId}`);
           }
         }
-      } catch (delAllErr) {
-        console.error('[Stripe Webhook] Error eliminando items de carrito fuente:', delAllErr && (delAllErr.stack || delAllErr.message || delAllErr));
+        if (guestId) {
+          const remainingCacheItems = await CartCache.destroy({ where: { guest_id: guestId } });
+          if (remainingCacheItems > 0) {
+            console.log(`[Stripe Webhook] 🧹 Limpieza adicional: eliminados ${remainingCacheItems} CartCache items para guestId=${guestId}`);
+          }
+        }
+      } catch (cleanupErr) {
+        console.warn('[Stripe Webhook] Error en limpieza adicional de carritos:', cleanupErr && (cleanupErr.message || cleanupErr));
       }
+    } else {
+      console.warn(`[Stripe Webhook] ⚠️ NO SE LIMPIA EL CARRITO - Los SaleDetails no se crearon correctamente`);
+      console.warn(`[Stripe Webhook] ⚠️ Esto preserva los datos del carrito para que successfull-checkout funcione`);
     }
 
     console.log('[Stripe Webhook] Venta y detalles registrados correctamente, saleId=', sale.id);
@@ -635,4 +732,88 @@ export const stripeWebhook = async (req, res) => {
   }
 
   res.json({ received: true });
+};
+
+/**
+ * Decrementar el uso de cupones limitados para una venta de Stripe
+ */
+const decrementCouponUsageForStripe = async (cartItems) => {
+    try {
+        // Obtener cupones únicos de todos los items del carrito
+        const uniqueCoupons = [...new Set(
+            cartItems.filter(item => item.code_cupon)
+                     .map(item => item.code_cupon)
+        )];
+
+        console.log(`🔍 [decrementCouponUsageForStripe] Items con cupón:`, 
+            cartItems.filter(item => item.code_cupon).map(item => ({ 
+                code_cupon: item.code_cupon, 
+                discount: item.discount 
+            }))
+        );
+
+        if (uniqueCoupons.length === 0) {
+            console.log(`ℹ️ [decrementCouponUsageForStripe] No hay cupones para procesar`);
+            return;
+        }
+
+        console.log(`🎟️ [decrementCouponUsageForStripe] Procesando ${uniqueCoupons.length} cupones únicos:`, uniqueCoupons);
+
+        // Procesar cada cupón único una sola vez
+        for (const couponCode of uniqueCoupons) {
+            await decrementSingleCouponStripe(couponCode);
+        }
+        
+    } catch (error) {
+        console.error(`❌ [decrementCouponUsageForStripe] Error general:`, error);
+    }
+};
+
+/**
+ * Decrementar el uso de un cupón específico para Stripe
+ */
+const decrementSingleCouponStripe = async (couponCode) => {
+    try {
+        console.log(`🎟️ [decrementSingleCouponStripe] Procesando cupón: ${couponCode}`);
+
+        // Buscar el cupón
+        const cupon = await Cupone.findOne({
+            where: { 
+                code: couponCode,
+                state: 1 // Solo cupones activos
+            }
+        });
+
+        if (!cupon) {
+            console.warn(`⚠️ [decrementSingleCouponStripe] Cupón no encontrado o inactivo: ${couponCode}`);
+            return;
+        }
+
+        // Solo decrementar si es cupón limitado (type_count = 2)
+        if (cupon.type_count === 2) {
+            if (cupon.num_use && cupon.num_use > 0) {
+                const newUsageCount = cupon.num_use - 1;
+                
+                await Cupone.update(
+                    { num_use: newUsageCount },
+                    { where: { id: cupon.id } }
+                );
+
+                console.log(`✅ [decrementSingleCouponStripe] Cupón ${cupon.code} decrementado: ${cupon.num_use} -> ${newUsageCount}`);
+                
+                // Si llega a 0, opcionalmente marcar como inactivo
+                if (newUsageCount === 0) {
+                    console.log(`🚫 [decrementSingleCouponStripe] Cupón ${cupon.code} agotado (0 usos restantes)`);
+                }
+            } else {
+                console.warn(`⚠️ [decrementSingleCouponStripe] Cupón ${cupon.code} ya sin usos disponibles`);
+            }
+        } else {
+            console.log(`ℹ️ [decrementSingleCouponStripe] Cupón ${cupon.code} es ilimitado, no se decrementa`);
+        }
+        
+    } catch (error) {
+        console.error(`❌ [decrementSingleCouponStripe] Error al decrementar cupón:`, error);
+        // No lanzar error para no afectar la venta principal
+    }
 };

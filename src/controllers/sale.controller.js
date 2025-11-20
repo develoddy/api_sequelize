@@ -14,6 +14,7 @@ import { Galeria } from "../models/Galeria.js";
 import { Option } from "../models/Option.js";
 import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
+import { Cupone } from "../models/Cupone.js";
 import fs from 'fs';
 import path from "path";
 import http from 'http';
@@ -461,6 +462,7 @@ const prepareItemsForPrintful = async (carts, sale) => {
         try {
             const createdDetail = await createSaleDetail(cart, sale.id);
             console.log('[prepareItemsForPrintful] createSaleDetail succeeded for cart id=', cart.id, 'detailId=', createdDetail && createdDetail.id);
+            
         } catch (detailErr) {
             console.error('[prepareItemsForPrintful] createSaleDetail FAILED for cart id=', cart.id, detailErr && (detailErr.stack || detailErr.message || detailErr));
             throw detailErr; // bubble up so register fails visibly
@@ -473,6 +475,9 @@ const prepareItemsForPrintful = async (carts, sale) => {
         subtotal += parseFloat(cart.subtotal);
         discount += parseFloat(cart.discount);
     }
+    
+    // Decrementar cupones después de procesar todos los items exitosamente
+    await decrementCouponUsageForSale(carts);
     
     return {
         items,
@@ -873,6 +878,21 @@ export const getSaleBySession = async (req, res) => {
         // Obtener detalles con helper para mantener la forma esperada (product imagen, variedad, etc.)
         const saleDetails = await getSaleDetails(sale.id);
         console.log('[Sale Controller] getSaleBySession - saleId=', sale.id, 'saleDetails.count=', Array.isArray(saleDetails) ? saleDetails.length : 0);
+        
+        // Logging detallado para debugging
+        console.log('[Sale Controller] getSaleBySession - Sale encontrada:', {
+            saleId: sale.id,
+            total: sale.total,
+            method_payment: sale.method_payment,
+            stripeSessionId: sale.stripeSessionId,
+            saleDetailsCount: saleDetails ? saleDetails.length : 0,
+            firstDetail: saleDetails && saleDetails[0] ? {
+                productId: saleDetails[0].productId,
+                cantidad: saleDetails[0].cantidad,
+                price_unitario: saleDetails[0].price_unitario,
+                total: saleDetails[0].total
+            } : 'no details'
+        });
 
         // Si aún no hay detalles, devolver vacío (el frontend tiene retry) pero logear para depuración
         if (!saleDetails || saleDetails.length === 0) {
@@ -1849,4 +1869,76 @@ export const getLastSale = async (req, res) => {
     console.error(error);
     return res.status(500).json({ success: false, message: 'Error al obtener la última venta' });
   }
+};
+
+/**
+ * Decrementar el uso de cupones limitados para una venta completa
+ */
+const decrementCouponUsageForSale = async (carts) => {
+    try {
+        // Obtener cupones únicos de todos los carritos
+        const uniqueCoupons = [...new Set(
+            carts.filter(cart => cart.code_cupon)
+                 .map(cart => cart.code_cupon)
+        )];
+
+        console.log(`🎟️ [decrementCouponUsageForSale] Procesando ${uniqueCoupons.length} cupones únicos:`, uniqueCoupons);
+
+        // Procesar cada cupón único una sola vez
+        for (const couponCode of uniqueCoupons) {
+            await decrementSingleCoupon(couponCode);
+        }
+        
+    } catch (error) {
+        console.error(`❌ [decrementCouponUsageForSale] Error general:`, error);
+    }
+};
+
+/**
+ * Decrementar el uso de un cupón específico
+ */
+const decrementSingleCoupon = async (couponCode) => {
+    try {
+        console.log(`🎟️ [decrementSingleCoupon] Procesando cupón: ${couponCode}`);
+
+        // Buscar el cupón
+        const cupon = await Cupone.findOne({
+            where: { 
+                code: couponCode,
+                state: 1 // Solo cupones activos
+            }
+        });
+
+        if (!cupon) {
+            console.warn(`⚠️ [decrementSingleCoupon] Cupón no encontrado o inactivo: ${couponCode}`);
+            return;
+        }
+
+        // Solo decrementar si es cupón limitado (type_count = 2)
+        if (cupon.type_count === 2) {
+            if (cupon.num_use && cupon.num_use > 0) {
+                const newUsageCount = cupon.num_use - 1;
+                
+                await Cupone.update(
+                    { num_use: newUsageCount },
+                    { where: { id: cupon.id } }
+                );
+
+                console.log(`✅ [decrementSingleCoupon] Cupón ${cupon.code} decrementado: ${cupon.num_use} -> ${newUsageCount}`);
+                
+                // Si llega a 0, opcionalmente marcar como inactivo
+                if (newUsageCount === 0) {
+                    console.log(`🚫 [decrementSingleCoupon] Cupón ${cupon.code} agotado (0 usos restantes)`);
+                }
+            } else {
+                console.warn(`⚠️ [decrementSingleCoupon] Cupón ${cupon.code} ya sin usos disponibles`);
+            }
+        } else {
+            console.log(`ℹ️ [decrementSingleCoupon] Cupón ${cupon.code} es ilimitado, no se decrementa`);
+        }
+        
+    } catch (error) {
+        console.error(`❌ [decrementSingleCoupon] Error al decrementar cupón:`, error);
+        // No lanzar error para no afectar la venta principal
+    }
 };
