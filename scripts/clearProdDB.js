@@ -34,6 +34,11 @@ import { Receipt } from '../src/models/Receipt.js';
 async function clearProdDB() {
   try {
     console.log("🔥 Limpieza de producción: borrando todos los registros...");
+    
+    // Verificar conexión a BD primero
+    console.log("🔍 Verificando conexión a base de datos...");
+    await sequelize.authenticate();
+    console.log("✅ Conexión a BD establecida correctamente");
 
     // Orden importante para evitar errores de foreign keys
     
@@ -111,4 +116,11 @@ async function clearProdDB() {
   }
 }
 
-clearProdDB();
+// Ejecutar una sola vez y salir
+clearProdDB().then(() => {
+  console.log("🎯 Script clearProdDB terminado - saliendo...");
+  process.exit(0);
+}).catch((error) => {
+  console.error("💥 Error fatal en clearProdDB:", error);
+  process.exit(1);
+});
