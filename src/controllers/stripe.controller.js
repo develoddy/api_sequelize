@@ -394,8 +394,9 @@ export const stripeWebhook = async (req, res) => {
         const code_cupon = item.code_cupon || null;
         const code_discount = item.code_discount || null;  // ADD: preserve Flash Sale IDs
 
-        const subtotal = item.subtotal != null ? Number(item.subtotal) : parseFloat((price_unitario * cantidad).toFixed(2));
-        const total = item.total != null ? Number(item.total) : subtotal;
+        // Fix: Asegurar que subtotal y total sean exactos (precio unitario * cantidad) sin decimales extraños
+        const subtotal = parseFloat((price_unitario * cantidad).toFixed(2));
+        const total = parseFloat((price_unitario * cantidad).toFixed(2));
 
         let resolvedProductId = item.productId || null;
         if (!resolvedProductId && item.variedadId) {
