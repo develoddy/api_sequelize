@@ -35,6 +35,14 @@ async function clearProdDB() {
   try {
     console.log("🔥 Limpieza de producción: borrando todos los registros...");
     
+    // Mostrar configuración de BD para debugging
+    console.log("🔍 Configuración de base de datos:");
+    console.log("  - Host:", sequelize.config.host || 'localhost');
+    console.log("  - Puerto:", sequelize.config.port || 3306);
+    console.log("  - Base de datos:", sequelize.config.database);
+    console.log("  - Usuario:", sequelize.config.username);
+    console.log("  - Dialecto:", sequelize.config.dialect);
+    
     // Verificar conexión a BD primero
     console.log("🔍 Verificando conexión a base de datos...");
     await sequelize.authenticate();
