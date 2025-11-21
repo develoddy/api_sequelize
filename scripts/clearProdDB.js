@@ -1,85 +1,113 @@
 import { sequelize } from '../src/database/database.js';
-import '../src/models/User.js';
-import '../src/models/Variedad.js';
-import '../src/models/Slider.js';
-import '../src/models/Galeria.js';
-import '../src/models/Categorie.js';
-import '../src/models/Product.js';
-import '../src/models/Sale.js';
-import '../src/models/Shipment.js';
-import '../src/models/SaleDetail.js';
-import '../src/models/SaleAddress.js';
-import '../src/models/Review.js';
-import '../src/models/DiscountCategorie.js';
-import '../src/models/DiscountProduct.js';
-import '../src/models/Discount.js';
-import '../src/models/CuponeCategorie.js';
-import '../src/models/CuponeProduct.js';
-import '../src/models/Cupone.js';
-import '../src/models/Cart.js';
-import '../src/models/CartCache.js';
-import '../src/models/Wishlist.js';
-import '../src/models/AddressClient.js';
-import '../src/models/AddressGuest.js';
-import '../src/models/ProductVariants.js';
-import '../src/models/File.js';
-import '../src/models/Option.js';
-import '../src/models/chat/ChatConversation.js';
-import '../src/models/chat/ChatMessage.js';
-import '../src/models/ReturnRequest.js';
-import '../src/models/Notification.js';
+import { User } from '../src/models/User.js';
+import { Variedad } from '../src/models/Variedad.js';
+import { Slider } from '../src/models/Slider.js';
+import { Galeria } from '../src/models/Galeria.js';
+import { Categorie } from '../src/models/Categorie.js';
+import { Product } from '../src/models/Product.js';
+import { Sale } from '../src/models/Sale.js';
+import { Shipment } from '../src/models/Shipment.js';
+import { SaleDetail } from '../src/models/SaleDetail.js';
+import { SaleAddress } from '../src/models/SaleAddress.js';
+import { Review } from '../src/models/Review.js';
+import { DiscountCategorie } from '../src/models/DiscountCategorie.js';
+import { DiscountProduct } from '../src/models/DiscountProduct.js';
+import { Discount } from '../src/models/Discount.js';
+import { CuponeCategorie } from '../src/models/CuponeCategorie.js';
+import { CuponeProduct } from '../src/models/CuponeProduct.js';
+import { Cupone } from '../src/models/Cupone.js';
+import { Cart } from '../src/models/Cart.js';
+import { CartCache } from '../src/models/CartCache.js';
+import { CheckoutCache } from '../src/models/CheckoutCache.js';
+import { Wishlist } from '../src/models/Wishlist.js';
+import { AddressClient } from '../src/models/AddressClient.js';
+import { AddressGuest } from '../src/models/AddressGuest.js';
+import { ProductVariants } from '../src/models/ProductVariants.js';
+import { File } from '../src/models/File.js';
+import { Option } from '../src/models/Option.js';
+import { ReturnRequest } from '../src/models/ReturnRequest.js';
+import { Notification } from '../src/models/Notification.js';
+import { Inbox } from '../src/models/Inbox.js';
+import { Guest } from '../src/models/Guest.js';
+import { Receipt } from '../src/models/Receipt.js';
 
 async function clearProdDB() {
   try {
     console.log("🔥 Limpieza de producción: borrando todos los registros...");
 
-    // Tablas principales
-    await SaleDetail.destroy({ where: {}, truncate: true });
-    await SaleAddress.destroy({ where: {}, truncate: true });
-    await Sale.destroy({ where: {}, truncate: true });
-    await Shipment.destroy({ where: {}, truncate: true });
+    // Orden importante para evitar errores de foreign keys
+    
+    // 1. Limpiar tablas dependientes primero
+    console.log("📊 Limpiando SaleDetails...");
+    await SaleDetail.destroy({ where: {} });
+    
+    console.log("📧 Limpiando SaleAddresses...");
+    await SaleAddress.destroy({ where: {} });
+    
+    console.log("🛒 Limpiando Sales...");
+    await Sale.destroy({ where: {} });
+    
+    console.log("📦 Limpiando Shipments...");
+    await Shipment.destroy({ where: {} });
+    
+    console.log("🧾 Limpiando Receipts...");
+    await Receipt.destroy({ where: {} });
 
-    // Cupones y descuentos
-    await CuponeProduct.destroy({ where: {}, truncate: true });
-    await CuponeCategorie.destroy({ where: {}, truncate: true });
-    await Cupone.destroy({ where: {}, truncate: true });
-    await DiscountProduct.destroy({ where: {}, truncate: true });
-    await DiscountCategorie.destroy({ where: {}, truncate: true });
-    await Discount.destroy({ where: {}, truncate: true });
+    // 2. Cupones y descuentos
+    console.log("🎟️ Limpiando Cupones y Descuentos...");
+    await CuponeProduct.destroy({ where: {} });
+    await CuponeCategorie.destroy({ where: {} });
+    await Cupone.destroy({ where: {} });
+    await DiscountProduct.destroy({ where: {} });
+    await DiscountCategorie.destroy({ where: {} });
+    await Discount.destroy({ where: {} });
 
-    // Carritos, wishlist, direcciones
-    await Cart.destroy({ where: {}, truncate: true });
-    await CartCache.destroy({ where: {}, truncate: true });
-    await Wishlist.destroy({ where: {}, truncate: true });
-    await AddressClient.destroy({ where: {}, truncate: true });
-    await AddressGuest.destroy({ where: {}, truncate: true });
+    // 3. Carritos, wishlist, direcciones
+    console.log("🛍️ Limpiando Carritos y Wishlist...");
+    await Cart.destroy({ where: {} });
+    await CartCache.destroy({ where: {} });
+    await CheckoutCache.destroy({ where: {} });
+    await Wishlist.destroy({ where: {} });
+    await AddressClient.destroy({ where: {} });
+    await AddressGuest.destroy({ where: {} });
 
-    // Productos y variantes
-    await ProductVariants.destroy({ where: {}, truncate: true });
-    await Product.destroy({ where: {}, truncate: true });
+    // 4. Reviews y notificaciones
+    console.log("⭐ Limpiando Reviews y Notificaciones...");
+    await Review.destroy({ where: {} });
+    await Notification.destroy({ where: {} });
+    await Inbox.destroy({ where: {} });
+    await ReturnRequest.destroy({ where: {} });
 
-    // Archivos, opciones, galerías, sliders
-    await File.destroy({ where: {}, truncate: true });
-    await Option.destroy({ where: {}, truncate: true });
-    await Galeria.destroy({ where: {}, truncate: true });
-    await Slider.destroy({ where: {}, truncate: true });
-    await Categorie.destroy({ where: {}, truncate: true });
-    await Variedad.destroy({ where: {}, truncate: true });
+    // 5. Productos y variantes
+    console.log("📦 Limpiando Productos...");
+    await ProductVariants.destroy({ where: {} });
+    await Galeria.destroy({ where: {} });
+    await Variedad.destroy({ where: {} });
+    await Product.destroy({ where: {} });
 
-    // Chats y notificaciones
-    await ChatMessage.destroy({ where: {}, truncate: true });
-    await ChatConversation.destroy({ where: {}, truncate: true });
-    await Notification.destroy({ where: {}, truncate: true });
+    // 6. Archivos, opciones, categorías
+    console.log("🗂️ Limpiando Archivos y Categorías...");
+    await File.destroy({ where: {} });
+    await Option.destroy({ where: {} });
+    await Slider.destroy({ where: {} });
+    await Categorie.destroy({ where: {} });
 
-    // Usuarios
-    await User.destroy({ where: {}, truncate: true });
+    // 7. Usuarios y guests (al final)
+    console.log("👥 Limpiando Usuarios...");
+    await Guest.destroy({ where: {} });
+    await User.destroy({ where: {} });
 
-    console.log("✅ Producción limpia, todas las tablas vacías (estructura intacta)");
+    console.log("✅ Producción limpia exitosamente - todas las tablas vacías");
+    console.log("🏗️ Estructura de base de datos intacta");
 
   } catch (error) {
     console.error("❌ Error limpiando DB producción:", error);
+    console.error("Stack trace:", error.stack);
   } finally {
+    console.log("🔌 Cerrando conexión a base de datos...");
     await sequelize.close();
+    console.log("✅ Script completado");
+    process.exit(0);
   }
 }
 
