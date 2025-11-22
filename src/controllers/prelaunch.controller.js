@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
+import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
 
@@ -127,36 +128,98 @@ export const subscribe = async (req, res) => {
  */
 export const getStats = async (req, res) => {
     try {
-        const totalSubscribers = await PrelaunchSubscriber.count({
-            where: { status: 'subscribed' }
-        });
+        // Obtener todas las estadísticas en paralelo para mayor velocidad
+        const [
+            total,
+            verified,
+            pending,
+            unsubscribed,
+            notified,
+            bySource,
+            byDate
+        ] = await Promise.all([
+            // Total de suscriptores
+            PrelaunchSubscriber.count(),
 
-        const subscribersBySource = await PrelaunchSubscriber.findAll({
-            attributes: [
-                'source',
-                [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-            ],
-            where: { status: 'subscribed' },
-            group: ['source'],
-            raw: true
-        });
-
-        const recentSubscribers = await PrelaunchSubscriber.count({
-            where: {
-                status: 'subscribed',
-                createdAt: {
-                    [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Últimas 24 horas
+            // Verificados
+            PrelaunchSubscriber.count({
+                where: { 
+                    email_verified: true,
+                    status: 'subscribed'
                 }
-            }
+            }),
+
+            // Pendientes de verificación
+            PrelaunchSubscriber.count({
+                where: { 
+                    email_verified: false,
+                    status: 'pending'
+                }
+            }),
+
+            // Desuscritos
+            PrelaunchSubscriber.count({
+                where: { status: 'unsubscribed' }
+            }),
+
+            // Notificados con campaña de lanzamiento
+            PrelaunchSubscriber.count({
+                where: { notified_launch: true }
+            }),
+
+            // Por fuente
+            PrelaunchSubscriber.findAll({
+                attributes: [
+                    'source',
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+                ],
+                group: ['source'],
+                raw: true
+            }),
+
+            // Por fecha (últimos 7 días)
+            PrelaunchSubscriber.findAll({
+                attributes: [
+                    [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+                ],
+                where: {
+                    createdAt: {
+                        [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                    }
+                },
+                group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+                order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'DESC']],
+                raw: true
+            })
+        ]);
+
+        // Formatear by_source para el frontend
+        const bySourceFormatted = {};
+        bySource.forEach(item => {
+            bySourceFormatted[item.source || 'unknown'] = parseInt(item.count);
         });
+
+        // Formatear by_date para el frontend
+        const byDateFormatted = {};
+        byDate.forEach(item => {
+            byDateFormatted[item.date] = parseInt(item.count);
+        });
+
+        // Calcular tasa de conversión
+        const conversion_rate = total > 0 ? ((verified / total) * 100).toFixed(1) : 0;
 
         res.status(200).json({
             status: 200,
             data: {
-                total_subscribers: totalSubscribers,
-                recent_subscribers_24h: recentSubscribers,
-                subscribers_by_source: subscribersBySource,
-                generated_at: new Date().toISOString()
+                total,
+                verified,
+                pending,
+                unsubscribed,
+                notified,
+                by_source: bySourceFormatted,
+                by_date: byDateFormatted,
+                conversion_rate: parseFloat(conversion_rate)
             }
         });
 
@@ -164,7 +227,8 @@ export const getStats = async (req, res) => {
         console.error('Error al obtener estadísticas:', error);
         res.status(500).json({
             status: 500,
-            message: 'Error al obtener estadísticas'
+            message: 'Error al obtener estadísticas',
+            error: error.message
         });
     }
 };
@@ -559,6 +623,198 @@ export const sendLaunchEmailsCampaign = async (req, res) => {
         res.status(500).json({ 
             status: 500, 
             message: 'Error interno del servidor' 
+        });
+    }
+};
+
+/**
+ * ADMIN ENDPOINTS
+ * Endpoints específicos para el panel de administración
+ */
+
+/**
+ * Obtener lista de todos los suscriptores (ADMIN)
+ */
+export const getAllSubscribers = async (req, res) => {
+    try {
+        const { status, verified, notified, source } = req.query;
+        
+        const whereClause = {};
+        
+        if (status) whereClause.status = status;
+        if (verified !== undefined) whereClause.email_verified = verified === 'true';
+        if (notified !== undefined) whereClause.notified_launch = notified === 'true';
+        if (source) whereClause.source = source;
+
+        const subscribers = await PrelaunchSubscriber.findAll({
+            where: whereClause,
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.status(200).json({
+            status: 200,
+            data: subscribers
+        });
+
+    } catch (error) {
+        console.error('Error getting subscribers:', error);
+        res.status(500).json({ 
+            status: 500, 
+            message: 'Error al obtener suscriptores' 
+        });
+    }
+};
+
+/**
+ * Obtener suscriptor por ID (ADMIN)
+ */
+export const getSubscriberById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const subscriber = await PrelaunchSubscriber.findByPk(id);
+
+        if (!subscriber) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Suscriptor no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            status: 200,
+            data: subscriber
+        });
+
+    } catch (error) {
+        console.error('Error getting subscriber:', error);
+        res.status(500).json({ 
+            status: 500, 
+            message: 'Error al obtener suscriptor' 
+        });
+    }
+};
+
+/**
+ * Preview del email de lanzamiento (ADMIN)
+ */
+export const previewLaunchEmail = async (req, res) => {
+    try {
+        const { coupon_discount, coupon_expiry_days, featured_products } = req.body;
+
+        // Generar HTML del email para preview
+        const previewData = {
+            user_name: 'Usuario Ejemplo',
+            coupon_code: 'PREVIEW123',
+            coupon_discount,
+            coupon_expiry_days,
+            launch_date: new Date().toLocaleDateString('es-ES'),
+            featured_products: featured_products || [],
+            store_url: process.env.URL_FRONTEND || 'http://localhost:4200'
+        };
+
+        // Importar y compilar template
+        const Handlebars = require('handlebars');
+        const fs = require('fs');
+        const path = require('path');
+
+        const templatePath = path.join(process.cwd(), 'src/mails/launch-email.html');
+        const templateSource = fs.readFileSync(templatePath, 'utf8');
+        const template = Handlebars.compile(templateSource);
+        const html = template(previewData);
+
+        res.status(200).json({
+            status: 200,
+            html
+        });
+
+    } catch (error) {
+        console.error('Error generating preview:', error);
+        res.status(500).json({ 
+            status: 500, 
+            message: 'Error al generar preview',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Exportar suscriptores a CSV (ADMIN)
+ */
+export const exportSubscribers = async (req, res) => {
+    try {
+        const subscribers = await PrelaunchSubscriber.findAll({
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Generar CSV
+        const csvHeaders = 'Email,Source,Status,Verified,Notified,Created At,UTM Source,UTM Medium,UTM Campaign\n';
+        const csvRows = subscribers.map(sub => 
+            `${sub.email},${sub.source},${sub.status},${sub.email_verified},${sub.notified_launch},${sub.createdAt},${sub.utm_source || ''},${sub.utm_medium || ''},${sub.utm_campaign || ''}`
+        ).join('\n');
+
+        const csv = csvHeaders + csvRows;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=prelaunch_subscribers.csv');
+        res.status(200).send(csv);
+
+    } catch (error) {
+        console.error('Error exporting subscribers:', error);
+        res.status(500).json({ 
+            status: 500, 
+            message: 'Error al exportar datos' 
+        });
+    }
+};
+
+/**
+ * Reenviar email de verificación (ADMIN)
+ */
+export const resendVerification = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const subscriber = await PrelaunchSubscriber.findOne({
+            where: { email: email.toLowerCase() }
+        });
+
+        if (!subscriber) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Suscriptor no encontrado'
+            });
+        }
+
+        if (subscriber.email_verified) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Este email ya está verificado'
+            });
+        }
+
+        // Generar nuevo token si no existe
+        if (!subscriber.verification_token) {
+            const verificationToken = crypto.randomBytes(32).toString('hex');
+            await subscriber.update({ verification_token: verificationToken });
+        }
+
+        // Reenviar email de bienvenida con verificación
+        await sendWelcomeEmail({
+            email: subscriber.email,
+            verification_token: subscriber.verification_token
+        });
+
+        res.status(200).json({
+            status: 200,
+            message: 'Email de verificación reenviado correctamente'
+        });
+
+    } catch (error) {
+        console.error('Error resending verification:', error);
+        res.status(500).json({ 
+            status: 500, 
+            message: 'Error al reenviar verificación' 
         });
     }
 };
