@@ -14,6 +14,7 @@ import { SaleAddress } from './SaleAddress.js';
 import { DiscountProduct } from './DiscountProduct.js';
 import { ReturnRequest } from './ReturnRequest.js';
 import { Inbox } from './Inbox.js';
+import { PrelaunchSubscriber } from './PrelaunchSubscriber.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE

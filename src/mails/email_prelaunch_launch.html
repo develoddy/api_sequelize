@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡YA ESTAMOS LIVE! + Tu Cupón Exclusivo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        .header::before {
+            content: '🎉';
+            font-size: 60px;
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            opacity: 0.3;
+        }
+        .header::after {
+            content: '🚀';
+            font-size: 40px;
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            opacity: 0.3;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .launch-date {
+            background-color: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .coupon-section {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .coupon-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            animation: sparkle 3s linear infinite;
+        }
+        @keyframes sparkle {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .coupon-code {
+            font-size: 36px;
+            font-weight: 800;
+            color: #2d3436;
+            background-color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            display: inline-block;
+            border: 3px dashed #ff6b6b;
+            margin: 15px 0;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+        .coupon-details {
+            color: #2d3436;
+            font-weight: 600;
+            font-size: 18px;
+            margin-top: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        .cta-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 18px 40px;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 18px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(238, 90, 36, 0.3);
+        }
+        .urgency-banner {
+            background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .product-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+        .footer {
+            background-color: #2d3436;
+            color: #b2bec3;
+            padding: 25px 30px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #ff6b6b;
+            text-decoration: none;
+        }
+        @media only screen and (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content, .footer { padding: 20px; }
+            .coupon-code { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>¡YA ESTAMOS LIVE!</h1>
+            <div class="launch-date">Lanzamiento oficial: <%= launch_date %></div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="color: #2d3436; font-size: 26px;">¡Hola <%= email.split('@')[0] %>! 👋</h2>
+                <p style="font-size: 18px; color: #636e72;">El momento que esperabas ha llegado. <strong><%= brand_name %></strong> ya está oficialmente abierto y tienes acceso VIP.</p>
+            </div>
+
+            <!-- Cupón Exclusivo -->
+            <div class="coupon-section">
+                <h3 style="margin: 0 0 10px; color: #2d3436; font-size: 24px;">🎁 TU CUPÓN EXCLUSIVO</h3>
+                <div class="coupon-code"><%= coupon_code %></div>
+                <div class="coupon-details">
+                    <strong><%= coupon_discount %> de descuento</strong><br>
+                    Válido por <%= coupon_expiry_days %> días • Solo para pre-registrados
+                </div>
+            </div>
+
+            <!-- Urgencia -->
+            <div class="urgency-banner">
+                ⏰ <strong>¡Stock Limitado!</strong> Los primeros productos pueden agotarse rápidamente
+            </div>
+
+            <!-- CTA Principal -->
+            <div class="cta-section">
+                <p style="font-size: 16px; color: #636e72; margin-bottom: 25px;">Usa tu cupón ahora y sé de los primeros en estrenar nuestros diseños exclusivos</p>
+                <a href="<%= store_url %>?utm_source=launch_email&utm_medium=email&utm_campaign=prelaunch&coupon=<%= coupon_code %>" class="cta-button">
+                    Comprar Ahora
+                </a>
+            </div>
+
+            <!-- Productos Destacados -->
+            <% if (featured_products && featured_products.length > 0) { %>
+            <div style="margin: 40px 0;">
+                <h3 style="text-align: center; color: #2d3436; margin-bottom: 25px;">✨ Productos del Lanzamiento</h3>
+                <div class="products-grid">
+                    <% featured_products.forEach(function(product) { %>
+                    <div class="product-card">
+                        <% if (product.image) { %>
+                        <img src="<%= product.image %>" alt="<%= product.name %>" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
+                        <% } %>
+                        <h4 style="margin: 10px 0 5px; font-size: 14px; color: #2d3436;"><%= product.name %></h4>
+                        <p style="margin: 0; font-weight: 600; color: #ff6b6b;"><%= product.price %></p>
+                    </div>
+                    <% }); %>
+                </div>
+            </div>
+            <% } %>
+
+            <!-- Beneficios -->
+            <div style="background-color: #f1f2f6; border-radius: 10px; padding: 25px; margin: 30px 0;">
+                <h3 style="color: #2d3436; text-align: center; margin-bottom: 20px;">🎯 Por qué comprar ahora:</h3>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin-bottom: 10px;">✅ <strong>Envío gratuito</strong> en tu primera compra</li>
+                    <li style="margin-bottom: 10px;">✅ <strong>Garantía de calidad</strong> premium</li>
+                    <li style="margin-bottom: 10px;">✅ <strong>Diseños únicos</strong> no disponibles en otros lugares</li>
+                    <li style="margin-bottom: 10px;">✅ <strong>Soporte dedicado</strong> para miembros VIP</li>
+                </ul>
+            </div>
+
+            <!-- Información adicional -->
+            <div style="text-align: center; padding: 20px; background-color: #74b9ff; border-radius: 10px; color: white; margin: 25px 0;">
+                <h4 style="margin: 0 0 10px;">📞 ¿Necesitas ayuda?</h4>
+                <p style="margin: 0;">Nuestro equipo está listo para ayudarte: <a href="mailto:<%= support_email %>" style="color: white; text-decoration: underline;"><%= support_email %></a></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p style="margin: 0 0 15px;">🎉 ¡Gracias por ser parte del pre-launch de <%= brand_name %>!</p>
+            <p style="margin: 0 0 20px;">© <%= new Date().getFullYear() %> <%= brand_name %>. Todos los derechos reservados.</p>
+            <p style="margin: 0;">
+                <a href="<%= store_url %>">Visitar tienda</a> |
+                <a href="<%= unsubscribe_url %>">Desuscribirse</a> |
+                <a href="mailto:<%= support_email %>">Contacto</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

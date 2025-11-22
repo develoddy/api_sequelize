@@ -28,6 +28,7 @@ import receiptRoutes from './receipt.routes.js';
 // Webhook de Printful
 import printfulWebhook from './printfulWebhook.routes.js';
 import notifications from './notifications.routes.js';
+import prelaunchRoutes from './prelaunch.routes.js';
 
 const app = express();
 
@@ -59,5 +60,6 @@ app.use("/receipts", receiptRoutes);
 // Webhook de Printful
 app.use("/printfulWebhook", printfulWebhook);
 app.use("/notifications", notifications);
+app.use("/prelaunch", prelaunchRoutes);
 
 export default app;
