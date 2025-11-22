@@ -3,6 +3,14 @@ import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
 import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
+import ejs from 'ejs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Para usar __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Suscribir email al pre-launch
@@ -600,20 +608,27 @@ export const sendLaunchEmailsCampaign = async (req, res) => {
         
         const result = await sendLaunchEmails(emailData);
         
-        if (result.success) {
+        // Si no hay suscriptores, devolver 200 con los datos en lugar de error 500
+        if (result.success || result.total === 0) {
             res.status(200).json({
                 status: 200,
                 message: result.message,
                 data: {
-                    sent: result.sent,
-                    errors: result.errors,
-                    total: result.total
-                }
+                    sent: result.sent || 0,
+                    errors: result.errors || 0,
+                    total: result.total || 0
+                },
+                warning: result.total === 0 ? 'No hay suscriptores pendientes' : null
             });
         } else {
             res.status(500).json({
                 status: 500,
                 message: result.message,
+                data: {
+                    sent: result.sent || 0,
+                    errors: result.errors || 0,
+                    total: result.total || 0
+                },
                 error: result.error
             });
         }
@@ -700,6 +715,8 @@ export const getSubscriberById = async (req, res) => {
  */
 export const previewLaunchEmail = async (req, res) => {
     try {
+        console.log('📧 Preview request received:', req.body);
+        
         const { coupon_discount, coupon_expiry_days, featured_products } = req.body;
 
         // Generar HTML del email para preview
@@ -713,23 +730,32 @@ export const previewLaunchEmail = async (req, res) => {
             store_url: process.env.URL_FRONTEND || 'http://localhost:4200'
         };
 
-        // Importar y compilar template
-        const Handlebars = require('handlebars');
-        const fs = require('fs');
-        const path = require('path');
+        console.log('📋 Preview data prepared:', previewData);
 
-        const templatePath = path.join(process.cwd(), 'src/mails/launch-email.html');
-        const templateSource = fs.readFileSync(templatePath, 'utf8');
-        const template = Handlebars.compile(templateSource);
-        const html = template(previewData);
+        // Cargar y compilar template con EJS
+        const templatePath = path.join(process.cwd(), 'src/mails/email_prelaunch_launch.html');
+        console.log('📂 Loading template from:', templatePath);
+        
+        // Renderizar con EJS
+        const html = await ejs.renderFile(templatePath, {
+            email: 'ejemplo@email.com',
+            brand_name: process.env.BRAND_NAME || 'Tu Tienda',
+            support_email: process.env.SUPPORT_EMAIL || 'soporte@tutienda.com',
+            unsubscribe_url: `${process.env.URL_BACKEND || 'http://localhost:3500'}/api/prelaunch/unsubscribe/PREVIEW`,
+            ...previewData
+        });
+        
+        console.log('✅ HTML generated with EJS, size:', html.length, 'bytes');
 
         res.status(200).json({
             status: 200,
             html
         });
+        
+        console.log('📤 Preview response sent');
 
     } catch (error) {
-        console.error('Error generating preview:', error);
+        console.error('❌ Error generating preview:', error);
         res.status(500).json({ 
             status: 500, 
             message: 'Error al generar preview',

@@ -124,8 +124,14 @@ export async function sendLaunchEmails(launchData = {}) {
         });
 
         if (subscribers.length === 0) {
-            console.log('No subscribers to notify for launch');
-            return { success: true, sent: 0, message: 'No subscribers to notify' };
+            console.log('⚠️ No subscribers to notify for launch');
+            return { 
+                success: false, 
+                sent: 0, 
+                errors: 0,
+                total: 0,
+                message: 'No hay suscriptores pendientes de notificar. Todos ya han recibido el email de lanzamiento.' 
+            };
         }
 
         // Configurar transporter
