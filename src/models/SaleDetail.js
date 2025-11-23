@@ -11,6 +11,7 @@ export const SaleDetail = sequelize.define('sale_details', {
   cantidad: { type: DataTypes.INTEGER, allowNull: false },
   code_cupon: { type: DataTypes.STRING, allowNull: true },
   code_discount: { type: DataTypes.STRING, allowNull: true },
+  type_campaign: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null }, // 1=Campaign Discount, 2=Flash Sale, 3=Cupón
   price_unitario: { type: DataTypes.FLOAT, allowNull: false },
   subtotal: { type: DataTypes.FLOAT, allowNull: false },
   total: { type: DataTypes.FLOAT, allowNull: false }

@@ -337,17 +337,26 @@ export const generatePdf = async (req, res) => {
         }
       }
       
-      // 8. TIPO DE DESCUENTO
+      // 8. TIPO DE DESCUENTO - USAR type_campaign
       let discountType = '';
       if (hasDiscount) {
-        if (d.code_cupon) {
-          discountType = `Cupón ${d.code_cupon}`;
-        } else if (d.code_discount) {
+        if (d.type_campaign === 3 || d.code_cupon) {
+          discountType = `Cupón ${d.code_cupon || ''}`;
+        } else if (d.type_campaign === 2) {
           discountType = 'Flash Sale';
-        } else if (d.discount) {
+        } else if (d.type_campaign === 1) {
           discountType = 'Campaign Discount';
         } else {
-          discountType = 'Descuento';
+          // Fallback para registros antiguos sin type_campaign
+          if (d.code_cupon) {
+            discountType = `Cupón ${d.code_cupon}`;
+          } else if (d.code_discount) {
+            discountType = 'Flash Sale';
+          } else if (d.discount) {
+            discountType = 'Campaign Discount';
+          } else {
+            discountType = 'Descuento';
+          }
         }
       }
       
@@ -666,25 +675,33 @@ export const generateClientReceiptPdf = async (req, res) => {
         originalUnitPrice = parseFloat(d.product.price_usd);
       }
       
-      // 2. DETECTAR TIPO DE DESCUENTO
+      // 2. DETECTAR TIPO DE DESCUENTO - USAR type_campaign
       let discountType = '';
       let discountPercentage = 0;
       let hasDiscount = false;
       
-      if (d.code_cupon) {
+      if (d.type_campaign === 3 || d.code_cupon) {
         hasDiscount = true;
-        discountType = `Cupón ${d.code_cupon}`;
+        discountType = `Cupón ${d.code_cupon || ''}`;
         // Para cupones, extraer porcentaje del código
-        const cuponMatch = d.code_cupon.toUpperCase().match(/(\d+)/);
-        discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : 50;
+        const cuponMatch = d.code_cupon ? d.code_cupon.toUpperCase().match(/(\d+)/) : null;
+        discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : parseInt(d.discount || 50);
+      } else if (d.type_campaign === 2) {
+        hasDiscount = true;
+        discountType = 'Flash Sale';
+        discountPercentage = parseInt(d.discount || 10);
+      } else if (d.type_campaign === 1) {
+        hasDiscount = true;
+        discountType = 'Campaign Discount';
+        discountPercentage = parseInt(d.discount || 10);
       } else if (d.code_discount || d.discount) {
+        // Fallback para registros antiguos sin type_campaign
         hasDiscount = true;
         if (d.code_discount) {
           discountType = 'Flash Sale';
         } else {
           discountType = 'Campaign Discount';
         }
-        // Para flash sales, usar porcentaje guardado
         discountPercentage = parseInt(d.discount || 10);
       }
       

@@ -809,6 +809,7 @@ const createSaleDetail = async (cart, saleId) => {
         cantidad: cantidad,
         code_cupon: cart.code_cupon || null,
         code_discount: cart.code_discount || null,
+        type_campaign: cart.type_campaign || null,
         price_unitario: finalPrice, // ✅ Usar precio corregido con .95
         subtotal: subtotalVal,
         total: totalVal,
@@ -1236,7 +1237,8 @@ export const list = async (req, res) => {
                     price_unitario: det.price_unitario,
                     color: det.variedade ? det.variedade.color : null,
                     imagen: image,
-                    talla: det.variedade ? det.variedade.valor || det.variedade.name : null
+                    talla: det.variedade ? det.variedade.valor || det.variedade.name : null,
+                    type_campaign: det.type_campaign ?? null
                 };
             });
 

@@ -149,6 +149,7 @@ export const createCheckoutSession = async (req, res) => {
       type_discount: item.type_discount ?? null,
       code_cupon: item.code_cupon ?? null,
       code_discount: item.code_discount ?? null,  // ADD: preserve Flash Sale IDs
+      type_campaign: item.type_campaign ?? null,   // <-- Propaga type_campaign
       title: item.product?.title ?? item.title ?? '',
       // Preserve any additional fields that might be useful later
       subtotal: item.subtotal ?? null,
@@ -421,6 +422,7 @@ export const stripeWebhook = async (req, res) => {
           type_discount: type_discount,
           code_cupon: code_cupon,
           code_discount: code_discount,  // ADD: Flash Sale IDs for email detection
+          type_campaign: item.type_campaign || null,
           subtotal: subtotal,
           total: total,
         };
@@ -431,12 +433,20 @@ export const stripeWebhook = async (req, res) => {
           variedadId: item.variedadId,
           code_cupon: code_cupon,
           code_discount: code_discount,  // ADD: Flash Sale ID logging
+          type_campaign: item.type_campaign,  // 🔍 DEBUG: type_campaign del item
           discount: discount, 
           type_discount: type_discount,
           price_unitario: price_unitario,
           cantidad: cantidad,
           subtotal: subtotal,
           total: total
+        });
+        
+        // 🔍 DEBUG LOG EXTRA
+        console.log('[Stripe Webhook] 🏷️ TYPE_CAMPAIGN DEBUG:', {
+          'item.type_campaign': item.type_campaign,
+          'detailPayload.type_campaign': detailPayload.type_campaign,
+          'item completo': JSON.stringify(item)
         });
 
         console.log('[Stripe Webhook] 📦 Final SaleDetail payload:', detailPayload);

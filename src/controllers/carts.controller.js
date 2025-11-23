@@ -53,6 +53,17 @@ export const list = async (req, res) => {
                 return resources.Cart.cart_list(cart);
             });
 
+            // 🔍 DEBUG LOG
+            console.log('🛒 [CARTS LIST] Enviando carritos al frontend:', {
+                count: CARTS.length,
+                firstCart: CARTS[0] ? {
+                    productTitle: CARTS[0].product?.title,
+                    type_campaign: CARTS[0].type_campaign,
+                    code_discount: CARTS[0].code_discount,
+                    discount: CARTS[0].discount
+                } : null
+            });
+
             // Enviando la respuesta
             res.status(200).json({
                 carts: CARTS,
@@ -145,6 +156,18 @@ export const register = async (req, res) => {
             }
         }
 
+        // Determinar type_campaign
+        let type_campaign = null;
+        if (data.code_cupon) {
+            type_campaign = 3; // Cupón
+        } else if (data.code_discount) {
+            // Consultar tipo de campaña desde discounts
+            const discount = await Discount.findByPk(data.code_discount);
+            type_campaign = discount ? discount.type_campaign : null;
+        } else if (data.discount && data.discount > 0) {
+            type_campaign = 1; // Campaign Discount sin código
+        }
+
         // Insertar en la tabla Cart
         let newCart = await Cart.create({
             userId: data.user,
@@ -155,6 +178,7 @@ export const register = async (req, res) => {
             cantidad: data.cantidad,
             code_cupon: data.code_cupon,
             code_discount: data.code_discount,
+            type_campaign: type_campaign,
             price_unitario: data.price_unitario,
             subtotal: data.subtotal,
             total: data.total
@@ -753,6 +777,18 @@ export const mergeCart = async (req, res) => {
 
             if (!existingItem) {
                 // Si no existe, agregar el artículo al carrito del backend
+                
+                // Determinar type_campaign
+                let type_campaign = null;
+                if (localItem.code_cupon) {
+                    type_campaign = 3; // Cupón
+                } else if (localItem.code_discount) {
+                    const discount = await Discount.findByPk(localItem.code_discount);
+                    type_campaign = discount ? discount.type_campaign : null;
+                } else if (localItem.discount && localItem.discount > 0) {
+                    type_campaign = 1; // Campaign Discount sin código
+                }
+                
                 await Cart.create({
                     userId: user_id,
                     productId: localItem.product._id,
@@ -762,6 +798,7 @@ export const mergeCart = async (req, res) => {
                     cantidad: Number(localItem.cantidad),
                     code_cupon: localItem.code_cupon,
                     code_discount: localItem.code_discount,
+                    type_campaign: type_campaign,
                     price_unitario: localItem.price_unitario,
                     subtotal: localItem.subtotal,
                     total: localItem.total
@@ -846,6 +883,18 @@ export const mergeCart = async (req, res) => {
                 await existingItem.save();  // Guardar los cambios en la base de datos
             } else {
                 // Si no existe, agregar el artículo al carrito del backend
+                
+                // Determinar type_campaign
+                let type_campaign = null;
+                if (localItem.code_cupon) {
+                    type_campaign = 3; // Cupón
+                } else if (localItem.code_discount) {
+                    const discount = await Discount.findByPk(localItem.code_discount);
+                    type_campaign = discount ? discount.type_campaign : null;
+                } else if (localItem.discount && localItem.discount > 0) {
+                    type_campaign = 1; // Campaign Discount sin código
+                }
+                
                 await Cart.create({
                     userId: user_id,
                     productId: localItem.product._id,
@@ -855,6 +904,7 @@ export const mergeCart = async (req, res) => {
                     cantidad: Number(localItem.cantidad),
                     code_cupon: localItem.code_cupon,
                     code_discount: localItem.code_discount,
+                    type_campaign: type_campaign,
                     price_unitario: localItem.price_unitario,
                     subtotal: localItem.subtotal,
                     total: localItem.total
