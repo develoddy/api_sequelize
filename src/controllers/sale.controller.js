@@ -753,6 +753,137 @@ const createSaleDetail = async (cart, saleId) => {
         code_discount: cart.code_discount
     });
 
+    // === VALIDACIÓN ESTRICTA DE DESCUENTO REAL ===
+    let type_campaign = null;
+    let discount = 0;
+    let type_discount = cart.type_discount || 1;
+    let code_cupon = cart.code_cupon || null;
+    let code_discount = cart.code_discount || null;
+
+    // Importar modelos dinámicamente para evitar ciclos
+    const { Discount } = await import('../models/Discount.js');
+    const { DiscountProduct } = await import('../models/DiscountProduct.js');
+    const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
+    const { Cupone } = await import('../models/Cupone.js');
+
+    // Resolver productId y categoryId
+    let resolvedProductId = cart.productId || null;
+    let resolvedCategoryId = null;
+    if (!resolvedProductId && cart.variedadId) {
+        try {
+            const variedadRow = await Variedad.findByPk(cart.variedadId);
+            if (variedadRow && variedadRow.productId) {
+                resolvedProductId = variedadRow.productId;
+            }
+        } catch {}
+    }
+    if (resolvedProductId) {
+        try {
+            const productRow = await Product.findByPk(resolvedProductId);
+            if (productRow && productRow.categoryId) {
+                resolvedCategoryId = productRow.categoryId;
+            }
+        } catch {}
+    }
+
+    // === VALIDAR CUPONES (type_campaign = 3) ===
+    let cuponRow = null;
+    let cuponValid = false;
+    if (code_cupon) {
+        try {
+            // Buscar cupón en tabla cupones por código
+            cuponRow = await Cupone.findOne({ where: { code: code_cupon, state: 1 } });
+            
+            if (cuponRow) {
+                // Verificar si el cupón aplica al producto o categoría
+                const { CuponeProduct } = await import('../models/CuponeProduct.js');
+                const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+                
+                // Si type_segment = 1, el cupón aplica a productos específicos
+                if (cuponRow.type_segment === 1 && resolvedProductId) {
+                    const cuponProduct = await CuponeProduct.findOne({
+                        where: { cuponeId: cuponRow.id, productId: resolvedProductId }
+                    });
+                    cuponValid = !!cuponProduct;
+                }
+                // Si type_segment = 2, el cupón aplica a categorías específicas
+                else if (cuponRow.type_segment === 2 && resolvedCategoryId) {
+                    const cuponCategorie = await CuponeCategorie.findOne({
+                        where: { cuponeId: cuponRow.id, categoryId: resolvedCategoryId }
+                    });
+                    cuponValid = !!cuponCategorie;
+                }
+                // Si type_segment = 3, el cupón aplica a todos
+                else if (cuponRow.type_segment === 3) {
+                    cuponValid = true;
+                }
+            }
+        } catch (err) {
+            console.warn('[PayPal] Error validando cupón:', err);
+        }
+    }
+
+    // === VALIDAR CAMPAIGN DISCOUNT / FLASH SALE (type_campaign = 1 o 2) ===
+    let discountRow = null;
+    let discountValid = false;
+    if (code_discount) {
+        discountRow = await Discount.findByPk(code_discount);
+        
+        if (discountRow && discountRow.state === 1) {
+            // Campaign Discount (type_campaign = 1): validar por producto O categoría
+            if (discountRow.type_campaign === 1) {
+                if (resolvedProductId) {
+                    const productDiscount = await DiscountProduct.findOne({ 
+                        where: { discountId: code_discount, productId: resolvedProductId } 
+                    });
+                    if (productDiscount) discountValid = true;
+                }
+                if (!discountValid && resolvedCategoryId) {
+                    const categoryDiscount = await DiscountCategorie.findOne({ 
+                        where: { discountId: code_discount, categoryId: resolvedCategoryId } 
+                    });
+                    if (categoryDiscount) discountValid = true;
+                }
+            }
+            // Flash Sale (type_campaign = 2): validar SOLO por producto
+            else if (discountRow.type_campaign === 2 && resolvedProductId) {
+                const productDiscount = await DiscountProduct.findOne({ 
+                    where: { discountId: code_discount, productId: resolvedProductId } 
+                });
+                discountValid = !!productDiscount;
+            }
+        }
+    }
+
+    // === ASIGNAR VALORES SEGÚN VALIDACIÓN ===
+    if (cuponValid && cuponRow) {
+        // Cupón válido
+        type_campaign = 3;
+        discount = cuponRow.discount;
+        type_discount = cuponRow.type_discount;
+    } else if (discountValid && discountRow) {
+        // Campaign Discount o Flash Sale válido
+        type_campaign = discountRow.type_campaign;
+        discount = discountRow.discount;
+        type_discount = discountRow.type_discount;
+    } else {
+        // NO hay descuento real
+        type_campaign = null;
+        discount = 0;
+        code_cupon = null;
+        code_discount = null;
+    }
+
+    console.log('[PayPal] ✅ Validación de descuento:', {
+        hasRealDiscount: type_campaign !== null,
+        type_campaign,
+        discount,
+        code_cupon,
+        code_discount,
+        productId: resolvedProductId,
+        categoryId: resolvedCategoryId
+    });
+
     // 🔍 Obtener precio original de la variedad para cálculos correctos
     let originalPrice = null;
     if (cart.variedadId) {
@@ -760,11 +891,8 @@ const createSaleDetail = async (cart, saleId) => {
             const variedad = await Variedad.findByPk(cart.variedadId);
             if (variedad) {
                 originalPrice = parseFloat(variedad.retail_price || 0);
-                console.log('[PayPal] 📊 Original price from variedad:', originalPrice);
             }
-        } catch (err) {
-            console.error('[PayPal] Error getting variedad:', err);
-        }
+        } catch {}
     }
 
     // Si no se pudo obtener precio original, usar el del carrito
@@ -775,27 +903,21 @@ const createSaleDetail = async (cart, saleId) => {
     // 💰 Aplicar lógica de precios con redondeo .95 (IGUAL QUE STRIPE)
     let finalPrice = parseFloat(cart.price_unitario || cart.price || 0);
     
-    // Si hay descuento, recalcular con .95
-    const hasDiscount = (cart.code_cupon || cart.code_discount || cart.discount > 0);
-    if (hasDiscount && originalPrice > 0) {
-        const discountPercentage = parseFloat(cart.discount || 0);
-        if (discountPercentage > 0) {
-            const discountAmount = (originalPrice * discountPercentage) / 100;
+    // Si hay descuento real, recalcular con .95
+    if (type_campaign !== null && discount > 0 && originalPrice > 0) {
+        if (type_discount === 1) {
+            // Descuento porcentual
+            const discountAmount = (originalPrice * discount) / 100;
             const calculatedFinalPrice = originalPrice - discountAmount;
             finalPrice = applyRoundingTo95(calculatedFinalPrice);
-            
-            console.log('[PayPal] 🧮 Price calculation:', {
-                original: originalPrice,
-                discountPercentage: discountPercentage + '%',
-                discountAmount: discountAmount.toFixed(2),
-                calculatedFinal: calculatedFinalPrice.toFixed(2),
-                finalWithRounding: finalPrice
-            });
+        } else if (type_discount === 2) {
+            // Descuento fijo
+            const calculatedFinalPrice = originalPrice - discount;
+            finalPrice = applyRoundingTo95(calculatedFinalPrice);
         }
     } else if (originalPrice > 0) {
         // Sin descuento, aplicar redondeo .95 al precio original
         finalPrice = applyRoundingTo95(originalPrice);
-        console.log('[PayPal] 💰 No discount, applying .95 rounding:', originalPrice, '->', finalPrice);
     }
 
     // Ensure numeric fields
@@ -804,21 +926,28 @@ const createSaleDetail = async (cart, saleId) => {
     const totalVal = subtotalVal;
 
     const saleDetailData = {
-        type_discount: cart.type_discount || 1,
-        discount: cart.discount || 0,
+        type_discount: type_discount,
+        discount: discount,
         cantidad: cantidad,
-        code_cupon: cart.code_cupon || null,
-        code_discount: cart.code_discount || null,
-        type_campaign: cart.type_campaign || null,
-        price_unitario: finalPrice, // ✅ Usar precio corregido con .95
+        code_cupon: code_cupon,
+        code_discount: code_discount,
+        type_campaign: type_campaign,
+        price_unitario: finalPrice,
         subtotal: subtotalVal,
         total: totalVal,
         saleId: saleId,
-        productId: cart.productId || null,
+        productId: resolvedProductId,
         variedadId: cart.variedadId || null
     };
 
-    console.log('[PayPal] 📦 Final SaleDetail data:', saleDetailData);
+    console.log('[PayPal] 📦 Creating SaleDetail:', {
+        saleId,
+        productId: resolvedProductId,
+        type_campaign,
+        discount,
+        price_unitario: finalPrice,
+        total: totalVal
+    });
 
     const created = await SaleDetail.create(saleDetailData);
     return created;

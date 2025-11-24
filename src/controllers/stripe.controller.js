@@ -361,56 +361,154 @@ export const stripeWebhook = async (req, res) => {
           price_unitario: item.price_unitario
         });
 
-        // 🔧 USAR PRECIO FINAL CALCULADO EN FRONTEND (con redondeo .95 y descuentos aplicados)
-        console.log(`[Stripe Webhook] 🔍 DEBUG ITEM ${index + 1}:`, {
-          finalPrice: item.finalPrice,
-          price_unitario: item.price_unitario,
-          originalPrice: item.originalPrice,
-          hasDiscount: item.hasDiscount,
-          productTitle: item.product?.title,
-          type_discount: item.type_discount,
-          discount: item.discount,
-          code_cupon: item.code_cupon,
-          code_discount: item.code_discount
+        // === VALIDACIÓN ESTRICTA DE DESCUENTO REAL ===
+        let type_campaign = null;
+        let discount = 0;
+        let type_discount = item.type_discount || 1;
+        let code_cupon = item.code_cupon || null;
+        let code_discount = item.code_discount || null;
+
+        // Importar modelos dinámicamente para evitar ciclos
+        const { Discount } = await import('../models/Discount.js');
+        const { DiscountProduct } = await import('../models/DiscountProduct.js');
+        const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
+        const { Cupone } = await import('../models/Cupone.js');
+        const { Product } = await import('../models/Product.js');
+
+        // Resolver productId y categoryId
+        let resolvedProductId = item.productId || null;
+        let resolvedCategoryId = null;
+        if (!resolvedProductId && item.variedadId) {
+          try {
+            const variedadRow = await Variedad.findByPk(item.variedadId);
+            if (variedadRow && variedadRow.productId) {
+              resolvedProductId = variedadRow.productId;
+            }
+          } catch {}
+        }
+        if (resolvedProductId) {
+          try {
+            const productRow = await Product.findByPk(resolvedProductId);
+            if (productRow && productRow.categoryId) {
+              resolvedCategoryId = productRow.categoryId;
+            }
+          } catch {}
+        }
+
+        // === VALIDAR CUPONES (type_campaign = 3) ===
+        let cuponRow = null;
+        let cuponValid = false;
+        if (code_cupon) {
+          try {
+            // Buscar cupón en tabla cupones por código
+            cuponRow = await Cupone.findOne({ where: { code: code_cupon, state: 1 } });
+            
+            if (cuponRow) {
+              // Verificar si el cupón aplica al producto o categoría
+              const { CuponeProduct } = await import('../models/CuponeProduct.js');
+              const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+              
+              // Si type_segment = 1, el cupón aplica a productos específicos
+              if (cuponRow.type_segment === 1 && resolvedProductId) {
+                const cuponProduct = await CuponeProduct.findOne({
+                  where: { cuponeId: cuponRow.id, productId: resolvedProductId }
+                });
+                cuponValid = !!cuponProduct;
+              }
+              // Si type_segment = 2, el cupón aplica a categorías específicas
+              else if (cuponRow.type_segment === 2 && resolvedCategoryId) {
+                const cuponCategorie = await CuponeCategorie.findOne({
+                  where: { cuponeId: cuponRow.id, categoryId: resolvedCategoryId }
+                });
+                cuponValid = !!cuponCategorie;
+              }
+              // Si type_segment = 3, el cupón aplica a todos
+              else if (cuponRow.type_segment === 3) {
+                cuponValid = true;
+              }
+            }
+          } catch (err) {
+            console.warn('[Stripe] Error validando cupón:', err);
+          }
+        }
+
+        // === VALIDAR CAMPAIGN DISCOUNT / FLASH SALE (type_campaign = 1 o 2) ===
+        let discountRow = null;
+        let discountValid = false;
+        if (code_discount) {
+          discountRow = await Discount.findByPk(code_discount);
+          
+          if (discountRow && discountRow.state === 1) {
+            // Campaign Discount (type_campaign = 1): validar por producto O categoría
+            if (discountRow.type_campaign === 1) {
+              if (resolvedProductId) {
+                const productDiscount = await DiscountProduct.findOne({ 
+                  where: { discountId: code_discount, productId: resolvedProductId } 
+                });
+                if (productDiscount) discountValid = true;
+              }
+              if (!discountValid && resolvedCategoryId) {
+                const categoryDiscount = await DiscountCategorie.findOne({ 
+                  where: { discountId: code_discount, categoryId: resolvedCategoryId } 
+                });
+                if (categoryDiscount) discountValid = true;
+              }
+            }
+            // Flash Sale (type_campaign = 2): validar SOLO por producto
+            else if (discountRow.type_campaign === 2 && resolvedProductId) {
+              const productDiscount = await DiscountProduct.findOne({ 
+                where: { discountId: code_discount, productId: resolvedProductId } 
+              });
+              discountValid = !!productDiscount;
+            }
+          }
+        }
+
+        // === ASIGNAR VALORES SEGÚN VALIDACIÓN ===
+        if (cuponValid && cuponRow) {
+          // Cupón válido
+          type_campaign = 3;
+          discount = cuponRow.discount;
+          type_discount = cuponRow.type_discount;
+        } else if (discountValid && discountRow) {
+          // Campaign Discount o Flash Sale válido
+          type_campaign = discountRow.type_campaign;
+          discount = discountRow.discount;
+          type_discount = discountRow.type_discount;
+        } else {
+          // NO hay descuento real
+          type_campaign = null;
+          discount = 0;
+          code_cupon = null;
+          code_discount = null;
+        }
+
+        console.log(`[Stripe Webhook] ✅ Validación de descuento:`, {
+          hasRealDiscount: type_campaign !== null,
+          type_campaign,
+          discount,
+          code_cupon,
+          code_discount,
+          productId: resolvedProductId,
+          categoryId: resolvedCategoryId
         });
-        
+
         // 🔧 USAR finalPrice si llega del frontend, o calcular redondeo .95 como fallback
         let price_unitario;
         if (item.finalPrice != null) {
           price_unitario = Number(item.finalPrice);
         } else {
-          // Fallback: aplicar redondeo .95 en backend si finalPrice no llega
           const rawPrice = item.price_unitario != null ? Number(item.price_unitario) : 
                           (item.price != null ? Number(item.price) : 0);
           price_unitario = applyRoundingTo95(rawPrice);
           console.log(`[Stripe Webhook] ⚠️ finalPrice not received, applied .95 rounding: ${rawPrice} -> ${price_unitario}`);
         }
         
-        console.log(`[Stripe Webhook] 💰 Precios para ${index + 1}: finalPrice=${item.finalPrice}, price_unitario=${item.price_unitario}, usando=${price_unitario}`);
         const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
-        
-        // Fix: Manejar discount y type_discount correctamente
-        const discount = item.discount != null ? Number(item.discount) : 0;
-        const type_discount = item.type_discount || 1; // 1 = porcentaje (valor por defecto)
-        const code_cupon = item.code_cupon || null;
-        const code_discount = item.code_discount || null;  // ADD: preserve Flash Sale IDs
 
-        // Fix: Asegurar que subtotal y total sean exactos (precio unitario * cantidad) sin decimales extraños
+        // Total = precio unitario * cantidad (SIN redondeo adicional)
         const subtotal = parseFloat((price_unitario * cantidad).toFixed(2));
         const total = parseFloat((price_unitario * cantidad).toFixed(2));
-
-        let resolvedProductId = item.productId || null;
-        if (!resolvedProductId && item.variedadId) {
-          try {
-            const variedadRow = await Variedad.findByPk(item.variedadId);
-            if (variedadRow && variedadRow.productId) {
-              resolvedProductId = variedadRow.productId;
-              console.log(`[Stripe Webhook] Resolved productId=${resolvedProductId} from variedadId=${item.variedadId}`);
-            }
-          } catch (resolveErr) {
-            console.warn('[Stripe Webhook] Could not resolve productId from Variedad for variedadId=', item.variedadId, resolveErr && (resolveErr.message || resolveErr));
-          }
-        }
 
         const detailPayload = {
           saleId: sale.id,
@@ -421,35 +519,20 @@ export const stripeWebhook = async (req, res) => {
           discount: discount,
           type_discount: type_discount,
           code_cupon: code_cupon,
-          code_discount: code_discount,  // ADD: Flash Sale IDs for email detection
-          type_campaign: item.type_campaign || null,
+          code_discount: code_discount,
+          type_campaign: type_campaign,
           subtotal: subtotal,
           total: total,
         };
 
-        console.log('[Stripe Webhook] 🎟️ SaleDetail values before create:', { 
-          saleId: sale.id, 
+        console.log('[Stripe Webhook] 📦 Creating SaleDetail:', {
+          saleId: sale.id,
           productId: resolvedProductId,
-          variedadId: item.variedadId,
-          code_cupon: code_cupon,
-          code_discount: code_discount,  // ADD: Flash Sale ID logging
-          type_campaign: item.type_campaign,  // 🔍 DEBUG: type_campaign del item
-          discount: discount, 
-          type_discount: type_discount,
-          price_unitario: price_unitario,
-          cantidad: cantidad,
-          subtotal: subtotal,
-          total: total
+          type_campaign,
+          discount,
+          price_unitario,
+          total
         });
-        
-        // 🔍 DEBUG LOG EXTRA
-        console.log('[Stripe Webhook] 🏷️ TYPE_CAMPAIGN DEBUG:', {
-          'item.type_campaign': item.type_campaign,
-          'detailPayload.type_campaign': detailPayload.type_campaign,
-          'item completo': JSON.stringify(item)
-        });
-
-        console.log('[Stripe Webhook] 📦 Final SaleDetail payload:', detailPayload);
 
         const createdDetail = await SaleDetail.create(detailPayload);
         createdDetailsCount++;

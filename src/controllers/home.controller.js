@@ -466,37 +466,38 @@ export const profile_client = async (req, res) => {
             let sale_address = await SaleAddress.findAll({ where: { saleId: order.id } });
 
             let collection_detail_orders = [];
-            for ( const detail_order of detail_orders ) {
-                //console.log("----> Data detail_order", JSON.stringify(detail_order, null, 2));
+            for (const detail_order of detail_orders) {
+                const d = detail_order.get({ plain: true }); // Convierte Sequelize instance a objeto plano
+
                 // Obtener review para el detalle de la orden
-                let reviewS = await Review.findOne({ where: { saleDetailId: detail_order.id } });
-                
+                let reviewS = await Review.findOne({ where: { saleDetailId: d.id } });
+
                 collection_detail_orders.push({
-                    _id: detail_order.id,
-                    sale:order,
+                    _id: d.id,
+                    sale: order,
                     product: {
-                        _id: detail_order.product.id,
-                        title: detail_order.product.title,
-                        sku: detail_order.product.sku,
-                        slug: detail_order.product.slug,
-                        imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + detail_order.product.portada,
-                        categorie: detail_order.product.category,
-                        price_soles: detail_order.product.price_soles,
-                        price_usd: detail_order.product.price_usd,
+                    _id: d.product.id,
+                    title: d.product.title,
+                    sku: d.product.sku,
+                    slug: d.product.slug,
+                    imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada,
+                    categorie: d.product.category,
+                    price_soles: d.product.price_soles,
+                    price_usd: d.product.price_usd,
                     },
-                    type_discount: detail_order.type_discount,
-                    discount: detail_order.discount,
-                    cantidad: detail_order.cantidad,
-                    variedad: detail_order.variedad,
-                    code_cupon: detail_order.code_cupon,
-                    code_discount: detail_order.code_discount,
-                    price_unitario: detail_order.price_unitario,
-                    subtotal: detail_order.subtotal,
-                    total: detail_order.total,
+                    type_discount: d.type_discount,
+                    discount: d.discount,
+                    cantidad: d.cantidad,
+                    variedad: d.variedad,
+                    code_cupon: d.code_cupon,
+                    code_discount: d.code_discount,
+                    price_unitario: d.price_unitario,
+                    subtotal: d.subtotal,
+                    total: d.total,
+                    type_campaign: d.type_campaign ?? null, // ✅ Ahora sí llegará al frontend
                     review: reviewS,
                 });
             }
-
             sale_orders.push({
                 sale: order,
                 sale_details: collection_detail_orders,
