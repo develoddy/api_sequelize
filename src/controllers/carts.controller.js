@@ -419,25 +419,41 @@ export const apllyCupon = async (req, res) => {
         let categories = cupon.cupones_categories.map(cuponeCategorie => cuponeCategorie.categoryId);
         console.log("📦 [applyCupon] Productos aplicables del cupón:", products);
         console.log("🗂️ [applyCupon] Categorías aplicables del cupón:", categories);
+        console.log("🎯 [applyCupon] type_segment del cupón:", cupon.type_segment);
 
         for (const cart of carts) {
             let subtotal = cart.price_unitario;
             let total = subtotal * cart.cantidad;
 
-            const appliesToProduct = products.length === 0 || products.includes(cart.product.id);
-            const appliesToCategory = categories.length === 0 || categories.includes(cart.product.categoryId);
+            // === VALIDACIÓN ESTRICTA SEGÚN type_segment ===
+            let appliesToThisProduct = false;
+            
+            // type_segment = 1: Solo productos específicos
+            if (cupon.type_segment === 1) {
+                appliesToThisProduct = products.includes(cart.product.id);
+            }
+            // type_segment = 2: Solo categorías específicas
+            else if (cupon.type_segment === 2) {
+                appliesToThisProduct = categories.includes(cart.product.categoryId);
+            }
+            // type_segment = 3: Aplica a todos los productos
+            else if (cupon.type_segment === 3) {
+                appliesToThisProduct = true;
+            }
 
             // NUEVA VALIDACIÓN MEJORADA: Solo aplicar cupón si el producto NO tiene campaign discount REAL
             const hasExistingCampaignDiscount = cart.discount && cart.type_discount && !cart.code_cupon;
-            const isEligibleForCoupon = !hasExistingCampaignDiscount;
+            const isEligibleForCoupon = !hasExistingCampaignDiscount && appliesToThisProduct;
 
             // DEBUG COMPLETO
             console.log(`🔍 [applyCupon] Analizando ${cart.product.title}:`);
+            console.log(`   - productId: ${cart.product.id}`);
+            console.log(`   - categoryId: ${cart.product.categoryId}`);
             console.log(`   - discount: ${cart.discount}`);
             console.log(`   - code_cupon: ${cart.code_cupon}`);
             console.log(`   - type_discount: ${cart.type_discount}`);
-            console.log(`   - appliesToProduct: ${appliesToProduct}`);
-            console.log(`   - appliesToCategory: ${appliesToCategory}`);
+            console.log(`   - type_segment: ${cupon.type_segment}`);
+            console.log(`   - appliesToThisProduct: ${appliesToThisProduct}`);
             console.log(`   - hasExistingCampaignDiscount: ${hasExistingCampaignDiscount}`);
             console.log(`   - isEligibleForCoupon: ${isEligibleForCoupon}`);
 
@@ -455,7 +471,7 @@ export const apllyCupon = async (req, res) => {
                 cart.discount = null;
             }
 
-            if ((appliesToProduct || appliesToCategory) && isEligibleForCoupon) {
+            if (isEligibleForCoupon) {
                 if (cupon.type_discount == 1) { // Porcentaje
                     subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
                 } else { // Por monto fijo
@@ -482,10 +498,12 @@ export const apllyCupon = async (req, res) => {
                 console.log(`💰 [applyCupon] CUPÓN aplicado con redondeo .95: ${cart.price_unitario} → ${finalPriceWithRounding}`);
 
                 console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
-            } else if ((appliesToProduct || appliesToCategory) && !isEligibleForCoupon) {
-                console.log(`🚫 [applyCupon] ${cart.product.title} NO elegible - ya tiene campaign discount`);
             } else {
-                console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title} - producto/categoría no incluida`);
+                if (hasExistingCampaignDiscount) {
+                    console.log(`🚫 [applyCupon] ${cart.product.title} NO elegible - ya tiene campaign discount`);
+                } else if (!appliesToThisProduct) {
+                    console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title} - producto/categoría no incluida en type_segment=${cupon.type_segment}`);
+                }
             }
         }
 
