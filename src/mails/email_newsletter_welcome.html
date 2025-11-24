@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Bienvenido a LujanDev Store!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .welcome-message h2 {
+            color: #4a5568;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .welcome-message p {
+            color: #718096;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .benefits {
+            background-color: #f7fafc;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+        .benefit-item:last-child {
+            margin-bottom: 0;
+        }
+        .benefit-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 14px;
+            color: white;
+        }
+        .benefit-text {
+            flex: 1;
+            color: #4a5568;
+            font-size: 15px;
+        }
+        .benefit-text strong {
+            color: #2d3748;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .cta-section {
+            text-align: center;
+            margin: 35px 0;
+            padding: 25px;
+            background-color: #edf2f7;
+            border-radius: 8px;
+        }
+        .cta-text {
+            color: #4a5568;
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .verify-section {
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+        }
+        .verify-button {
+            display: inline-block;
+            background-color: #48bb78;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .footer {
+            background-color: #f7fafc;
+            padding: 30px;
+            text-align: center;
+            color: #718096;
+            font-size: 13px;
+        }
+        .footer-links {
+            margin: 15px 0;
+        }
+        .footer-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .social-icons {
+            margin: 20px 0;
+        }
+        .social-icons a {
+            display: inline-block;
+            margin: 0 8px;
+            color: #4a5568;
+            font-size: 20px;
+            text-decoration: none;
+        }
+        .unsubscribe {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+        .unsubscribe a {
+            color: #a0aec0;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>¡Bienvenido a LujanDev Store! 🚀</h1>
+            <p>Tu destino para camisetas developer con estilo</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="welcome-message">
+                <h2>¡Gracias por unirte a nosotros!</h2>
+                <p>
+                    Hola <strong><%= email %></strong>,<br>
+                    Nos emociona tenerte en nuestra comunidad. Desde ahora recibirás:
+                </p>
+            </div>
+
+            <!-- Benefits -->
+            <div class="benefits">
+                <div class="benefit-item">
+                    <div class="benefit-icon">🎨</div>
+                    <div class="benefit-text">
+                        <strong>Lanzamientos Exclusivos</strong>
+                        Sé el primero en conocer nuestros nuevos diseños antes que nadie.
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-icon">🏷️</div>
+                    <div class="benefit-text">
+                        <strong>Ofertas Especiales</strong>
+                        Acceso a descuentos y promociones exclusivas para suscriptores.
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-icon">💡</div>
+                    <div class="benefit-text">
+                        <strong>Contenido Developer</strong>
+                        Tips, artículos y recursos interesantes para la comunidad tech.
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-icon">🎁</div>
+                    <div class="benefit-text">
+                        <strong>Regalos y Concursos</strong>
+                        Participa en sorteos y obtén beneficios exclusivos.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Verification (opcional) -->
+            <% if (verification_url) { %>
+            <div class="verify-section">
+                <p style="margin: 0; color: #4a5568; font-size: 14px;">
+                    <strong>Verifica tu email</strong><br>
+                    Confirma tu dirección de email para empezar a recibir nuestras novedades:
+                </p>
+                <a href="<%= verification_url %>" class="verify-button">Verificar Email</a>
+            </div>
+            <% } %>
+
+            <!-- CTA Section -->
+            <div class="cta-section">
+                <p class="cta-text">
+                    <strong>Explora nuestra colección</strong><br>
+                    Descubre camisetas que combinan código, cultura y estilo.
+                </p>
+                <a href="<%= store_url %>" class="cta-button">Ir a la Tienda</a>
+            </div>
+
+            <!-- Personal Note -->
+            <div style="text-align: center; padding: 20px; color: #718096; font-size: 14px; font-style: italic;">
+                "Programar es más que código. Es cultura, estilo y actitud."<br>
+                <strong>- Equipo LujanDev</strong>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="social-icons">
+                <a href="https://github.com/develoddy" title="GitHub">📦</a>
+                <a href="https://twitter.com/lujandev" title="Twitter">🐦</a>
+                <a href="https://linkedin.com/in/lujandev" title="LinkedIn">💼</a>
+                <a href="https://instagram.com/lujandev" title="Instagram">📸</a>
+            </div>
+
+            <div class="footer-links">
+                <a href="<%= store_url %>/shop">Tienda</a>
+                <a href="<%= store_url %>/about">Nosotros</a>
+                <a href="<%= store_url %>/contact">Contacto</a>
+            </div>
+
+            <p style="margin: 15px 0;">
+                <strong><%= brand_name %></strong><br>
+                Camisetas developer con elegancia y código
+            </p>
+
+            <p>
+                ¿Tienes preguntas? Contáctanos en<br>
+                <a href="mailto:<%= support_email %>"><%= support_email %></a>
+            </p>
+
+            <div class="unsubscribe">
+                Si no deseas recibir más emails de nuestra newsletter,<br>
+                puedes <a href="<%= unsubscribe_url %>">darte de baja aquí</a>.
+            </div>
+
+            <p style="margin-top: 20px; font-size: 11px; color: #a0aec0;">
+                © <%= new Date().getFullYear() %> <%= brand_name %>. Todos los derechos reservados.<br>
+                Este email fue enviado el <%= current_date %>.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

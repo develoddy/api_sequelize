@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../database/database.js";
 
-export const PrelaunchSubscriber = sequelize.define('prelaunch_subscribers', {
+export const NewsletterSubscriber = sequelize.define('newsletter_subscribers', {
     id: { 
         type: DataTypes.INTEGER, 
         autoIncrement: true, 
@@ -20,9 +20,9 @@ export const PrelaunchSubscriber = sequelize.define('prelaunch_subscribers', {
         allowNull: true 
     },
     source: { 
-        type: DataTypes.ENUM('main_form', 'cta_final', 'home'), 
-        defaultValue: 'main_form',
-        comment: 'Indica de qué formulario proviene la suscripción'
+        type: DataTypes.ENUM('home', 'footer', 'checkout', 'campaign_import', 'admin'), 
+        defaultValue: 'home',
+        comment: 'Indica de dónde proviene la suscripción'
     },
     ip_address: { 
         type: DataTypes.STRING(45), 
@@ -60,10 +60,10 @@ export const PrelaunchSubscriber = sequelize.define('prelaunch_subscribers', {
         type: DataTypes.STRING(100), 
         allowNull: true 
     },
-    notified_launch: { 
+    notified_campaign: { 
         type: DataTypes.BOOLEAN, 
         defaultValue: false,
-        comment: 'Indica si ya fue notificado del lanzamiento'
+        comment: 'Indica si ya fue notificado en la última campaña'
     },
     coupon_sent: { 
         type: DataTypes.BOOLEAN, 
@@ -72,7 +72,7 @@ export const PrelaunchSubscriber = sequelize.define('prelaunch_subscribers', {
     }
 }, {
     timestamps: true,
-    tableName: 'prelaunch_subscribers',
+    tableName: 'newsletter_subscribers',
     indexes: [
         {
             unique: true,
@@ -86,6 +86,9 @@ export const PrelaunchSubscriber = sequelize.define('prelaunch_subscribers', {
         },
         {
             fields: ['createdAt']
+        },
+        {
+            fields: ['email_verified']
         }
     ]
 });

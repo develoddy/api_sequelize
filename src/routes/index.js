@@ -29,6 +29,7 @@ import receiptRoutes from './receipt.routes.js';
 import printfulWebhook from './printfulWebhook.routes.js';
 import notifications from './notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
+import newsletterRoutes from './newsletter.routes.js';
 
 const app = express();
 
@@ -61,5 +62,6 @@ app.use("/receipts", receiptRoutes);
 app.use("/printfulWebhook", printfulWebhook);
 app.use("/notifications", notifications);
 app.use("/prelaunch", prelaunchRoutes);
+app.use("/newsletter", newsletterRoutes);
 
 export default app;

@@ -27,26 +27,30 @@ export default {
     verifyAdmin: async(req, res, next) => {
         try {
             if ( !req.headers.token ) {
-                res.status(401).send({
+                return res.status(401).send({
                     message: 'No has enviado el token'
                 });
             }
             const response = await token.decode( req.headers.token );
             if ( response ) {
                 if ( response.rol == "admin" ) {
-                    next();
+                    req.user = response; // Inyectar usuario en request
+                    return next();
                 } else {
-                    res.status( 401 ).send({
-                        message: 'No esta permitido visitar esta ruta porque eres un cliente'
+                    return res.status( 403 ).send({
+                        message: 'No tienes permisos de administrador para acceder a esta ruta'
                     });
                 }
             } else {
-                res.status( 401 ).send({
-                    message: 'El token no es validooo'
+                return res.status( 401 ).send({
+                    message: 'El token no es válido'
                 });
             }
         } catch (error) {
-            console.log(error);
+            console.error('❌ Error en verifyAdmin middleware:', error);
+            return res.status(500).send({
+                message: 'Error al verificar autenticación'
+            });
         }
     },
     optionalAuth: async (req, res, next) => {
