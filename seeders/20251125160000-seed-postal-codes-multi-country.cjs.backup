@@ -1,0 +1,69 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    const basePath = path.join(__dirname, '..', 'data', 'postal-codes');
+    if (!fs.existsSync(basePath)) return;
+
+    const countries = fs.readdirSync(basePath).filter(f => fs.statSync(path.join(basePath, f)).isDirectory());
+    let totalInserted = 0;
+
+    for (const country of countries) {
+      const jsonFile = path.join(basePath, country, `postal-codes-${country}.json`);
+      if (!fs.existsSync(jsonFile)) continue;
+
+      const rawData = fs.readFileSync(jsonFile, 'utf8');
+      let postalCodesData;
+      try {
+        postalCodesData = JSON.parse(rawData);
+      } catch {
+        console.error(`❌ Error al parsear JSON de ${country}`);
+        continue;
+      }
+
+      // Filtrar registros inválidos
+      const validRecords = postalCodesData.filter(item => item.postal_code && item.city && item.province);
+
+      if (validRecords.length < postalCodesData.length) {
+        console.warn(`⚠️ Se omitieron ${postalCodesData.length - validRecords.length} registros inválidos en ${country}`);
+      }
+
+      const records = validRecords.map(item => ({
+        country: item.country || country.toUpperCase(),
+        postal_code: item.postal_code,
+        province: item.province,
+        city: item.city,
+        city_normalized: normalizeString(item.city),
+        is_primary: item.is_primary || false,
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      }));
+
+      const batchSize = 1000;
+      const batches = Math.ceil(records.length / batchSize);
+
+      for (let i = 0; i < batches; i++) {
+        const start = i * batchSize;
+        const end = Math.min((i + 1) * batchSize, records.length);
+        await queryInterface.bulkInsert('postal_codes', records.slice(start, end));
+        totalInserted += end - start;
+      }
+    }
+
+    console.log(`🎉 Seed completado. Total de registros insertados: ${totalInserted}`);
+  },
+
+  async down(queryInterface, Sequelize) {
+    await queryInterface.bulkDelete('postal_codes', {}, {});
+  }
+};
+
+function normalizeString(str) {
+  if (!str) return '';
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}

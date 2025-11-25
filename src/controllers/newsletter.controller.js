@@ -617,6 +617,7 @@ export const getUserSubscription = async (req, res) => {
                 'status', 
                 'source', 
                 'email_verified',
+                'preferences',
                 'createdAt',
                 'updatedAt'
             ]
@@ -650,6 +651,66 @@ export const getUserSubscription = async (req, res) => {
 };
 
 /**
+ * Actualizar preferencias del usuario autenticado
+ */
+export const updateUserPreferences = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { content = [], channels = [] } = req.body;
+
+        // Validaciones
+        const validContent = ['novedades', 'promociones', 'prelaunch'];
+        const validChannels = ['email', 'sms', 'whatsapp'];
+
+        const contentPrefs = content.filter(c => validContent.includes(c));
+        const channelPrefs = channels.filter(c => validChannels.includes(c));
+
+        // Email siempre debe estar incluido
+        if (!channelPrefs.includes('email')) {
+            channelPrefs.push('email');
+        }
+
+        const preferences = {
+            content: contentPrefs,
+            channels: channelPrefs
+        };
+
+        // Buscar suscripción por userId
+        const subscriber = await NewsletterSubscriber.findOne({
+            where: { 
+                userId: userId,
+                status: 'subscribed'
+            }
+        });
+
+        if (!subscriber) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No se encontró una suscripción activa para este usuario'
+            });
+        }
+
+        // Actualizar preferencias
+        await subscriber.update({ preferences });
+
+        console.log(`✅ Preferencias actualizadas para userId ${userId}:`, preferences);
+
+        res.status(200).json({
+            status: 200,
+            message: 'Preferencias actualizadas correctamente',
+            data: { preferences }
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar preferencias:', error);
+        res.status(500).json({
+            status: 500,
+            message: 'Error al guardar tus preferencias'
+        });
+    }
+};
+
+/**
  * Enviar campaña (ADMIN)
  */
 export const sendCampaign = async (req, res) => {
@@ -657,7 +718,8 @@ export const sendCampaign = async (req, res) => {
         const { 
             name,
             subject, 
-            htmlBody, 
+            htmlBody,
+            campaign_type = 'general',
             filters = {},
             testEmails = [],
             scheduleAt 
@@ -707,17 +769,41 @@ export const sendCampaign = async (req, res) => {
             };
         }
 
-        // Obtener destinatarios
-        const recipients = await NewsletterSubscriber.findAll({
+        // Obtener destinatarios con preferencias
+        let recipients = await NewsletterSubscriber.findAll({
             where: whereCondition,
-            attributes: ['email', 'id']
+            attributes: ['email', 'id', 'preferences']
         });
+
+        // Filtrar por preferencias de contenido si no es campaña general
+        const initialCount = recipients.length;
+        if (campaign_type !== 'general') {
+            recipients = recipients.filter(recipient => {
+                const prefs = recipient.preferences || { 
+                    content: ['novedades', 'promociones', 'prelaunch'],
+                    channels: ['email']
+                };
+                
+                // Si no tiene preferencias guardadas, incluir por defecto
+                if (!prefs.content || prefs.content.length === 0) {
+                    return true;
+                }
+                
+                // Verificar si el tipo de campaña está en las preferencias del usuario
+                return prefs.content.includes(campaign_type);
+            });
+
+            console.log(`📧 Campaña tipo "${campaign_type}": ${recipients.length}/${initialCount} destinatarios elegibles`);
+        } else {
+            console.log(`📧 Campaña general: ${recipients.length} destinatarios`);
+        }
 
         // Crear registro de campaña
         const campaign = await NewsletterCampaign.create({
             name,
             subject,
             html_body: htmlBody,
+            campaign_type,
             filters,
             status: scheduleAt ? 'scheduled' : 'sending',
             scheduled_at: scheduleAt || null,

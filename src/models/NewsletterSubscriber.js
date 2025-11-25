@@ -74,6 +74,23 @@ export const NewsletterSubscriber = sequelize.define('newsletter_subscribers', {
         type: DataTypes.BOOLEAN, 
         defaultValue: false,
         comment: 'Indica si ya recibió el cupón exclusivo'
+    },
+    preferences: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Preferencias de contenido y canales del suscriptor',
+        get() {
+            const rawValue = this.getDataValue('preferences');
+            if (!rawValue) {
+                // Valores por defecto si no hay preferencias guardadas
+                return {
+                    content: ['novedades', 'promociones', 'prelaunch'],
+                    channels: ['email']
+                };
+            }
+            return rawValue;
+        }
     }
 }, {
     timestamps: true,

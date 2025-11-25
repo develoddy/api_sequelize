@@ -6,6 +6,7 @@ import {
     getStats, 
     listSubscribers,
     getUserSubscription,
+    updateUserPreferences,
     createCampaign,
     sendTestCampaign,
     sendCampaign,
@@ -29,6 +30,7 @@ router.get('/unsubscribe', unsubscribe); // GET también para links en emails
 // RUTAS PROTEGIDAS PARA USUARIOS AUTENTICADOS
 // ============================================
 router.get('/subscription', auth.verifyEcommerce, getUserSubscription);
+router.put('/preferences', auth.verifyEcommerce, updateUserPreferences);
 
 // ============================================
 // RUTAS ADMIN (protegidas con middleware)

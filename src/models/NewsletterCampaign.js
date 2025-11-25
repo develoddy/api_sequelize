@@ -81,6 +81,12 @@ export const NewsletterCampaign = sequelize.define('newsletter_campaigns', {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Log de errores durante el envío'
+    },
+    campaign_type: {
+        type: DataTypes.ENUM('novedades', 'promociones', 'prelaunch', 'general'),
+        allowNull: false,
+        defaultValue: 'general',
+        comment: 'Tipo de campaña para filtrar por preferencias de usuarios'
     }
 }, {
     timestamps: true,
