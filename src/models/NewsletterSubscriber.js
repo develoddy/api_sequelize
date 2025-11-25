@@ -15,6 +15,11 @@ export const NewsletterSubscriber = sequelize.define('newsletter_subscribers', {
             isEmail: true
         }
     },
+    userId: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: 'ID del usuario autenticado (NULL para guests)'
+    },
     session_id: { 
         type: DataTypes.STRING(100), 
         allowNull: true 
@@ -89,6 +94,9 @@ export const NewsletterSubscriber = sequelize.define('newsletter_subscribers', {
         },
         {
             fields: ['email_verified']
+        },
+        {
+            fields: ['userId']
         }
     ]
 });

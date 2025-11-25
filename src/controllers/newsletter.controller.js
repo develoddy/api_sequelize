@@ -37,7 +37,7 @@ const checkRateLimit = (ip) => {
  */
 export const subscribe = async (req, res) => {
     try {
-        const { email, source = 'home' } = req.body;
+        const { email, source = 'home', userId } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress;
 
         // Rate limiting
@@ -74,17 +74,48 @@ export const subscribe = async (req, res) => {
             });
         }
 
-        // Verificar si ya existe
+        // Buscar suscriptor existente: primero por userId (si existe), luego por email
+        let whereClause = { email: email.toLowerCase() };
+        if (userId) {
+            whereClause = {
+                [Op.or]: [
+                    { userId: userId },
+                    { email: email.toLowerCase() }
+                ]
+            };
+        }
+
         const existingSubscriber = await NewsletterSubscriber.findOne({
-            where: { email: email.toLowerCase() }
+            where: whereClause
         });
 
         if (existingSubscriber) {
+            // Si existe un registro guest (sin userId) y ahora el usuario está autenticado,
+            // actualizar el registro con el userId
+            if (!existingSubscriber.userId && userId) {
+                await existingSubscriber.update({
+                    userId: userId,
+                    status: 'subscribed',
+                    source: source
+                });
+
+                return res.status(200).json({
+                    status: 200,
+                    message: 'Tu suscripción ha sido vinculada a tu cuenta',
+                    data: {
+                        email: existingSubscriber.email,
+                        userId: userId,
+                        linked: true
+                    }
+                });
+            }
+
             // Si ya existe pero está unsubscribed, lo reactivamos
             if (existingSubscriber.status === 'unsubscribed') {
                 await existingSubscriber.update({
                     status: 'subscribed',
-                    source: source
+                    source: source,
+                    userId: userId || existingSubscriber.userId
                 });
 
                 return res.status(200).json({
@@ -92,6 +123,7 @@ export const subscribe = async (req, res) => {
                     message: 'Te has vuelto a suscribir correctamente',
                     data: {
                         email: existingSubscriber.email,
+                        userId: existingSubscriber.userId,
                         resubscribed: true
                     }
                 });
@@ -102,6 +134,7 @@ export const subscribe = async (req, res) => {
                 message: 'Ya estás suscrito a nuestro newsletter',
                 data: {
                     email: existingSubscriber.email,
+                    userId: existingSubscriber.userId,
                     already_subscribed: true
                 }
             });
@@ -118,6 +151,7 @@ export const subscribe = async (req, res) => {
         // Crear nueva suscripción
         const newSubscriber = await NewsletterSubscriber.create({
             email: email.toLowerCase(),
+            userId: userId || null,
             source,
             ip_address: ipAddress,
             user_agent: userAgent,
@@ -352,7 +386,9 @@ export const confirmEmail = async (req, res) => {
  */
 export const unsubscribe = async (req, res) => {
     try {
-        const { email, token } = req.query;
+        // Aceptar email desde query (GET desde links email) o body (POST desde frontend)
+        const email = req.query.email || req.body.email;
+        const token = req.query.token || req.body.token;
 
         if (!email) {
             return res.status(400).json({
@@ -492,7 +528,8 @@ export const listSubscribers = async (req, res) => {
             status = 'subscribed', 
             source,
             verified,
-            search 
+            search,
+            userId 
         } = req.query;
         
         const offset = (page - 1) * limit;
@@ -510,7 +547,13 @@ export const listSubscribers = async (req, res) => {
             whereCondition.email_verified = verified === 'true';
         }
 
-        if (search && search.trim() !== '') {
+        // Buscar por userId primero, con fallback a email
+        if (userId) {
+            whereCondition[Op.or] = [
+                { userId: userId },
+                { email: { [Op.like]: `%${search || ''}%` } }
+            ];
+        } else if (search && search.trim() !== '') {
             whereCondition.email = {
                 [Op.like]: `%${search.trim()}%`
             };
@@ -541,6 +584,67 @@ export const listSubscribers = async (req, res) => {
         res.status(500).json({
             status: 500,
             message: 'Error al obtener la lista de suscriptores'
+        });
+    }
+};
+
+/**
+ * Obtener suscripción del usuario autenticado
+ * Endpoint protegido para usuarios normales (no requiere admin)
+ */
+export const getUserSubscription = async (req, res) => {
+    try {
+        // El userId viene del token JWT verificado por auth.verifyEcommerce
+        const userId = req.user.id; // El token tiene { id, rol, email }
+
+        if (!userId) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Usuario no identificado'
+            });
+        }
+
+        // Buscar suscripción por userId
+        const subscriber = await NewsletterSubscriber.findOne({
+            where: { 
+                userId: userId,
+                status: 'subscribed'
+            },
+            attributes: [
+                'id', 
+                'email', 
+                'userId', 
+                'status', 
+                'source', 
+                'email_verified',
+                'createdAt',
+                'updatedAt'
+            ]
+        });
+
+        if (!subscriber) {
+            return res.status(200).json({
+                status: 200,
+                subscribed: false,
+                message: 'No estás suscrito al newsletter',
+                data: null
+            });
+        }
+
+        res.status(200).json({
+            status: 200,
+            subscribed: true,
+            message: 'Suscripción encontrada',
+            data: {
+                subscriber: subscriber
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al obtener suscripción del usuario:', error);
+        res.status(500).json({
+            status: 500,
+            message: 'Error al obtener tu suscripción'
         });
     }
 };
