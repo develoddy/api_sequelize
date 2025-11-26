@@ -239,6 +239,32 @@ async function send_email(sale_id) {
                 return;
             }
 
+            // 🔍 Validar que el email tenga un dominio válido antes de enviar
+            const invalidDomains = [
+                'example.com', 
+                'example.org', 
+                'example.net', 
+                'test.com',
+                'localhost',
+                'fake.com',
+                'dummy.com',
+                'sample.com'
+            ];
+            
+            const emailDomain = emailDestino.split('@')[1]?.toLowerCase();
+            
+            if (!emailDomain || invalidDomains.includes(emailDomain)) {
+                console.warn(`⚠️ Email con dominio inválido o de prueba: ${emailDestino}. Email de confirmación no será enviado.`);
+                return;
+            }
+            
+            // Validar formato básico de email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailDestino)) {
+                console.warn(`⚠️ Formato de email inválido: ${emailDestino}. Email de confirmación no será enviado.`);
+                return;
+            }
+
             let subject = '';
 
             if (orderDetails.length === 1) {
@@ -256,17 +282,28 @@ async function send_email(sale_id) {
                 html: htmlToSend
             };
 
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.error('Error sending email:', error);
-                } else {
-                    console.log('Email sent:', info.response);
-                }
-            });
+            // 📧 Intentar enviar email con manejo robusto de errores
+            try {
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        console.error('❌ Error enviando email de confirmación:', error.message || error);
+                        // Si el error es de dominio rechazado (nullMX), registrarlo pero no lanzar excepción
+                        if (error.message?.includes('nullMX') || error.message?.includes('Recipient address rejected')) {
+                            console.warn(`⚠️ Dominio de email rechazado: ${emailDestino}. El email no puede ser entregado.`);
+                        }
+                    } else {
+                        console.log('✅ Email de confirmación enviado:', info.response);
+                    }
+                });
+            } catch (sendError) {
+                console.error('❌ Excepción al intentar enviar email:', sendError.message || sendError);
+                // No lanzar error para evitar bloquear el flujo de la venta
+            }
         });
 
     } catch (error) {
-        console.log(error);
+        console.error('❌ Error en send_email():', error.message || error);
+        // No propagar el error para evitar bloquear operaciones críticas
     }
 }
 
