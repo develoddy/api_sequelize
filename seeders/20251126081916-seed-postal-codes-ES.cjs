@@ -276,7 +276,6 @@ module.exports = {
         [Sequelize.Op.in]: countries
       }
     }, {});
-
     console.log(`✅ Códigos postales eliminados para: ${countries.join(', ')}\n`);
   }
 };

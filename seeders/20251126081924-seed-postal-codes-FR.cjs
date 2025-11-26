@@ -26,7 +26,7 @@ const LOG_INTERVAL = 10; // Log cada X batches
 // Archivos de datos
 const dataPath = path.join(__dirname, '..', 'data');
 const jsonFiles = [
-  { file: 'postal-codes-FR.json', country: 'FR', name: 'Francia' }
+  { file: 'postal-codes-FR.json', country: 'FR', name: 'Francia' },
 ];
 
 /**
@@ -276,7 +276,6 @@ module.exports = {
         [Sequelize.Op.in]: countries
       }
     }, {});
-
     console.log(`✅ Códigos postales eliminados para: ${countries.join(', ')}\n`);
   }
 };
