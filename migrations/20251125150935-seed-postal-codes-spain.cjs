@@ -26,6 +26,13 @@ const path = require('path');
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // 🔒 Evitar ejecución en producción
+    if (process.env.NODE_ENV === "production") {
+      console.log("⛔ Seed postal codes skipped in production");
+      return Promise.resolve();
+    }
+
+
     console.log('📦 Iniciando carga de códigos postales de España...');
     
     // Ruta al archivo JSON completo (opcional)
@@ -99,6 +106,11 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    // 🔒 Evitar eliminación en producción
+    if (process.env.NODE_ENV === "production") {
+      console.log("⛔ Seed postal codes undo skipped in production");
+      return Promise.resolve();
+    }
     await queryInterface.bulkDelete('postal_codes', { country: 'ES' }, {});
     console.log('✅ Datos de códigos postales de España eliminados');
   }
