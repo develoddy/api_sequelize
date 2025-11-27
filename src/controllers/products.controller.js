@@ -221,10 +221,17 @@ export const list = async (req, res) => {
     // 🧩 Consulta final
     products = await Product.findAll({
       where: filter.length ? { [Op.and]: filter } : {},
-      include: [Categorie]
+      include: [
+        Categorie,
+        Variedad // Sin alias, usar la relación por defecto
+      ]
     });
 
-    products = products.map(product => resources.Product.product_list(product));
+    products = products.map(product => {
+      // Obtener las variantes del producto
+      const variedades = product.variedades || [];
+      return resources.Product.product_list(product, variedades);
+    });
 
     res.status(200).json({ 
         products,
