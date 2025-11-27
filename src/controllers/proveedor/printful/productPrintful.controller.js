@@ -183,15 +183,15 @@ export const getPrintfulProducts = async () => {
           
         } else {
           // PRODUCTO EXISTE - VERIFICAR SI HAY CAMBIOS
-          console.log(`  🔍 [${i + 1}/${printfulProducts.length}] Verificando cambios: "${product.name}" (DB ID: ${existingProduct.id})`);
+          console.log(`  🔍 [${i + 1}/${printfulProducts.length}] Verificando cambios: "${product.name}" (DB ID: ${existingProduct.id}, Printful ID: ${product.id})`);
           const hasChanges = await checkProductChanges(existingProduct, product);
           
           if (hasChanges) {
-            console.log(`  🔄 [${i + 1}/${printfulProducts.length}] ACTUALIZAR: "${product.name}" (cambios detectados)`);
+            console.log(`  🔄 [${i + 1}/${printfulProducts.length}] ACTUALIZAR: "${product.name}" (cambios detectados - ver detalles arriba)`);
             await processPrintfulProduct(product, transaction);
             stats.updated++;
           } else {
-            console.log(`  ✅ [${i + 1}/${printfulProducts.length}] SIN CAMBIOS: "${product.name}" (producto idéntico)`);
+            console.log(`  ✅ [${i + 1}/${printfulProducts.length}] SIN CAMBIOS: "${product.name}" (producto idéntico - SKIP)`);
             stats.skipped++;
           }
         }
@@ -266,38 +266,57 @@ const productDetailSyncPrice = (product) => {
  */
 const checkProductChanges = async (existingProduct, printfulProduct) => {
   try {
+    console.log(`    🔎 Iniciando comparación detallada...`);
+    
     // 1. Comparar título
+    console.log(`    📝 Título: "${existingProduct.title}" vs "${printfulProduct.name}"`);
     if (existingProduct.title !== printfulProduct.name) {
-      console.log(`    🔄 Cambio detectado: título "${existingProduct.title}" → "${printfulProduct.name}"`);
+      console.log(`    🔄 ⚠️ CAMBIO DETECTADO: título diferente`);
       return true;
     }
     
     // 2. Comparar estado (ignored)
     const newState = productCompareState(printfulProduct);
+    console.log(`    🏷️ Estado: ${existingProduct.state} vs ${newState}`);
     if (existingProduct.state !== newState) {
-      console.log(`    🔄 Cambio detectado: estado ${existingProduct.state} → ${newState}`);
+      console.log(`    🔄 ⚠️ CAMBIO DETECTADO: estado diferente`);
       return true;
     }
     
     // 3. Obtener detalles del producto para comparar precio y tags
     const productDetail = await getPrintfulProductDetail(printfulProduct.id);
     
-    // 4. Comparar precio
-    const newPrice = productDetail.sync_variants[0]?.retail_price;
-    if (existingProduct.price_soles !== newPrice) {
-      console.log(`    🔄 Cambio detectado: precio ${existingProduct.price_soles} → ${newPrice}`);
+    // 4. Comparar precio (convertir a número para evitar problemas de tipo)
+    const newPrice = parseFloat(productDetail.sync_variants[0]?.retail_price || 0);
+    const existingPrice = parseFloat(existingProduct.price_soles || 0);
+    console.log(`    💰 Precio: ${existingPrice} (${typeof existingPrice}) vs ${newPrice} (${typeof newPrice})`);
+    if (existingPrice !== newPrice) {
+      console.log(`    🔄 ⚠️ CAMBIO DETECTADO: precio diferente`);
       return true;
     }
     
-    // 5. Comparar tags (colores)
-    const newTags = JSON.stringify(
-      await removeRepeatedColors(
-        productDetail.sync_variants.map(v => v.color).filter(Boolean)
-      )
+    // 5. Comparar tags (colores) - ORDENADOS para evitar falsos positivos
+    const newColorsArray = await removeRepeatedColors(
+      productDetail.sync_variants.map(v => v.color).filter(Boolean)
     );
+    const newTags = JSON.stringify(newColorsArray.sort()); // Ordenar para comparación consistente
     
-    if (existingProduct.tags !== newTags) {
-      console.log(`    🔄 Cambio detectado: tags modificados`);
+    // Ordenar tags existentes también
+    let existingTagsArray = [];
+    try {
+      existingTagsArray = JSON.parse(existingProduct.tags || '[]');
+      if (Array.isArray(existingTagsArray)) {
+        existingTagsArray.sort();
+      }
+    } catch (e) {
+      console.log(`    ⚠️ Error parseando tags existentes, usando array vacío`);
+      existingTagsArray = [];
+    }
+    const existingTags = JSON.stringify(existingTagsArray);
+    
+    console.log(`    🏷️ Tags: ${existingTags} vs ${newTags}`);
+    if (existingTags !== newTags) {
+      console.log(`    🔄 ⚠️ CAMBIO DETECTADO: tags diferentes`);
       return true;
     }
     
@@ -306,18 +325,22 @@ const checkProductChanges = async (existingProduct, printfulProduct) => {
       where: { productId: existingProduct.id }
     });
     
+    console.log(`    🔢 Variantes: ${existingVariantsCount} vs ${productDetail.sync_variants.length}`);
     if (existingVariantsCount !== productDetail.sync_variants.length) {
-      console.log(`    🔄 Cambio detectado: variantes ${existingVariantsCount} → ${productDetail.sync_variants.length}`);
+      console.log(`    🔄 ⚠️ CAMBIO DETECTADO: cantidad de variantes diferente`);
       return true;
     }
     
     // No hay cambios detectados
+    console.log(`    ✅ NO HAY CAMBIOS - Producto idéntico`);
     return false;
     
   } catch (error) {
-    console.error(`    ❌ Error verificando cambios para producto ${printfulProduct.id}:`, error.message);
-    // En caso de error, mejor actualizar por seguridad
-    return true;
+    console.error(`    ❌ ERROR en checkProductChanges:`, error.message);
+    console.error(`    ⚠️ Stack:`, error.stack);
+    // En caso de error, retornar false y hacer skip (mejor perder una actualización que forzar una innecesaria)
+    console.log(`    ⏭️ Por seguridad, marcando como SIN CAMBIOS debido al error`);
+    return false;
   }
 };
 
@@ -595,8 +618,10 @@ const updateProductIfNeeded = async (existingProduct, product, productDetail, ca
   if (existingProduct.state !== (product.is_ignored ? 1 : 2)) updates.state = product.is_ignored ? 1 : 2;
   if (existingProduct.categoryId !== category.id) updates.categoryId = category.id;
 
-  const newPrice = productDetail.sync_variants[0].retail_price;
-  if (existingProduct.price_soles !== newPrice) {
+  // Comparar precio con conversión a float para evitar problemas de tipo
+  const newPrice = parseFloat(productDetail.sync_variants[0].retail_price);
+  const existingPrice = parseFloat(existingProduct.price_soles);
+  if (existingPrice !== newPrice) {
     updates.price_soles = newPrice;
     updates.price_usd = newPrice;
   }
@@ -604,13 +629,30 @@ const updateProductIfNeeded = async (existingProduct, product, productDetail, ca
   const newSKU = await extractSKU(productDetail.sync_variants[0].sku);
   if (existingProduct.sku !== newSKU) updates.sku = newSKU;
 
-  const newTags = JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(v => v.color).filter(Boolean)));
-  if (existingProduct.tags !== newTags) updates.tags = newTags;
+  // Normalizar tags (ordenar para comparación consistente)
+  const newColorsArray = await removeRepeatedColors(
+    productDetail.sync_variants.map(v => v.color).filter(Boolean)
+  );
+  const newTags = JSON.stringify(newColorsArray.sort());
+  
+  let existingTagsArray = [];
+  try {
+    existingTagsArray = JSON.parse(existingProduct.tags || '[]');
+    if (Array.isArray(existingTagsArray)) {
+      existingTagsArray.sort();
+    }
+  } catch (e) {
+    existingTagsArray = [];
+  }
+  const existingTags = JSON.stringify(existingTagsArray);
+  
+  if (existingTags !== newTags) updates.tags = newTags;
 
   const portada_name = await handleProductImage(product.thumbnail_url, existingProduct.portada);
   if (portada_name && existingProduct.portada !== portada_name) updates.portada = portada_name;
 
   if (Object.keys(updates).length > 0) {
+    console.log(`      📝 Actualizando campos: ${Object.keys(updates).join(', ')}`);
     await existingProduct.update(updates, { transaction });
   }
 
