@@ -982,3 +982,220 @@ export const createPrintfulOrder = async( orderData ) => {
     return "error_order"
   }
 };
+
+/**
+ * ==================================================================================================
+ * =                                  DASHBOARD STATS ENDPOINT                                     =
+ * ==================================================================================================
+ */
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    console.log('📊 Calculating dashboard statistics...');
+
+    // Get all Printful products (type_inventario = 2)
+    const productsRaw = await Product.findAll({
+      where: { type_inventario: 2 },
+      attributes: ['id', 'title', 'slug', 'sku', 'price_usd', 'price_soles', 'portada', 'state', 'categoryId', 'stock', 'updatedAt'],
+      include: [
+        { 
+          model: Categorie,
+          attributes: ['id', 'title'],
+          required: false
+        },
+        { 
+          model: Variedad,
+          attributes: ['id', 'valor'],
+          required: false
+        },
+        { 
+          model: Galeria,
+          attributes: ['id', 'imagen'],
+          limit: 1,
+          order: [['id', 'ASC']],
+          required: false
+        }
+      ]
+    });
+
+    // Convert to plain objects to access associations properly
+    const products = productsRaw.map(p => p.get({ plain: true }));
+
+    // Initialize stats
+    const stats = {
+      totalProducts: products.length,
+      totalVariants: 0,
+      totalCategories: 0,
+      activeProducts: 0,
+      inactiveProducts: 0,
+      totalInventoryValue: 0,
+      averagePrice: 0,
+      priceRange: { min: 0, max: 0 },
+      categoriesDistribution: [],
+      lastSync: null,
+      alerts: [],
+      topExpensive: [],
+      topCheap: []
+    };
+
+    // Calculate basic stats
+    const prices = [];
+    const categoriesMap = new Map();
+    let totalPrice = 0;
+
+    products.forEach(product => {
+      // Count variants
+      const variedades = product.variedades || [];
+      stats.totalVariants += variedades.length;
+
+      // Active/Inactive count
+      // state = 2 means ACTIVE, state = 1 means INACTIVE
+      if (product.state === 2) {
+        stats.activeProducts++;
+      } else {
+        stats.inactiveProducts++;
+      }
+
+      // Price calculations
+      const price = parseFloat(product.price_usd) || 0;
+      if (price > 0) {
+        prices.push(price);
+        totalPrice += price;
+        stats.totalInventoryValue += price * (variedades.length || 1);
+      }
+
+      // Category distribution
+      if (product.category && product.category.title) {
+        const categoryName = product.category.title;
+        categoriesMap.set(categoryName, (categoriesMap.get(categoryName) || 0) + 1);
+      } else {
+        // Count products without category
+        categoriesMap.set('Sin Categoría', (categoriesMap.get('Sin Categoría') || 0) + 1);
+      }
+
+      // Last sync
+      if (product.updatedAt) {
+        const productDate = new Date(product.updatedAt);
+        if (!stats.lastSync || productDate > new Date(stats.lastSync)) {
+          stats.lastSync = product.updatedAt;
+        }
+      }
+    });
+
+    // Calculate price stats
+    if (prices.length > 0) {
+      stats.averagePrice = totalPrice / prices.length;
+      stats.priceRange.min = Math.min(...prices);
+      stats.priceRange.max = Math.max(...prices);
+    }
+
+    // Categories distribution
+    stats.totalCategories = categoriesMap.size;
+    stats.categoriesDistribution = Array.from(categoriesMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Top 10 categories
+
+    // Generate alerts
+    const alerts = [];
+
+    // Alert: Products without variants
+    const noVariantsCount = products.filter(p => !p.variedades || p.variedades.length === 0).length;
+    if (noVariantsCount > 0) {
+      alerts.push({
+        type: 'no-variants',
+        message: 'Productos sin variantes configuradas',
+        count: noVariantsCount
+      });
+    }
+
+    // Alert: Products without category
+    const noCategoryCount = products.filter(p => !p.category || !p.category.title).length;
+    if (noCategoryCount > 0) {
+      alerts.push({
+        type: 'no-category',
+        message: 'Productos sin categoría asignada',
+        count: noCategoryCount
+      });
+    }
+
+    // Alert: Inactive products
+    if (stats.inactiveProducts > 0) {
+      alerts.push({
+        type: 'low-stock',
+        message: 'Productos inactivos en catálogo',
+        count: stats.inactiveProducts
+      });
+    }
+
+    // Alert: Products with very high price (outliers)
+    const highPriceThreshold = stats.averagePrice * 2;
+    const highPriceCount = products.filter(p => parseFloat(p.price_usd) > highPriceThreshold).length;
+    if (highPriceCount > 0) {
+      alerts.push({
+        type: 'high-price',
+        message: 'Productos con precio superior al promedio',
+        count: highPriceCount
+      });
+    }
+
+    stats.alerts = alerts;
+
+    // Top expensive products (top 5)
+    stats.topExpensive = products
+      .filter(p => p.price_usd > 0)
+      .sort((a, b) => parseFloat(b.price_usd) - parseFloat(a.price_usd))
+      .slice(0, 5)
+      .map(p => {
+        // Get first image from gallery or use portada field and construct full URL
+        let imagen = null;
+        if (p.galerias && p.galerias.length > 0 && p.galerias[0].imagen) {
+          imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${p.galerias[0].imagen}`;
+        } else if (p.portada) {
+          imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${p.portada}`;
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          price_soles: parseFloat(p.price_soles),
+          imagen: imagen
+        };
+      });
+
+    // Top cheap products (top 5)
+    stats.topCheap = products
+      .filter(p => p.price_usd > 0)
+      .sort((a, b) => parseFloat(a.price_usd) - parseFloat(b.price_usd))
+      .slice(0, 5)
+      .map(p => {
+        // Get first image from gallery or use portada field and construct full URL
+        let imagen = null;
+        if (p.galerias && p.galerias.length > 0 && p.galerias[0].imagen) {
+          imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${p.galerias[0].imagen}`;
+        } else if (p.portada) {
+          imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${p.portada}`;
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          price_usd: parseFloat(p.price_usd),
+          imagen: imagen
+        };
+      });
+
+    console.log('✅ Dashboard stats calculated successfully');
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('❌ Error calculating dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al calcular estadísticas del dashboard',
+      error: error.message
+    });
+  }
+};
