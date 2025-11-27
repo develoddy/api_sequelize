@@ -25,15 +25,43 @@ import { getGelatoProducts } from './proveedor/gelato/productGelato.controller.j
 /* ----------------------------- START PROVEDORES ---------------------------- */
 export const syncPrintfulProducts = async (req, res) => {
     try {
-        const printfulProducts = await getPrintfulProducts();
-        res.status( 200 ).json({
+        console.log('🔄 [SYNC] Iniciando sincronización con Printful...');
+        const startTime = Date.now();
+        
+        // Ejecutar sincronización y obtener estadísticas
+        const result = await getPrintfulProducts();
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [SYNC] Sincronización completada en ${duration}ms`);
+        console.log('📊 [SYNC] Estadísticas:', result);
+        
+        // Validar que result tenga datos
+        if (!result) {
+            throw new Error('No se obtuvieron resultados de la sincronización');
+        }
+        
+        // Responder con estadísticas detalladas
+        res.status(200).json({
             sync: true,
+            productsProcessed: result.total || 0,
+            created: result.created || 0,
+            updated: result.updated || 0,
+            deleted: result.deleted || 0,
+            skipped: result.skipped || 0,
+            errors: result.errors || [],
+            duration: `${(duration / 1000).toFixed(2)}s`,
+            timestamp: new Date().toISOString()
         });
+        
     } catch (error) {
-        res.status( 500 ).send({
-            message: "debbug: ProductController syncPrintfulProducts - OCURRIÓ UN PROBLEMA"
+        console.error('❌ [SYNC] Error crítico en sincronización:', error);
+        
+        res.status(500).send({
+            sync: false,
+            message: "Error al sincronizar productos de Printful",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
-        console.log(error);
     }
 }
 

@@ -77,58 +77,175 @@ export const show = async( req, res ) => {
 
 
 export const getPrintfulProducts = async () => {
+  // Estadísticas de sincronización
+  const stats = {
+    total: 0,
+    created: 0,
+    updated: 0,
+    deleted: 0,
+    skipped: 0,
+    errors: []
+  };
 
+  let transaction;
+  
   try {
-
+    console.log('📥 [STEP 1] Obteniendo productos de Printful...');
+    
+    // 1️⃣ OBTENER PRODUCTOS DE PRINTFUL
     const printfulProducts = await getPrintfulProductsService();
+    
+    // Validar que obtuvimos productos
+    if (!printfulProducts || printfulProducts.length === 0) {
+      console.warn('⚠️ No se obtuvieron productos de Printful');
+      return stats;
+    }
+    
+    stats.total = printfulProducts.length;
+    console.log(`✅ [STEP 1] Obtenidos ${stats.total} productos de Printful`);
 
-    /** CREA UN ARREGLO DE IDS DE PRODUCTOS DE PRINTFUL */
+    // 2️⃣ INICIAR TRANSACCIÓN
+    console.log('💾 [STEP 2] Iniciando transacción SQL...');
+    transaction = await sequelize.transaction();
+
+    // 3️⃣ IDENTIFICAR PRODUCTOS OBSOLETOS
+    console.log('🔍 [STEP 3] Identificando productos obsoletos en DB...');
     const printfulProductIds = printfulProducts.map(product => product.id);
-
-    /** OBTENIENE LOS PRODUCTOS LOCAL QUE NO ESTÁN EN PRINTFUL */
+    
+    // Productos que:
+    // 1. Tienen idProduct (vienen de Printful)
+    // 2. Su idProduct NO está en la lista actual de Printful
+    // 3. Por lo tanto, ya no existen en Printful y deben eliminarse
     const productsToDelete = await Product.findAll({
-      where: { idProduct: { [Op.notIn]: printfulProductIds } }
+      where: { 
+        idProduct: {
+          [Op.notIn]: printfulProductIds,  // No está en la lista actual de Printful
+          [Op.ne]: null                     // Y tiene idProduct (es de Printful)
+        }
+      },
+      transaction
     });
 
-    /** ELIMINA LOS PRODUCTOS CON SUS RELACIONES */
-    for (const product of productsToDelete) {
-      //await deleteProductAndRelatedComponents(product);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`🧹 Eliminando producto local obsoleto: ${product.title}`);
-      }
-      try {
-        await deleteProductAndRelatedComponents(product);
-      } catch (error) {
-        console.error(`Error eliminando producto ${product.id}:`, error);
-      }
+    console.log(`🗑️ [STEP 3] Productos obsoletos encontrados: ${productsToDelete.length}`);
+    if (productsToDelete.length > 0) {
+      console.log(`   Productos a eliminar:`, productsToDelete.map(p => `${p.title} (ID Printful: ${p.idProduct})`));
     }
 
-    /** SE RECCORRE CADA PRODUCTO DE PRINTFUL*/
-    for (const product of printfulProducts) {
+    // 4️⃣ ELIMINAR PRODUCTOS OBSOLETOS
+    if (productsToDelete.length > 0) {
+      console.log('🧹 [STEP 4] Eliminando productos obsoletos...');
       
-      const existingProduct = await Product.findOne({ where: { idProduct: product.id } });
+      for (const product of productsToDelete) {
+        try {
+          console.log(`  🗑️ Eliminando: ${product.title} (ID: ${product.id})`);
+          await deleteProductAndRelatedComponents(product, transaction);
+          stats.deleted++;
+        } catch (error) {
+          console.error(`  ❌ Error eliminando producto ${product.id}:`, error.message);
+          stats.errors.push({
+            type: 'DELETE',
+            productId: product.id,
+            productName: product.title,
+            message: error.message
+          });
+        }
+      }
+      
+      console.log(`✅ [STEP 4] Eliminados: ${stats.deleted} productos`);
+    } else {
+      console.log('✅ [STEP 4] No hay productos para eliminar');
+    }
 
-      if (!existingProduct) {
-        // Si no existe, es un producto nuevo: se procesa y se crea
-        await processPrintfulProduct(product);
+    // 5️⃣ PROCESAR PRODUCTOS DE PRINTFUL (CREATE/UPDATE)
+    console.log(`🔄 [STEP 5] Procesando ${printfulProducts.length} productos de Printful...`);
+    console.log(`   Estos productos se crearán (si son nuevos) o se actualizarán (si ya existen)`);
+    
+    for (let i = 0; i < printfulProducts.length; i++) {
+      const product = printfulProducts[i];
+      
+      try {
+        // Rate limiting: esperar 300ms cada 10 productos
+        if (i > 0 && i % 10 === 0) {
+          console.log(`  ⏸️ Pausa de rate limiting (${i}/${printfulProducts.length})`);
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        const existingProduct = await Product.findOne({ 
+          where: { idProduct: product.id },
+          transaction
+        });
+
+        if (!existingProduct) {
+          // CREAR NUEVO PRODUCTO (no existe en DB)
+          console.log(`  ➕ [${i + 1}/${printfulProducts.length}] CREAR NUEVO: "${product.name}" (Printful ID: ${product.id})`);
+          await processPrintfulProduct(product, transaction);
+          stats.created++;
+          
+        } else {
+          // PRODUCTO EXISTE - VERIFICAR SI HAY CAMBIOS
+          console.log(`  🔍 [${i + 1}/${printfulProducts.length}] Verificando cambios: "${product.name}" (DB ID: ${existingProduct.id})`);
+          const hasChanges = await checkProductChanges(existingProduct, product);
+          
+          if (hasChanges) {
+            console.log(`  🔄 [${i + 1}/${printfulProducts.length}] ACTUALIZAR: "${product.name}" (cambios detectados)`);
+            await processPrintfulProduct(product, transaction);
+            stats.updated++;
+          } else {
+            console.log(`  ✅ [${i + 1}/${printfulProducts.length}] SIN CAMBIOS: "${product.name}" (producto idéntico)`);
+            stats.skipped++;
+          }
+        }
         
-      } else if ( existingProduct.title !== product.name                  || 
-                  existingProduct.state !== productCompareState(product)  || 
-                  existingProduct.price_soles !== productDetailSyncPrice(product) ) {
-       
-        // Si ya existe, podemos comparar campos críticos para ver si hubo cambios.
-        // Por ejemplo, si Printful provee un campo "updated" o "modified", lo compararíamos.
-        // Aquí mostramos una comparación simple con el título y el precio (puedes ampliarla según tus necesidades)
-       
-        // Si detectamos diferencias, procesamos el producto para actualizarlo
-        await processPrintfulProduct(product);
-      } else {
-          console.log(`Producto ${product.id} sin cambios, se omite la actualización.`);
+      } catch (error) {
+        console.error(`  ❌ Error procesando producto ${product.id}:`, error.message);
+        stats.errors.push({
+          type: 'PROCESS',
+          productId: product.id,
+          productName: product.name,
+          message: error.message
+        });
       }
     }
-  } catch ( error ) {
-    console.log("Error al sincronizar productos de Printful", error);
-    throw new Error('Error al sincronizar productos de Printful');
+
+    console.log(`✅ [STEP 5] Procesamiento completado`);
+    console.log(`   • Creados: ${stats.created}`);
+    console.log(`   • Actualizados: ${stats.updated}`);
+    console.log(`   • Sin cambios: ${stats.skipped}`);
+
+    // 6️⃣ COMMIT TRANSACCIÓN
+    console.log('💾 [STEP 6] Realizando commit de transacción...');
+    await transaction.commit();
+    console.log('✅ [STEP 6] Transacción completada exitosamente');
+    
+    // 7️⃣ VALIDAR INTEGRIDAD
+    console.log('🔍 [STEP 7] Validando integridad de base de datos...');
+    await validateDatabaseIntegrity();
+    console.log('✅ [STEP 7] Validación completada');
+
+    // 8️⃣ RETORNAR ESTADÍSTICAS
+    console.log('📊 [RESUMEN FINAL]');
+    console.log(`   Total procesados: ${stats.total}`);
+    console.log(`   ✅ Creados: ${stats.created}`);
+    console.log(`   🔄 Actualizados: ${stats.updated}`);
+    console.log(`   🗑️ Eliminados: ${stats.deleted}`);
+    console.log(`   ⏭️ Sin cambios: ${stats.skipped}`);
+    console.log(`   ❌ Errores: ${stats.errors.length}`);
+
+    return stats;
+
+  } catch (error) {
+    // 9️⃣ ROLLBACK EN CASO DE ERROR
+    if (transaction) {
+      try {
+        await transaction.rollback();
+        console.error('🔙 Rollback realizado debido a error crítico');
+      } catch (rollbackError) {
+        console.error('❌ Error durante rollback:', rollbackError);
+      }
+    }
+    
+    console.error('❌ Error crítico en sincronización:', error);
+    throw new Error(`Error en sincronización Printful: ${error.message}`);
   }
 };
 
@@ -143,6 +260,179 @@ const productDetailSyncPrice = (product) => {
 };
 
 
+/**
+ * Verifica si un producto tiene cambios que requieren actualización
+ * Compara: título, estado, precio, tags
+ */
+const checkProductChanges = async (existingProduct, printfulProduct) => {
+  try {
+    // 1. Comparar título
+    if (existingProduct.title !== printfulProduct.name) {
+      console.log(`    🔄 Cambio detectado: título "${existingProduct.title}" → "${printfulProduct.name}"`);
+      return true;
+    }
+    
+    // 2. Comparar estado (ignored)
+    const newState = productCompareState(printfulProduct);
+    if (existingProduct.state !== newState) {
+      console.log(`    🔄 Cambio detectado: estado ${existingProduct.state} → ${newState}`);
+      return true;
+    }
+    
+    // 3. Obtener detalles del producto para comparar precio y tags
+    const productDetail = await getPrintfulProductDetail(printfulProduct.id);
+    
+    // 4. Comparar precio
+    const newPrice = productDetail.sync_variants[0]?.retail_price;
+    if (existingProduct.price_soles !== newPrice) {
+      console.log(`    🔄 Cambio detectado: precio ${existingProduct.price_soles} → ${newPrice}`);
+      return true;
+    }
+    
+    // 5. Comparar tags (colores)
+    const newTags = JSON.stringify(
+      await removeRepeatedColors(
+        productDetail.sync_variants.map(v => v.color).filter(Boolean)
+      )
+    );
+    
+    if (existingProduct.tags !== newTags) {
+      console.log(`    🔄 Cambio detectado: tags modificados`);
+      return true;
+    }
+    
+    // 6. Comparar cantidad de variantes
+    const existingVariantsCount = await Variedad.count({
+      where: { productId: existingProduct.id }
+    });
+    
+    if (existingVariantsCount !== productDetail.sync_variants.length) {
+      console.log(`    🔄 Cambio detectado: variantes ${existingVariantsCount} → ${productDetail.sync_variants.length}`);
+      return true;
+    }
+    
+    // No hay cambios detectados
+    return false;
+    
+  } catch (error) {
+    console.error(`    ❌ Error verificando cambios para producto ${printfulProduct.id}:`, error.message);
+    // En caso de error, mejor actualizar por seguridad
+    return true;
+  }
+};
+
+
+/**
+ * Valida la integridad de la base de datos después de la sincronización
+ * Detecta: productos sin variantes, variantes sin archivos, categorías huérfanas
+ */
+const validateDatabaseIntegrity = async () => {
+  const issues = [];
+  
+  try {
+    // 1️⃣ Verificar productos sin variantes
+    const productsWithoutVariants = await sequelize.query(`
+      SELECT p.id, p.title, p.idProduct
+      FROM products p
+      LEFT JOIN variedades v ON v.productId = p.id
+      WHERE v.id IS NULL
+      AND p.idProduct IS NOT NULL
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (productsWithoutVariants.length > 0) {
+      console.warn(`⚠️ ${productsWithoutVariants.length} productos sin variantes detectados`);
+      issues.push({
+        type: 'PRODUCTS_WITHOUT_VARIANTS',
+        count: productsWithoutVariants.length,
+        products: productsWithoutVariants.map(p => ({ id: p.id, title: p.title }))
+      });
+    }
+
+    // 2️⃣ Verificar variantes sin archivos
+    const variedadesWithoutFiles = await sequelize.query(`
+      SELECT v.id, v.sku, v.productId
+      FROM variedades v
+      LEFT JOIN files f ON f.varietyId = v.id
+      WHERE f.id IS NULL
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (variedadesWithoutFiles.length > 0) {
+      console.warn(`⚠️ ${variedadesWithoutFiles.length} variedades sin archivos detectadas`);
+      issues.push({
+        type: 'VARIANTS_WITHOUT_FILES',
+        count: variedadesWithoutFiles.length
+      });
+    }
+
+    // 3️⃣ Verificar y limpiar categorías huérfanas
+    const orphanCategories = await sequelize.query(`
+      SELECT c.id, c.title
+      FROM categories c
+      LEFT JOIN products p ON p.categoryId = c.id
+      WHERE p.id IS NULL
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (orphanCategories.length > 0) {
+      console.warn(`⚠️ ${orphanCategories.length} categorías sin productos detectadas`);
+      console.log(`🧹 Eliminando categorías huérfanas...`);
+      
+      for (const cat of orphanCategories) {
+        try {
+          await Categorie.destroy({ where: { id: cat.id } });
+          console.log(`  ✅ Categoría eliminada: ${cat.title}`);
+        } catch (error) {
+          console.error(`  ❌ Error eliminando categoría ${cat.id}:`, error.message);
+        }
+      }
+      
+      issues.push({
+        type: 'ORPHAN_CATEGORIES_CLEANED',
+        count: orphanCategories.length
+      });
+    }
+
+    // 4️⃣ Verificar productos duplicados (mismo idProduct)
+    const duplicateProducts = await sequelize.query(`
+      SELECT idProduct, COUNT(*) as count
+      FROM products
+      WHERE idProduct IS NOT NULL
+      GROUP BY idProduct
+      HAVING COUNT(*) > 1
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    if (duplicateProducts.length > 0) {
+      console.error(`❌ ${duplicateProducts.length} productos duplicados detectados!`);
+      issues.push({
+        type: 'DUPLICATE_PRODUCTS',
+        count: duplicateProducts.length,
+        duplicates: duplicateProducts
+      });
+    }
+
+    // Resumen de validación
+    if (issues.length === 0) {
+      console.log('✅ No se detectaron problemas de integridad');
+    } else {
+      console.log(`⚠️ Se detectaron ${issues.length} tipos de problemas de integridad`);
+    }
+
+    return issues;
+    
+  } catch (error) {
+    console.error('❌ Error en validación de integridad:', error);
+    return [];
+  }
+};
+
+
 /*
  * Esta función procesa un producto de Printful.
  * Obtiene detalles del producto desde Printful usando su ID.
@@ -150,21 +440,19 @@ const productDetailSyncPrice = (product) => {
  * Obtiene o crea el producto en la base de datos local.
  * Crea o actualiza variantes y galerías del producto.
  */
-const processPrintfulProduct = async (product) => {
+const processPrintfulProduct = async (product, transaction) => {
   try {
-    
     const productDetail = await getPrintfulProductDetail(product.id);
-    const category = await getOrCreateCategory( productDetail );
-    const existingProduct = await getOrCreateProduct( product, productDetail, category );
+    const category = await getOrCreateCategory(productDetail, transaction);
+    const existingProduct = await getOrCreateProduct(product, productDetail, category, transaction);
 
-    if ( existingProduct ) {
-      await createOrUpdateVariants( existingProduct.id, productDetail.sync_variants );
+    if (existingProduct) {
+      await createOrUpdateVariants(existingProduct.id, productDetail.sync_variants, transaction);
     }
-    console.log(`Procesando producto: ${product.id} - ${product.name}`);
 
-  } catch ( error ) {
-    console.error('Error processing Printful product:', error);
-    throw new Error('Error processing Printful product');
+  } catch (error) {
+    console.error(`Error processing Printful product ${product.id}:`, error);
+    throw new Error(`Error processing Printful product: ${error.message}`);
   }
 };
 
@@ -174,16 +462,17 @@ const processPrintfulProduct = async (product) => {
  * Si no existe, la crea.
  * Devuelve la categoría existente o recién creada.
  */
-const getOrCreateCategory = async (productDetail) => {
+const getOrCreateCategory = async (productDetail, transaction) => {
   const categoryResponse = await getPrintfulCategory(productDetail.sync_variants[0].main_category_id);
   const category = categoryResponse.category;
 
   let existingCategory = await Categorie.findOne({
-    where: { title: category.title }
+    where: { title: category.title },
+    transaction
   });
 
-  if ( !existingCategory ) {
-    existingCategory = await createCategory(category);
+  if (!existingCategory) {
+    existingCategory = await createCategory(category, transaction);
   }
 
   return existingCategory;
@@ -193,7 +482,7 @@ const getOrCreateCategory = async (productDetail) => {
  * Crea una nueva categoría en la base de datos local.
  * Descarga y guarda la imagen de la categoría si está disponible.
  */
-const createCategory = async (category) => {
+const createCategory = async (category, transaction) => {
   let portada_name = '';
 
   if (category.image_url) {
@@ -214,24 +503,27 @@ const createCategory = async (category) => {
     title: category.title,
     imagen: portada_name,
     state: 1,
-  });
+  }, { transaction });
 };
 
 
 // Obtiene o crea un producto solo si es necesario
-const getOrCreateProduct = async (product, productDetail, category) => {
-  let existingProduct = await Product.findOne({ where: { idProduct: product.id } });
+const getOrCreateProduct = async (product, productDetail, category, transaction) => {
+  let existingProduct = await Product.findOne({ 
+    where: { idProduct: product.id },
+    transaction
+  });
 
   if (!existingProduct) {
-    return await createProduct(product, productDetail, category);
+    return await createProduct(product, productDetail, category, transaction);
   }
 
-  return await updateProductIfNeeded(existingProduct, product, productDetail, category);
+  return await updateProductIfNeeded(existingProduct, product, productDetail, category, transaction);
 };
 
 
 // Crea un producto si no existe
-const createProduct = async (product, productDetail, category) => {
+const createProduct = async (product, productDetail, category, transaction) => {
   const portada_name = await handleProductImage(product.thumbnail_url);
 
   // Tomamos el variant_id de la primera variante
@@ -244,10 +536,7 @@ const createProduct = async (product, productDetail, category) => {
   const description_en = catalogResponse.product?.description || "Descripción no disponible";
 
   // --- 🔥 DESCRIPCIÓN AUTOMÁTICA PERSONALIZADA ---
-  //let description_es = generarDescripcionPorCategoria(category.title);
-
-  const description_es = generarDescripcionPorCategoria(category.title, 'es'); // español o 'en' si necesitas inglés
-  //const description_en = generarDescripcionPorCategoria(category.title, 'en');
+  const description_es = generarDescripcionPorCategoria(category.title, 'es');
 
   return await Product.create({
     idProduct: product.id,
@@ -266,7 +555,7 @@ const createProduct = async (product, productDetail, category) => {
     imagen: "tu_imagen",
     type_inventario: 2,
     tags: JSON.stringify(await removeRepeatedColors(productDetail.sync_variants.map(variant => variant.color).filter(Boolean))),
-  });
+  }, { transaction });
 };
 
 
@@ -299,7 +588,7 @@ const createProduct = async (product, productDetail, category) => {
 // }
 
 // Actualiza un producto solo si hay cambios
-const updateProductIfNeeded = async (existingProduct, product, productDetail, category) => {
+const updateProductIfNeeded = async (existingProduct, product, productDetail, category, transaction) => {
   let updates = {};
 
   if (existingProduct.title !== product.name) updates.title = product.name;
@@ -322,7 +611,7 @@ const updateProductIfNeeded = async (existingProduct, product, productDetail, ca
   if (portada_name && existingProduct.portada !== portada_name) updates.portada = portada_name;
 
   if (Object.keys(updates).length > 0) {
-    await existingProduct.update(updates);
+    await existingProduct.update(updates, { transaction });
   }
 
   return existingProduct;
@@ -361,9 +650,15 @@ const handleProductImage = async (imageUrl, existingImageName = null) => {
   Optimiza la actualización de opciones: En lugar de recrearlas innecesariamente.
   Mejora la gestión de galerías: Evita inserciones redundantes.
  ***/
-const createOrUpdateVariants = async (productId, syncVariants) => {
-  const existingVariants = await Variedad.findAll({ where: { productId } });
-  const existingGalleries = await Galeria.findAll({ where: { productId } });
+const createOrUpdateVariants = async (productId, syncVariants, transaction) => {
+  const existingVariants = await Variedad.findAll({ 
+    where: { productId },
+    transaction
+  });
+  const existingGalleries = await Galeria.findAll({ 
+    where: { productId },
+    transaction
+  });
   const variantMap = new Map(existingVariants.map(v => [v.sku, v]));
   const newGalleryImages = new Set();
 
@@ -377,7 +672,7 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
       });
       
       if (Object.keys(variantUpdates).length > 0) {
-        await existingVariant.update(variantUpdates);
+        await existingVariant.update(variantUpdates, { transaction });
       }
     } else {
       // CREAR NUEVA VARIANTE
@@ -397,7 +692,7 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
         retail_price: variant.retail_price,
         sku: variant.sku,
         currency: variant.currency,
-      });
+      }, { transaction });
 
       // CREAR PRODUCTO VARIANTE
       await ProductVariants.create({
@@ -406,7 +701,7 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
         image: variant.product?.image,
         name: newVariant.name,
         varietyId: newVariant.id
-      });
+      }, { transaction });
 
       // CREAR ARCHIVOS ASOCIADOS A LA VARIANTE
       for ( const file of variant.files ) {
@@ -431,7 +726,7 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
               message         : file.message,
               varietyId       : newVariant.id,
               optionVarietyId : newVariant.variant_id,
-            });
+            }, { transaction });
         } catch ( error ) {
           console.error('Error creating file record:', error, file);
         }
@@ -443,7 +738,7 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
           idOption  : option.id     ,
           value     : option.value  ,
           varietyId : newVariant.id ,
-        });
+        }, { transaction });
       }
     }
 
@@ -454,7 +749,11 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
         newGalleryImages.add(galleryName);
 
         if (!existingGalleries.some(g => g.imagen === galleryName)) {
-          await Galeria.create({ imagen: galleryName, color: variant.color || 'no hay color', productId });
+          await Galeria.create({ 
+            imagen: galleryName, 
+            color: variant.color || 'no hay color', 
+            productId 
+          }, { transaction });
         }
       }
     }
@@ -464,17 +763,17 @@ const createOrUpdateVariants = async (productId, syncVariants) => {
   for (const existingVariant of existingVariants) {
     if (!syncVariants.some(v => v.sku === existingVariant.sku)) {
       // Eliminar opciones asociadas antes de eliminar la variedad
-      await Option.destroy({ where: { varietyId: existingVariant.id } });
-      await ProductVariants.destroy({ where: { varietyId: existingVariant.id } });
-      await File.destroy({ where: { varietyId: existingVariant.id } });
-      await existingVariant.destroy();
+      await Option.destroy({ where: { varietyId: existingVariant.id }, transaction });
+      await ProductVariants.destroy({ where: { varietyId: existingVariant.id }, transaction });
+      await File.destroy({ where: { varietyId: existingVariant.id }, transaction });
+      await existingVariant.destroy({ transaction });
     }
   }
 
   // ELIMINAR GALERÍAS QUE YA NO ESTÁN ASOCIADAS
   for (const existingGallery of existingGalleries) {
     if (!newGalleryImages.has(existingGallery.imagen)) {
-      await existingGallery.destroy();
+      await existingGallery.destroy({ transaction });
     }
   }
 
@@ -516,58 +815,59 @@ const clearLocalDatabaseIfNoProviderProducts = async (printfulProducts) => {
  * los archivos (File) asociados a esa variedad.
  * También llama a deleteOptionsForVariant(variety.id) para eliminar todas las opciones (Option) asociadas a esa variedad.
 */
-const deleteProductAndRelatedComponents = async (product) => {
+const deleteProductAndRelatedComponents = async (product, transaction) => {
   try {
     // Buscar la categoría asociada (si existe)
     const category = await Categorie.findOne({ 
-      where: { id: product.categoryId } 
+      where: { id: product.categoryId },
+      transaction
     });
 
     // 🛒 Eliminar productos del carrito asociados
-    await Cart.destroy({ where: { productId: product.id } });
+    await Cart.destroy({ where: { productId: product.id }, transaction });
 
    // 🧩 Buscar y eliminar las variedades asociadas
     const varieties = await Variedad.findAll({
-      where: { productId: product.id }
+      where: { productId: product.id },
+      transaction
     });
 
     for ( const variety of varieties ) {
-      await deleteVarietyAndRelatedFiles( variety );
-      await deleteOptionsForVariant( variety );
-      await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id } });
-      await ProductVariants.destroy({ where: { varietyId: variety.id } });
+      await deleteVarietyAndRelatedFiles(variety, transaction);
+      await deleteOptionsForVariant(variety, transaction);
+      await SaleDetail.destroy({ where: { productId: product.id, variedadId: variety.id }, transaction });
+      await ProductVariants.destroy({ where: { varietyId: variety.id }, transaction });
     }
 
     // 💖 Eliminar los favoritos asociado
-    const wishlists = await Wishlist.findAll({ where: { productId: product.id }});
+    const wishlists = await Wishlist.findAll({ where: { productId: product.id }, transaction });
     if (wishlists) {
       for (const wishlist of wishlists) {
-        await wishlist.destroy();
+        await wishlist.destroy({ transaction });
       }
     }
 
     // 🖼️ Eliminar las galerías asociadas
-    const galleries = await Galeria.findAll({ where: { productId: product.id } });
+    const galleries = await Galeria.findAll({ where: { productId: product.id }, transaction });
     for ( const gallery of galleries ) {
-      await gallery.destroy();
+      await gallery.destroy({ transaction });
     }
 
     // 🧹 Eliminar finalmente el producto
-    const count = await Product.destroy({ where: { idProduct: product.idProduct } });
+    await Product.destroy({ where: { idProduct: product.idProduct }, transaction });
 
     // 🗂️ Verificar si la categoría sigue siendo usada
     if (category) {
       const productsInCategory = await Product.findAll({
-        where: { categoryId: category.id }
+        where: { categoryId: category.id },
+        transaction
       });
 
       if (productsInCategory.length === 0) {
-        await category.destroy();
-        console.log(`🗂️ Categoría "${category.title}" eliminada (sin productos asociados).`);
+        await category.destroy({ transaction });
+        console.log(`  🗂️ Categoría "${category.title}" eliminada (sin productos asociados)`);
       }
     }
-
-    console.log(`✅ Producto "${product.title}" y sus relaciones eliminados correctamente.`);
 
   } catch (error) {
     console.error(`❌ Error eliminando producto ${product.id}:`, error);
@@ -577,21 +877,22 @@ const deleteProductAndRelatedComponents = async (product) => {
 /*
  * Busca todos los archivos (File) que están asociados a la variedad (variety.id)
  */
-const deleteVarietyAndRelatedFiles = async (variety) => {
+const deleteVarietyAndRelatedFiles = async (variety, transaction) => {
   try {
     // Primero eliminar ProductVariants asociados
     await ProductVariants.destroy({
-      where: { varietyId: variety.id }
+      where: { varietyId: variety.id },
+      transaction
     });
 
     // Luego eliminar Files asociados
-    const files = await File.findAll({ where: { varietyId: variety.id } });
+    const files = await File.findAll({ where: { varietyId: variety.id }, transaction });
     for (const file of files) {
-      await file.destroy();
+      await file.destroy({ transaction });
     }
 
     // Finalmente eliminar la variedad
-    await variety.destroy();
+    await variety.destroy({ transaction });
 
   } catch (error) {
     console.error(`Error eliminando variedad ${variety.id}:`, error);
@@ -602,16 +903,17 @@ const deleteVarietyAndRelatedFiles = async (variety) => {
 /*
  * Este método elimina todas las opciones (Option) asociadas a una variante específica
  */
-const deleteOptionsForVariant = async (variety) => {
+const deleteOptionsForVariant = async (variety, transaction) => {
   try {
     const options = await Option.findAll({
       where: {
         varietyId: variety.id
-      }
+      },
+      transaction
     });
 
     for ( const option of options ) {
-      await option.destroy();
+      await option.destroy({ transaction });
     }
 
     // ELIMINAR LA VARIEDAD FINALMENTE
