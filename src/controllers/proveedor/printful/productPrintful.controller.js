@@ -39,13 +39,46 @@ let idMapping = { products: {}, variedades: {} };
 
 export const list = async( req, res ) => {
   try{
+    // Si se solicita con ?source=db, devolver productos de la base de datos
+    if (req.query.source === 'db') {
+      const dbProducts = await Product.findAll({
+        where: {
+          idProduct: {
+            [Op.ne]: null // Productos que tienen idProduct (sincronizados con Printful)
+          }
+        },
+        include: [
+          {
+            model: Variedad,
+            as: 'variedades',
+            where: {
+              variant_id: {
+                [Op.ne]: null
+              }
+            },
+            required: false,
+            attributes: ['id', 'variant_id', 'name', 'valor', 'sku', 'retail_price']
+          }
+        ],
+        attributes: ['id', 'title', 'idProduct', 'portada']
+      });
+
+      return res.status(200).json({
+        products: dbProducts
+      });
+    }
+
+    // Por defecto, devolver productos desde Printful API
     const products = await getPrintfulProductsService();
     res.status( 200 ).json({
         products: products,
     });
   } catch (error) {
     console.error('Error al traer los productos de Printful:', error);
-    throw new Error('Error al traer los productos de Printful');
+    res.status(500).json({
+      message: 'Error al traer los productos de Printful',
+      error: error.message
+    });
   }
 }
 
