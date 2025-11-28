@@ -546,7 +546,22 @@ export const register = async (req, res) => {
 // Crear una venta
 const createSale = async (saleData) => {
     saleData.userId = saleData.user;
-    return await Sale.create(saleData);
+    
+    // Si no viene n_transaction o es genérico (PAYPAL_xxx, STRIPE_xxx), crear uno temporal
+    if (!saleData.n_transaction || saleData.n_transaction.startsWith('PAYPAL_') || saleData.n_transaction.startsWith('STRIPE_')) {
+        saleData.n_transaction = 'temp';
+    }
+    
+    const sale = await Sale.create(saleData);
+    
+    // Actualizar con ID amigable: sale_{id}_{timestamp}
+    if (saleData.n_transaction === 'temp') {
+        const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
+        await sale.update({ n_transaction: friendlyTransactionId });
+        console.log(`✅ [Sale] Transaction ID generado: ${friendlyTransactionId}`);
+    }
+    
+    return sale;
 };
 
 // Crear una dirección de venta

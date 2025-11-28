@@ -54,8 +54,9 @@ function normalizeForSearch(str) {
   return str
     .toString()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '') // quitar acentos
     .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')       // quitar caracteres no alfanuméricos
     .trim();
 }
 

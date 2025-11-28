@@ -248,16 +248,21 @@ export const stripeWebhook = async (req, res) => {
   const guestId = Number(session.metadata.guestId) || null;
 
   try {
-    // Crear venta
+    // Crear venta con ID amigable
     const sale = await Sale.create({
       userId,
       guestId,
       currency_payment: session.currency,
       method_payment: 'STRIPE',
-      n_transaction: `STRIPE_${session.id}`,
+      n_transaction: 'temp', // Se actualizará después de obtener el ID
       stripeSessionId: session.id,
       total: (session.amount_total ?? 0) / 100,
     });
+
+    // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}
+    const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
+    await sale.update({ n_transaction: friendlyTransactionId });
+    console.log(`✅ [Stripe] Transaction ID generado: ${friendlyTransactionId}`);
 
     // Crear detalles del carrito
     let cartItems = [];

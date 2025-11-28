@@ -43,6 +43,23 @@ import {
     getWebhookStats
 } from "../controllers/proveedor/printful/webhookPrintful.controller.js";
 
+import {
+    syncOrderToPrintful
+} from "../controllers/proveedor/printful/autoSyncPrintful.controller.js";
+
+import {
+    createTestReceipt,
+    updateReceiptStatus
+} from "../controllers/helpers/testReceipt.controller.js";
+
+import {
+    createTestSale
+} from "../controllers/helpers/testSale.controller.js";
+
+import {
+    resetTestSale
+} from "../controllers/helpers/resetSale.controller.js";
+
 const router = Router();
 
 // Product routes
@@ -58,6 +75,9 @@ router.delete("/orders/:id", auth.verifyEcommerce, cancelOrder);
 router.post("/orders/:id/retry", auth.verifyEcommerce, retryOrder);
 router.get("/orders/:id/shipments", auth.verifyEcommerce, getOrderShipments);
 router.post("/orders/estimate-costs", auth.verifyEcommerce, estimateOrderCosts);
+
+// 🆕 AUTO-SYNC: Receipt → Sale → Printful (temporalmente sin auth para testing)
+router.post("/sync-order", syncOrderToPrintful);
 
 // Analytics routes
 router.get("/analytics/financial", auth.verifyEcommerce, getFinancialStats);
@@ -75,6 +95,12 @@ router.get("/stock/discontinued", auth.verifyEcommerce, getDiscontinuedProducts)
 router.get("/stock/price-changes", auth.verifyEcommerce, getPriceChanges);
 router.post("/stock/update/:id", auth.verifyEcommerce, updateProduct);
 router.get("/stock/stats", auth.verifyEcommerce, getStockStats);
+
+// 🧪 TEST ENDPOINTS (temporales - eliminar en producción)
+router.post("/test/create-sale", createTestSale);
+router.post("/test/create-receipt", createTestReceipt);
+router.put("/test/receipt/:id/status", updateReceiptStatus);
+router.post("/test/reset-sale", resetTestSale);
 
 // Webhook routes (⚠️ Sin autenticación - Printful necesita acceso público)
 router.post("/webhook", handleWebhook);

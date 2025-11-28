@@ -165,7 +165,12 @@
         <!-- Header -->
         <div class="header">
             <h1>✅ ¡Pedido Confirmado!</h1>
-            <div class="order-number">Orden #<%= order.id %></div>
+            <% if (order.printfulOrderId) { %>
+                <div class="order-number">#PF<%= order.printfulOrderId %></div>
+                <div class="order-number" style="font-size: 12px; opacity: 0.8;">(#<%= order.n_transaction %>)</div>
+            <% } else { %>
+                <div class="order-number">#<%= order.n_transaction %></div>
+            <% } %>
         </div>
 
         <!-- Content -->
@@ -179,7 +184,7 @@
             <div class="info-section">
                 <h3 style="color: #2d3436; margin: 0 0 20px;">📦 Detalles de tu pedido</h3>
                 <div class="info-grid">
-                    <div class="info-card">
+                    <div class="info-card" style="margin-bottom: 1rem;">
                         <h3>Dirección de envío:</h3>
                         <p><strong><%= address_sale.name %></strong></p>
                         <p><%= address_sale.address %></p>
@@ -187,7 +192,7 @@
                         <p>Tel: +34 <%= address_sale.telefono %></p>
                     </div>
                     <div class="info-card">
-                        <h3>Llegada estimada:</h3>
+                        <h3 style="margin-bottom: 0;">Llegada estimada:</h3>
                         <% if (order.minDeliveryDate && order.maxDeliveryDate) { %>
                             <% if (order.minDeliveryDate === order.maxDeliveryDate) { %>
                                 <p>Tu pedido llegará el:</p>
@@ -245,27 +250,27 @@
             <div class="summary-section">
                 <h3 style="color: #2d3436; margin: 0 0 15px;">💳 Resumen del pago</h3>
                 <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span><%= order.originalSubtotal.toFixed(2) %> <%= order.currency_payment %></span>
+                    <span>Subtotal: </span>
+                    <span><%= order.originalSubtotal.toFixed(2) %> €</span>
                 </div>
                 <% if (order.totalDiscount > 0) { %>
                 <div class="summary-row" style="color: #e74c3c;">
-                    <span><strong>Descuento aplicado:</strong></span>
+                    <span><strong>Descuento aplicado: </strong></span>
                     <span><strong>-<%= order.totalDiscount.toFixed(2) %> €</strong></span>
                 </div>
                 <% } %>
                 <div class="summary-row">
-                    <span>Envío:</span>
+                    <span>Envío: </span>
                     <span>0.00 €</span>
                 </div>
                 <div class="summary-row">
-                    <span style="font-size: 14px; color: #636e72;">Método de pago:</span>
+                    <span style="font-size: 14px; color: #636e72;">Método de pago: </span>
                     <span style="font-size: 14px; color: #636e72;"><%= order.method_payment %></span>
                 </div>
                 <div class="summary-total">
                     <div style="display: flex; justify-content: space-between;">
-                        <span>TOTAL</span>
-                        <span><%= order.total %> <%= order.currency_payment %></span>
+                        <span>TOTAL: </span>
+                        <span><%= order.total %> €</span>
                     </div>
                 </div>
             </div>
