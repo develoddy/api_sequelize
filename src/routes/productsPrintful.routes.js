@@ -61,6 +61,10 @@ import {
 } from "../controllers/helpers/resetSale.controller.js";
 
 import {
+    runRetryQueueNow
+} from "../cron/cronJobs.js";
+
+import {
     testSendShippedEmail,
     testSimulatePackageShipped,
     testSendPrintingEmail,
@@ -70,6 +74,15 @@ import {
     testSendDeliveredEmail,
     testSendDailyReport
 } from "../controllers/helpers/testEmailNotifications.controller.js";
+
+import {
+    getFailedOrders,
+    getRetryLogs,
+    retryFailedOrder,
+    cancelRetryJob,
+    editAndRetry,
+    getRetryStats
+} from "../controllers/proveedor/adminRetry.controller.js";
 
 const router = Router();
 
@@ -123,9 +136,61 @@ router.post("/test/simulate-order-failed", testSimulateOrderFailed);
 router.post("/test/send-delivered-email", testSendDeliveredEmail);
 router.post("/test/send-daily-report", testSendDailyReport);
 
+// 🧪 TEST RETRY QUEUE (Sprint 6D)
+router.post("/test/run-retry-queue", async (req, res) => {
+  try {
+    const result = await runRetryQueueNow();
+    res.json({
+      success: true,
+      message: 'Retry queue ejecutado manualmente',
+      result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error ejecutando retry queue',
+      error: error.message
+    });
+  }
+});
+
+router.get("/test/retry-stats", async (req, res) => {
+  try {
+    const { getRetryStats } = await import("../controllers/proveedor/adminRetry.controller.js");
+    await getRetryStats(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo stats',
+      error: error.message
+    });
+  }
+});
+
+router.get("/test/failed-orders", async (req, res) => {
+  try {
+    const { getFailedOrders } = await import("../controllers/proveedor/adminRetry.controller.js");
+    await getFailedOrders(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo failed orders',
+      error: error.message
+    });
+  }
+});
+
 // Webhook routes (⚠️ Sin autenticación - Printful necesita acceso público)
 router.post("/webhook", handleWebhook);
 router.get("/webhook/logs", auth.verifyEcommerce, getWebhookLogs);
 router.get("/webhook/stats", auth.verifyEcommerce, getWebhookStats);
+
+// 🆕 ADMIN RETRY MANAGEMENT (Sprint 6D)
+router.get("/admin/failed-orders", auth.verifyEcommerce, getFailedOrders);
+router.get("/admin/retry-logs/:jobId", auth.verifyEcommerce, getRetryLogs);
+router.post("/admin/retry/:saleId", auth.verifyEcommerce, retryFailedOrder);
+router.post("/admin/cancel-job/:jobId", auth.verifyEcommerce, cancelRetryJob);
+router.patch("/admin/edit-and-retry/:saleId", auth.verifyEcommerce, editAndRetry);
+router.get("/admin/retry-stats", auth.verifyEcommerce, getRetryStats);
 
 export default router;

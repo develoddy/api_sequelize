@@ -16,6 +16,7 @@ import { ReturnRequest } from './ReturnRequest.js';
 import { Inbox } from './Inbox.js';
 import { PrelaunchSubscriber } from './PrelaunchSubscriber.js';
 import { PrintfulWebhookLog } from './PrintfulWebhookLog.js';
+import RetryQueue from './RetryQueue.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE
@@ -75,3 +76,10 @@ Inbox.belongsTo(User, { foreignKey: 'userId' });
 Inbox.belongsTo(Guest, { foreignKey: 'guestId' });
 Inbox.belongsTo(Inbox, { foreignKey: 'replyToId', as: 'parent' });
 Inbox.hasMany(Inbox, { foreignKey: 'replyToId', as: 'replies' });
+
+/*
+ * RETRY QUEUE
+ * RELACION RETRY_QUEUE -> SALE
+ */
+RetryQueue.belongsTo(Sale, { foreignKey: 'saleId' });
+Sale.hasMany(RetryQueue, { foreignKey: 'saleId' });

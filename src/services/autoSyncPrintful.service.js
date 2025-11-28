@@ -10,6 +10,8 @@ import { User } from '../models/User.js';
 import { Guest } from '../models/Guest.js';
 import { createPrintfulOrderService } from './proveedor/printful/printfulService.js';
 import { sendAdminSyncFailedAlert } from './emailNotification.service.js';
+import { addToQueue } from './retryQueue.service.js';
+import { classifyError } from './errorClassification.service.js';
 
 /**
  * =====================================================================================
@@ -281,66 +283,115 @@ export const autoSyncOrderToPrintful = async (saleId) => {
     } catch (printfulError) {
       console.error(`❌ [AUTO-SYNC] Error en Printful API:`, printfulError.message);
       
-      // Guardar error en Sale
+      // ========== CLASIFICAR ERROR Y DECIDIR ACCIÓN ========== //
+      const errorClassification = classifyError(printfulError);
+      
+      console.log(`🔍 [AUTO-SYNC] Error clasificado como: ${errorClassification.errorType}`);
+      console.log(`🔍 [AUTO-SYNC] Código: ${errorClassification.errorCode}`);
+      console.log(`🔍 [AUTO-SYNC] Retryable: ${errorClassification.retryable}`);
+
+      // Determinar syncStatus según tipo de error
+      let syncStatus = 'failed';
+      if (errorClassification.errorType === 'temporal' || errorClassification.errorType === 'recoverable') {
+        syncStatus = 'pending_retry'; // Estado especial para indicar que está en cola
+      }
+
+      // Marcar Sale con el estado apropiado
       await sale.update({
-        syncStatus: 'failed',
-        errorMessage: printfulError.message,
+        syncStatus,
+        errorMessage: errorClassification.description || printfulError.message,
         printfulUpdatedAt: new Date()
       });
-      
-      // 📧 Enviar alerta al admin
-      try {
-        // Determinar datos del cliente
-        let customerName, customerEmail, customerType;
-        if (sale.user) {
-          customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
-          customerEmail = sale.user.email;
-          customerType = 'Usuario Registrado';
-        } else if (sale.guest) {
-          customerName = sale.guest.name || 'Cliente';
-          customerEmail = sale.guest.email;
-          customerType = 'Invitado';
-        }
 
-        const saleData = {
-          id: sale.id,
-          n_transaction: sale.n_transaction,
-          printfulOrderId: sale.printfulOrderId,
-          total: sale.total,
-          method_payment: sale.method_payment,
-          created: sale.createdAt,
-          customer: {
-            name: customerName,
-            email: customerEmail,
-            type: customerType
-          }
-        };
-
-        const errorData = {
-          type: 'PRINTFUL_API_ERROR',
-          message: printfulError.message,
-          retryCount: 1,
-          context: {
-            api_response: printfulError.response?.data || 'No response data',
-            timestamp: new Date().toISOString()
-          }
-        };
-
-        const emailResult = await sendAdminSyncFailedAlert(saleData, errorData, receipt);
+      // ========== AGREGAR A RETRY QUEUE SI ES RETRYABLE ========== //
+      if (errorClassification.retryable) {
+        console.log(`🔄 [AUTO-SYNC] Error es retryable. Agregando a queue...`);
         
-        if (emailResult.success) {
-          console.log(`📧 [AUTO-SYNC] Email de alerta enviado al admin`);
-        } else {
-          console.error(`❌ [AUTO-SYNC] Error enviando email de alerta: ${emailResult.error}`);
+        try {
+          const retryJob = await addToQueue(saleId, printfulError, {
+            priority: errorClassification.errorType === 'temporal' ? 1 : 0
+          });
+
+          if (retryJob) {
+            console.log(`✅ [AUTO-SYNC] Sale #${saleId} agregado a retry queue (Job #${retryJob.id})`);
+            console.log(`⏰ [AUTO-SYNC] Próximo intento en: ${retryJob.nextRetryAt.toLocaleString('es-ES')}`);
+          } else {
+            console.log(`⚠️ [AUTO-SYNC] No se agregó a queue (posiblemente ya existe job activo)`);
+          }
+        } catch (queueError) {
+          console.error('❌ [AUTO-SYNC] Error agregando a retry queue:', queueError);
         }
-      } catch (emailError) {
-        console.error('❌ [AUTO-SYNC] Error enviando email de alerta (no crítico):', emailError);
+      } else {
+        console.log(`⚠️ [AUTO-SYNC] Error tipo '${errorClassification.errorType}' no es retryable`);
+      }
+
+      // ========== ENVIAR EMAIL AL ADMIN ========== //
+      // Solo si es error crítico O si es el primer intento de un error recoverable
+      const shouldSendEmail = !errorClassification.retryable || errorClassification.errorType === 'recoverable';
+      
+      if (shouldSendEmail) {
+        try {
+          // Determinar datos del cliente
+          let customerName, customerEmail, customerType;
+          if (sale.user) {
+            customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+            customerEmail = sale.user.email;
+            customerType = 'Usuario Registrado';
+          } else if (sale.guest) {
+            customerName = sale.guest.name || 'Cliente';
+            customerEmail = sale.guest.email;
+            customerType = 'Invitado';
+          }
+
+          const saleData = {
+            id: sale.id,
+            n_transaction: sale.n_transaction,
+            printfulOrderId: sale.printfulOrderId,
+            total: sale.total,
+            method_payment: sale.method_payment,
+            created: sale.createdAt,
+            customer: {
+              name: customerName,
+              email: customerEmail,
+              type: customerType
+            }
+          };
+
+          const errorData = {
+            type: errorClassification.errorCode,
+            errorType: errorClassification.errorType,
+            message: errorClassification.description,
+            retryable: errorClassification.retryable,
+            recommendedAction: errorClassification.action,
+            retryCount: 1,
+            context: {
+              api_response: printfulError.response?.data || 'No response data',
+              timestamp: new Date().toISOString(),
+              classification: errorClassification
+            }
+          };
+
+          const emailResult = await sendAdminSyncFailedAlert(saleData, errorData, receipt);
+          
+          if (emailResult.success) {
+            console.log(`📧 [AUTO-SYNC] Email de alerta enviado al admin`);
+          } else {
+            console.error(`❌ [AUTO-SYNC] Error enviando email de alerta: ${emailResult.error}`);
+          }
+        } catch (emailError) {
+          console.error('❌ [AUTO-SYNC] Error enviando email de alerta (no crítico):', emailError);
+        }
+      } else {
+        console.log(`⏭️ [AUTO-SYNC] Email omitido (error temporal manejado por retry queue)`);
       }
       
       return {
         success: false,
-        errorType: 'PRINTFUL_ERROR',
-        message: 'Error al crear orden en Printful',
+        errorType: errorClassification.errorCode,
+        errorClassification: errorClassification.errorType,
+        retryable: errorClassification.retryable,
+        message: errorClassification.description,
+        recommendedAction: errorClassification.action,
         saleId,
         printfulError: printfulError.message
       };
