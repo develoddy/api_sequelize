@@ -60,6 +60,17 @@ import {
     resetTestSale
 } from "../controllers/helpers/resetSale.controller.js";
 
+import {
+    testSendShippedEmail,
+    testSimulatePackageShipped,
+    testSendPrintingEmail,
+    testSimulateOrderCreated,
+    testSendSyncFailedAlert,
+    testSimulateOrderFailed,
+    testSendDeliveredEmail,
+    testSendDailyReport
+} from "../controllers/helpers/testEmailNotifications.controller.js";
+
 const router = Router();
 
 // Product routes
@@ -101,6 +112,16 @@ router.post("/test/create-sale", createTestSale);
 router.post("/test/create-receipt", createTestReceipt);
 router.put("/test/receipt/:id/status", updateReceiptStatus);
 router.post("/test/reset-sale", resetTestSale);
+
+// 🧪 TEST EMAIL NOTIFICATIONS (Sprint 6B)
+router.post("/test/send-shipped-email", testSendShippedEmail);
+router.post("/test/simulate-package-shipped", testSimulatePackageShipped);
+router.post("/test/send-printing-email", testSendPrintingEmail);
+router.post("/test/simulate-order-created", testSimulateOrderCreated);
+router.post("/test/send-sync-failed-alert", testSendSyncFailedAlert);
+router.post("/test/simulate-order-failed", testSimulateOrderFailed);
+router.post("/test/send-delivered-email", testSendDeliveredEmail);
+router.post("/test/send-daily-report", testSendDailyReport);
 
 // Webhook routes (⚠️ Sin autenticación - Printful necesita acceso público)
 router.post("/webhook", handleWebhook);

@@ -204,9 +204,17 @@ async function main() {
         // -------------------------------------------
         const PORT = process.env.PORT || 3500;
 
-        server.listen(PORT, () => {
+        server.listen(PORT, async () => {
             console.log(`🚀 Server running on port ${PORT}`);
             console.log("📡 WebSockets ready");
+
+            // Inicializar cron jobs (Sprint 6B - Iteración 4)
+            try {
+                const { initCronJobs } = await import('./cron/cronJobs.js');
+                initCronJobs();
+            } catch (error) {
+                console.error('❌ Error inicializando cron jobs:', error);
+            }
         });
 
     } catch (error) {

@@ -6,7 +6,10 @@ import { Product } from '../models/Product.js';
 import { Variedad } from '../models/Variedad.js';
 import { File } from '../models/File.js';
 import { Option } from '../models/Option.js';
+import { User } from '../models/User.js';
+import { Guest } from '../models/Guest.js';
 import { createPrintfulOrderService } from './proveedor/printful/printfulService.js';
+import { sendAdminSyncFailedAlert } from './emailNotification.service.js';
 
 /**
  * =====================================================================================
@@ -85,7 +88,15 @@ export const autoSyncOrderToPrintful = async (saleId) => {
             { model: Variedad }
           ]
         },
-        { model: SaleAddress }
+        { model: SaleAddress },
+        {
+          model: User,
+          attributes: ['id', 'name', 'surname', 'email']
+        },
+        {
+          model: Guest,
+          attributes: ['id', 'name', 'email']
+        }
       ]
     });
 
@@ -276,6 +287,55 @@ export const autoSyncOrderToPrintful = async (saleId) => {
         errorMessage: printfulError.message,
         printfulUpdatedAt: new Date()
       });
+      
+      // 📧 Enviar alerta al admin
+      try {
+        // Determinar datos del cliente
+        let customerName, customerEmail, customerType;
+        if (sale.user) {
+          customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+          customerEmail = sale.user.email;
+          customerType = 'Usuario Registrado';
+        } else if (sale.guest) {
+          customerName = sale.guest.name || 'Cliente';
+          customerEmail = sale.guest.email;
+          customerType = 'Invitado';
+        }
+
+        const saleData = {
+          id: sale.id,
+          n_transaction: sale.n_transaction,
+          printfulOrderId: sale.printfulOrderId,
+          total: sale.total,
+          method_payment: sale.method_payment,
+          created: sale.createdAt,
+          customer: {
+            name: customerName,
+            email: customerEmail,
+            type: customerType
+          }
+        };
+
+        const errorData = {
+          type: 'PRINTFUL_API_ERROR',
+          message: printfulError.message,
+          retryCount: 1,
+          context: {
+            api_response: printfulError.response?.data || 'No response data',
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        const emailResult = await sendAdminSyncFailedAlert(saleData, errorData, receipt);
+        
+        if (emailResult.success) {
+          console.log(`📧 [AUTO-SYNC] Email de alerta enviado al admin`);
+        } else {
+          console.error(`❌ [AUTO-SYNC] Error enviando email de alerta: ${emailResult.error}`);
+        }
+      } catch (emailError) {
+        console.error('❌ [AUTO-SYNC] Error enviando email de alerta (no crítico):', emailError);
+      }
       
       return {
         success: false,

@@ -1,6 +1,14 @@
 import crypto from 'crypto';
 import { PrintfulWebhookLog } from "../../../models/PrintfulWebhookLog.js";
 import { Sale } from "../../../models/Sale.js";
+import { SaleDetail } from "../../../models/SaleDetail.js";
+import { SaleAddress } from "../../../models/SaleAddress.js";
+import { Product } from "../../../models/Product.js";
+import { Variedad } from "../../../models/Variedad.js";
+import { User } from "../../../models/User.js";
+import { Guest } from "../../../models/Guest.js";
+import { Receipt } from "../../../models/Receipt.js";
+import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
 
 /**
  * 🔔 Recibir y procesar webhooks de Printful
@@ -41,6 +49,10 @@ export const handleWebhook = async (req, res) => {
       switch (eventType) {
         case 'package_shipped':
           processed = await handlePackageShipped(webhookData, webhookLog);
+          break;
+
+        case 'package_delivered':
+          processed = await handlePackageDelivered(webhookData, webhookLog);
           break;
 
         case 'order_failed':
@@ -111,9 +123,19 @@ async function handlePackageShipped(data, webhookLog) {
 
   console.log(`📦 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
 
-  // Buscar por external_id (tu ID interno)
+  // Buscar por external_id con includes para email
   const sale = await Sale.findOne({
-    where: { id: externalId }
+    where: { id: externalId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'name', 'surname', 'email']
+      },
+      {
+        model: Guest,
+        attributes: ['id', 'name', 'email']
+      }
+    ]
   });
 
   if (sale) {
@@ -134,8 +156,92 @@ async function handlePackageShipped(data, webhookLog) {
     console.log(`   📍 Tracking: ${shipment.tracking_number}`);
     console.log(`   🚚 Carrier: ${shipment.carrier}`);
     
-    // TODO: Enviar email al cliente con tracking
-    // await sendShippingEmailToCustomer(sale, shipment);
+    // 📧 Enviar email al cliente con tracking
+    try {
+      // Obtener detalles completos para el email
+      const saleDetails = await SaleDetail.findAll({
+        where: { saleId: sale.id },
+        include: [
+          { 
+            model: Product,
+            attributes: ['id', 'title', 'portada']
+          },
+          { 
+            model: Variedad,
+            attributes: ['id', 'valor', 'color']
+          }
+        ]
+      });
+
+      const saleAddress = await SaleAddress.findOne({
+        where: { saleId: sale.id }
+      });
+
+      // Determinar email y nombre del cliente
+      let customerEmail, customerName;
+      if (sale.user) {
+        customerEmail = sale.user.email;
+        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+      } else if (sale.guest) {
+        customerEmail = sale.guest.email;
+        customerName = sale.guest.name || 'Cliente';
+      }
+
+      if (customerEmail) {
+        // Preparar productos para el email
+        const products = saleDetails.map(detail => ({
+          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+          title: detail.product.title,
+          quantity: detail.cantidad,
+          variant: detail.variedad ? detail.variedad.valor : null
+        }));
+
+        // Preparar datos para el email
+        const emailData = {
+          customer: {
+            name: customerName,
+            email: customerEmail
+          },
+          order: {
+            printfulOrderId: sale.printfulOrderId,
+            n_transaction: sale.n_transaction,
+            created: sale.createdAt,
+            total: sale.total,
+            currency: sale.currency_payment || 'EUR'
+          },
+          shipment: {
+            trackingNumber: shipment.tracking_number,
+            trackingUrl: shipment.tracking_url,
+            carrier: shipment.carrier,
+            service: shipment.service || 'Standard',
+            estimatedDelivery: shipment.estimated_delivery || null,
+            shippedDate: shipment.shipped_at || new Date()
+          },
+          products: products,
+          address: {
+            name: saleAddress?.name || customerName,
+            address: saleAddress?.address || '',
+            ciudad: saleAddress?.ciudad || '',
+            region: saleAddress?.region || '',
+            telefono: saleAddress?.telefono || ''
+          }
+        };
+
+        // Enviar email
+        const emailResult = await sendOrderShippedEmail(emailData);
+        
+        if (emailResult.success) {
+          console.log(`📧 [WEBHOOK] Email enviado a ${customerEmail}`);
+        } else {
+          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+        }
+      } else {
+        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
+      }
+    } catch (emailError) {
+      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
+      // No fallar el webhook por error de email
+    }
     
     return true; // Procesado exitosamente
     
@@ -145,6 +251,150 @@ async function handlePackageShipped(data, webhookLog) {
     // Actualizar el log actual como orphan en lugar de crear uno nuevo
     await webhookLog.update({
       event_type: `orphan_package_shipped`,
+      event_data: {
+        ...data,
+        _orphan_metadata: {
+          external_id: externalId,
+          printful_order_id: printfulOrderId,
+          detected_at: new Date(),
+          reason: 'Sale not found in database'
+        }
+      },
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log (ya actualizado)
+  }
+}
+
+/**
+ * ✅ Paquete entregado - HANDLER PROFESIONAL
+ */
+async function handlePackageDelivered(data, webhookLog) {
+  console.log('✅ [WEBHOOK] Procesando package_delivered...');
+  
+  const order = data.data.order;
+  const shipment = data.data.shipment;
+  
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
+
+  console.log(`✅ External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+
+  // Buscar por external_id con includes para email
+  const sale = await Sale.findOne({
+    where: { id: externalId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'name', 'surname', 'email']
+      },
+      {
+        model: Guest,
+        attributes: ['id', 'name', 'email']
+      }
+    ]
+  });
+
+  if (sale) {
+    // ✅ Actualización: marcar como entregado
+    await sale.update({
+      printfulOrderId: printfulOrderId,
+      printfulStatus: 'fulfilled',
+      syncStatus: 'delivered',
+      deliveredAt: new Date(),
+      completedAt: new Date(),
+      printfulUpdatedAt: new Date()
+    });
+    
+    console.log(`✅ [WEBHOOK] Orden #${sale.id} marcada como entregada`);
+    console.log(`   📍 Fecha entrega: ${new Date().toLocaleDateString('es-ES')}`);
+    
+    // 📧 Enviar email al cliente
+    try {
+      // Obtener detalles completos para el email
+      const saleDetails = await SaleDetail.findAll({
+        where: { saleId: sale.id },
+        include: [
+          { 
+            model: Product,
+            attributes: ['id', 'title', 'portada']
+          },
+          { 
+            model: Variedad,
+            attributes: ['id', 'valor', 'color']
+          }
+        ]
+      });
+
+      const saleAddress = await SaleAddress.findOne({
+        where: { saleId: sale.id }
+      });
+
+      // Determinar email y nombre del cliente
+      let customerEmail, customerName;
+      if (sale.user) {
+        customerEmail = sale.user.email;
+        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+      } else if (sale.guest) {
+        customerEmail = sale.guest.email;
+        customerName = sale.guest.name || 'Cliente';
+      }
+
+      if (customerEmail) {
+        // Preparar productos para el email
+        const products = saleDetails.map(detail => ({
+          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+          title: detail.product.title,
+          quantity: detail.cantidad,
+          variant: detail.variedad ? detail.variedad.valor : null
+        }));
+
+        // Preparar datos para el email
+        const emailData = {
+          customer: {
+            name: customerName,
+            email: customerEmail
+          },
+          order: {
+            printfulOrderId: sale.printfulOrderId,
+            n_transaction: sale.n_transaction,
+            created: sale.createdAt,
+            total: sale.total,
+            currency: sale.currency_payment || 'EUR'
+          },
+          delivery: {
+            deliveredDate: new Date(),
+            address: `${saleAddress?.address || ''}, ${saleAddress?.ciudad || ''}, ${saleAddress?.region || ''}`
+          },
+          products: products
+        };
+
+        // Enviar email
+        const emailResult = await sendOrderDeliveredEmail(emailData);
+        
+        if (emailResult.success) {
+          console.log(`📧 [WEBHOOK] Email de entrega enviado a ${customerEmail}`);
+        } else {
+          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+        }
+      } else {
+        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
+      }
+    } catch (emailError) {
+      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
+      // No fallar el webhook por error de email
+    }
+    
+    return true; // Procesado exitosamente
+    
+  } else {
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan
+    await webhookLog.update({
+      event_type: `orphan_package_delivered`,
       event_data: {
         ...data,
         _orphan_metadata: {
@@ -177,7 +427,22 @@ async function handleOrderFailed(data, webhookLog) {
   console.log(`❌ External ID: ${externalId} | Error: ${reason}`);
 
   const sale = await Sale.findOne({
-    where: { id: externalId }
+    where: { id: externalId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'name', 'surname', 'email']
+      },
+      {
+        model: Guest,
+        attributes: ['id', 'name', 'email']
+      }
+    ]
+  });
+
+  // Obtener Receipt si existe
+  const receipt = await Receipt.findOne({
+    where: { saleId: externalId }
   });
 
   if (sale) {
@@ -197,8 +462,55 @@ async function handleOrderFailed(data, webhookLog) {
     const errorType = classifyError(reason);
     console.log(`   🔍 Tipo de error: ${errorType}`);
     
-    // TODO: Notificar administrador con prioridad según tipo
-    // await notifyAdminOrderFailed(sale, reason, errorType);
+    // 📧 Enviar alerta al admin
+    try {
+      // Determinar datos del cliente
+      let customerName, customerEmail, customerType;
+      if (sale.user) {
+        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+        customerEmail = sale.user.email;
+        customerType = 'Usuario Registrado';
+      } else if (sale.guest) {
+        customerName = sale.guest.name || 'Cliente';
+        customerEmail = sale.guest.email;
+        customerType = 'Invitado';
+      }
+
+      const saleData = {
+        id: sale.id,
+        n_transaction: sale.n_transaction,
+        printfulOrderId: sale.printfulOrderId,
+        total: sale.total,
+        method_payment: sale.method_payment,
+        created: sale.createdAt,
+        customer: {
+          name: customerName,
+          email: customerEmail,
+          type: customerType
+        }
+      };
+
+      const errorDataForEmail = {
+        type: errorType,
+        message: reason,
+        retryCount: 1,
+        context: {
+          webhook_error: errorData,
+          printful_order_id: printfulOrderId,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      const emailResult = await sendAdminSyncFailedAlert(saleData, errorDataForEmail, receipt);
+      
+      if (emailResult.success) {
+        console.log(`📧 [WEBHOOK] Email de alerta enviado al admin`);
+      } else {
+        console.error(`❌ [WEBHOOK] Error enviando email de alerta: ${emailResult.error}`);
+      }
+    } catch (emailError) {
+      console.error('❌ [WEBHOOK] Error enviando email de alerta (no crítico):', emailError);
+    }
     
     return true; // Procesado exitosamente
     
@@ -320,7 +632,17 @@ async function handleOrderCreated(data, webhookLog) {
   console.log(`🆕 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
 
   const sale = await Sale.findOne({
-    where: { id: externalId }
+    where: { id: externalId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'name', 'surname', 'email']
+      },
+      {
+        model: Guest,
+        attributes: ['id', 'name', 'email']
+      }
+    ]
   });
 
   if (sale) {
@@ -335,6 +657,86 @@ async function handleOrderCreated(data, webhookLog) {
     
     console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
     console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
+    
+    // 📧 Enviar email al cliente notificando que está en producción
+    try {
+      // Obtener detalles completos para el email
+      const saleDetails = await SaleDetail.findAll({
+        where: { saleId: sale.id },
+        include: [
+          { 
+            model: Product,
+            attributes: ['id', 'title', 'portada']
+          },
+          { 
+            model: Variedad,
+            attributes: ['id', 'valor', 'color']
+          }
+        ]
+      });
+
+      const saleAddress = await SaleAddress.findOne({
+        where: { saleId: sale.id }
+      });
+
+      // Determinar email y nombre del cliente
+      let customerEmail, customerName;
+      if (sale.user) {
+        customerEmail = sale.user.email;
+        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+      } else if (sale.guest) {
+        customerEmail = sale.guest.email;
+        customerName = sale.guest.name || 'Cliente';
+      }
+
+      if (customerEmail) {
+        // Preparar productos para el email
+        const products = saleDetails.map(detail => ({
+          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+          title: detail.product.title,
+          quantity: detail.cantidad,
+          variant: detail.variedad ? detail.variedad.valor : null,
+          color: detail.variedad ? detail.variedad.color : null
+        }));
+
+        // Preparar datos para el email
+        const emailData = {
+          customer: {
+            name: customerName,
+            email: customerEmail
+          },
+          order: {
+            printfulOrderId: sale.printfulOrderId,
+            n_transaction: sale.n_transaction,
+            created: sale.createdAt,
+            total: sale.total,
+            currency: sale.currency_payment || 'EUR'
+          },
+          products: products,
+          address: {
+            name: saleAddress?.name || customerName,
+            address: saleAddress?.address || '',
+            ciudad: saleAddress?.ciudad || '',
+            region: saleAddress?.region || '',
+            telefono: saleAddress?.telefono || ''
+          }
+        };
+
+        // Enviar email
+        const emailResult = await sendOrderPrintingEmail(emailData);
+        
+        if (emailResult.success) {
+          console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${customerEmail}`);
+        } else {
+          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+        }
+      } else {
+        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
+      }
+    } catch (emailError) {
+      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
+      // No fallar el webhook por error de email
+    }
     
     return true; // Procesado exitosamente
     

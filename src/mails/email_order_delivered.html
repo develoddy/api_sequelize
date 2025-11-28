@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Tu pedido ha sido entregado!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .success-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
+            animation: bounce 1s ease infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .content {
+            padding: 35px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .message {
+            background: linear-gradient(135deg, #e8f8f5 0%, #d5f4e6 100%);
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #27ae60;
+            margin: 25px 0;
+        }
+        .message h3 {
+            margin: 0 0 10px;
+            color: #27ae60;
+            font-size: 20px;
+        }
+        .message p {
+            margin: 0;
+            font-size: 15px;
+            color: #2c3e50;
+        }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        .order-info h4 {
+            margin: 0 0 15px;
+            color: #2c3e50;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #2c3e50;
+        }
+        .review-section {
+            background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 30px 0;
+            border: 2px solid #ffc107;
+        }
+        .review-section h3 {
+            margin: 0 0 15px;
+            color: #856404;
+            font-size: 22px;
+        }
+        .review-section p {
+            margin: 0 0 20px;
+            color: #856404;
+            font-size: 15px;
+        }
+        .stars {
+            font-size: 35px;
+            margin: 15px 0;
+            letter-spacing: 5px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+        .discount-code {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .discount-code h3 {
+            margin: 0 0 10px;
+            font-size: 20px;
+        }
+        .code-box {
+            background-color: white;
+            color: #2980b9;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin: 15px auto;
+            display: inline-block;
+            border: 3px dashed #2980b9;
+        }
+        .discount-details {
+            font-size: 13px;
+            margin-top: 15px;
+            opacity: 0.9;
+        }
+        .products {
+            margin: 30px 0;
+        }
+        .products h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 20px;
+        }
+        .product-details {
+            flex: 1;
+        }
+        .product-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .product-variant {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        .social-section {
+            background-color: #f8f9fa;
+            padding: 25px;
+            text-align: center;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+        .social-section h4 {
+            margin: 0 0 15px;
+            color: #2c3e50;
+        }
+        .social-icons {
+            margin-top: 15px;
+        }
+        .social-icons a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #3498db;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 25px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content { padding: 25px 20px; }
+            .product-item { flex-direction: column; text-align: center; }
+            .product-image { margin: 0 0 15px 0; }
+            .stars { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="success-icon">🎉</div>
+            <h1>¡Tu pedido ha sido entregado!</h1>
+            <p style="margin: 10px 0 0; font-size: 14px;">Esperamos que disfrutes tu compra</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                ¡Hola <%= customer.name %>! 👋
+            </div>
+
+            <!-- Success Message -->
+            <div class="message">
+                <h3>✅ Entrega Confirmada</h3>
+                <p>
+                    Tu pedido <strong>#PF<%= order.printfulOrderId %></strong> ha sido entregado exitosamente.
+                    Esperamos que todo haya llegado en perfectas condiciones.
+                </p>
+            </div>
+
+            <!-- Order Information -->
+            <div class="order-info">
+                <h4>📦 Información del Pedido</h4>
+                <div class="info-row">
+                    <span class="info-label">Pedido:</span>
+                    <span class="info-value">#PF<%= order.printfulOrderId %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transacción:</span>
+                    <span class="info-value"><%= order.n_transaction %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Fecha entrega:</span>
+                    <span class="info-value">
+                        <%= new Date(delivery.deliveredDate).toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                        }) %>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Dirección:</span>
+                    <span class="info-value"><%= delivery.address %></span>
+                </div>
+            </div>
+
+            <!-- Products -->
+            <div class="products">
+                <h4>📦 Productos Entregados</h4>
+                <% products.forEach(function(product) { %>
+                <div class="product-item">
+                    <img src="<%= product.image %>" alt="<%= product.title %>" class="product-image">
+                    <div class="product-details">
+                        <div class="product-title"><%= product.title %></div>
+                        <div class="product-variant">
+                            Cantidad: <%= product.quantity %>
+                            <% if (product.variant) { %> | <%= product.variant %><% } %>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+
+            <!-- Review Section -->
+            <div class="review-section">
+                <h3>⭐ ¿Qué te pareció tu compra?</h3>
+                <p>Tu opinión es muy importante para nosotros. Ayuda a otros clientes compartiendo tu experiencia.</p>
+                <div class="stars">⭐⭐⭐⭐⭐</div>
+                <a href="<%= process.env.URL_FRONTEND %>/review/<%= order.printfulOrderId %>" class="cta-button" target="_blank">
+                    Dejar una Reseña
+                </a>
+            </div>
+
+            <!-- Discount Code -->
+            <div class="discount-code">
+                <h3>🎁 ¡Gracias por tu compra!</h3>
+                <p>Como agradecimiento, aquí tienes un código de descuento para tu próxima compra:</p>
+                <div class="code-box">
+                    GRACIAS10
+                </div>
+                <div class="discount-details">
+                    10% de descuento en tu próximo pedido<br>
+                    Válido por 30 días
+                </div>
+            </div>
+
+            <!-- Social Section -->
+            <div class="social-section">
+                <h4>📱 Síguenos en Redes Sociales</h4>
+                <p>Mantente al día con nuestras novedades, promociones y lanzamientos.</p>
+                <div class="social-icons">
+                    <a href="https://facebook.com/tutienda" target="_blank">Facebook</a> |
+                    <a href="https://instagram.com/tutienda" target="_blank">Instagram</a> |
+                    <a href="https://twitter.com/tutienda" target="_blank">Twitter</a>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px; color: #1976d2;">💬 ¿Algún Problema?</h4>
+                <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                    Si tienes alguna pregunta o problema con tu pedido, no dudes en contactarnos.
+                    Estamos aquí para ayudarte.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p style="font-weight: 600; margin-bottom: 10px;">Gracias por confiar en nosotros 💚</p>
+            <p>Este es un correo automático, por favor no responder.</p>
+            <p style="margin-top: 15px; opacity: 0.8;">
+                © <%= new Date().getFullYear() %> Lujandev. Todos los derechos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
