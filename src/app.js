@@ -27,7 +27,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req,
 });
 
 // -------------------- Middleware para Printful Webhook --------------------
-app.post('/webhook/printful', express.json({
+app.post('/api/printful-webhook/webhook', express.json({
   limit: '50mb',
   verify: (req, res, buf) => {
     req.rawBody = buf;

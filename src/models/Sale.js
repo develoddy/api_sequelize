@@ -26,6 +26,38 @@ export const Sale = sequelize.define('sales', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  // Tracking fields
+  trackingNumber: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  trackingUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true
+  },
+  carrier: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  shippedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  // Error handling
+  errorMessage: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  // Sync status with Printful
+  syncStatus: {
+    type: DataTypes.ENUM('pending', 'failed', 'shipped', 'canceled', 'fulfilled'),
+    allowNull: true,
+    defaultValue: 'pending'
+  },
+  completedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
 }, {
   timestamps: true,
   tableName: 'sales'

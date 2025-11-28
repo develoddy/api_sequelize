@@ -14,10 +14,10 @@ export const handleWebhook = async (req, res) => {
     const signature = req.headers['x-printful-signature'];
     
     // 1️⃣ Verificar firma (opcional pero recomendado en producción)
-    // if (!verifyWebhookSignature(webhookData, signature)) {
-    //   console.error('❌ [WEBHOOK] Firma inválida');
-    //   return res.status(401).json({ error: 'Invalid signature' });
-    // }
+    if (process.env.PRINTFUL_WEBHOOK_SECRET && !verifyWebhookSignature(req, signature)) {
+      console.error('❌ [WEBHOOK] Firma inválida');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
 
     // 2️⃣ Extraer información del evento
     const eventType = webhookData.type;
@@ -40,28 +40,23 @@ export const handleWebhook = async (req, res) => {
     try {
       switch (eventType) {
         case 'package_shipped':
-          await handlePackageShipped(webhookData);
-          processed = true;
+          processed = await handlePackageShipped(webhookData, webhookLog);
           break;
 
         case 'order_failed':
-          await handleOrderFailed(webhookData);
-          processed = true;
+          processed = await handleOrderFailed(webhookData, webhookLog);
           break;
 
         case 'order_updated':
-          await handleOrderUpdated(webhookData);
-          processed = true;
+          processed = await handleOrderUpdated(webhookData, webhookLog);
           break;
 
         case 'product_synced':
-          await handleProductSynced(webhookData);
-          processed = true;
+          processed = await handleProductSynced(webhookData, webhookLog);
           break;
 
         case 'order_created':
-          await handleOrderCreated(webhookData);
-          processed = true;
+          processed = await handleOrderCreated(webhookData, webhookLog);
           break;
 
         default:
@@ -73,11 +68,13 @@ export const handleWebhook = async (req, res) => {
       error = processingError.message;
     }
 
-    // 5️⃣ Actualizar estado del log
-    await webhookLog.update({
-      processed,
-      processing_error: error
-    });
+    // 5️⃣ Actualizar estado del log solo si no fue actualizado por el handler
+    if (processed !== null) {
+      await webhookLog.update({
+        processed,
+        processing_error: error
+      });
+    }
 
     // 6️⃣ Responder a Printful (debe ser 200 OK)
     return res.status(200).json({
@@ -100,101 +97,267 @@ export const handleWebhook = async (req, res) => {
 };
 
 /**
- * 📦 Paquete enviado
+ * 📦 Paquete enviado - HANDLER PROFESIONAL
  */
-async function handlePackageShipped(data) {
+async function handlePackageShipped(data, webhookLog) {
   console.log('🚚 [WEBHOOK] Procesando package_shipped...');
   
-  const orderId = data.data.order.id;
-  const trackingNumber = data.data.shipment.tracking_number;
-  const trackingUrl = data.data.shipment.tracking_url;
-  const carrier = data.data.shipment.carrier;
+  const order = data.data.order;
+  const shipment = data.data.shipment;
+  
+  // Usar external_id para buscar (tu Sale.id)
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
 
-  // Actualizar venta en la DB
+  console.log(`📦 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+
+  // Buscar por external_id (tu ID interno)
   const sale = await Sale.findOne({
-    where: { printfulOrderId: orderId }
+    where: { id: externalId }
   });
 
   if (sale) {
+    // ✅ Actualización completa con tracking info
     await sale.update({
+      printfulOrderId: printfulOrderId,
       printfulStatus: 'shipped',
-      printfulUpdatedAt: new Date()
+      syncStatus: 'shipped',
+      trackingNumber: shipment.tracking_number,
+      trackingUrl: shipment.tracking_url,
+      carrier: shipment.carrier,
+      shippedAt: new Date(shipment.shipped_at || new Date()),
+      printfulUpdatedAt: new Date(),
+      errorMessage: null // Limpiar error anterior si existía
     });
     
-    console.log(`✅ [WEBHOOK] Orden ${orderId} marcada como enviada`);
+    console.log(`✅ [WEBHOOK] Orden #${sale.id} marcada como enviada`);
+    console.log(`   📍 Tracking: ${shipment.tracking_number}`);
+    console.log(`   🚚 Carrier: ${shipment.carrier}`);
     
     // TODO: Enviar email al cliente con tracking
+    // await sendShippingEmailToCustomer(sale, shipment);
+    
+    return true; // Procesado exitosamente
+    
   } else {
-    console.warn(`⚠️ [WEBHOOK] Orden ${orderId} no encontrada en DB`);
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan en lugar de crear uno nuevo
+    await webhookLog.update({
+      event_type: `orphan_package_shipped`,
+      event_data: {
+        ...data,
+        _orphan_metadata: {
+          external_id: externalId,
+          printful_order_id: printfulOrderId,
+          detected_at: new Date(),
+          reason: 'Sale not found in database'
+        }
+      },
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log (ya actualizado)
   }
 }
 
 /**
- * ❌ Orden fallida
+ * ❌ Orden fallida - HANDLER PROFESIONAL
  */
-async function handleOrderFailed(data) {
+async function handleOrderFailed(data, webhookLog) {
   console.log('❌ [WEBHOOK] Procesando order_failed...');
   
-  const orderId = data.data.order.id;
-  const reason = data.data.reason || 'Unknown error';
+  const order = data.data.order;
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
+  const errorData = data.data.error || {};
+  const reason = errorData.message || errorData.reason || 'Unknown error';
+
+  console.log(`❌ External ID: ${externalId} | Error: ${reason}`);
 
   const sale = await Sale.findOne({
-    where: { printfulOrderId: orderId }
+    where: { id: externalId }
   });
 
   if (sale) {
+    // ✅ Actualización con mensaje de error completo
     await sale.update({
+      printfulOrderId: printfulOrderId,
       printfulStatus: 'failed',
+      syncStatus: 'failed',
+      errorMessage: reason,
       printfulUpdatedAt: new Date()
     });
     
-    console.log(`❌ [WEBHOOK] Orden ${orderId} marcada como fallida: ${reason}`);
+    console.log(`❌ [WEBHOOK] Orden #${sale.id} marcada como fallida`);
+    console.log(`   📝 Razón: ${reason}`);
     
-    // TODO: Notificar administrador
+    // 🚨 Análisis del error para determinar acción
+    const errorType = classifyError(reason);
+    console.log(`   🔍 Tipo de error: ${errorType}`);
+    
+    // TODO: Notificar administrador con prioridad según tipo
+    // await notifyAdminOrderFailed(sale, reason, errorType);
+    
+    return true; // Procesado exitosamente
+    
+  } else {
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan en lugar de crear uno nuevo
+    await webhookLog.update({
+      event_type: `orphan_order_failed`,
+      event_data: {
+        ...data,
+        _orphan_metadata: {
+          external_id: externalId,
+          printful_order_id: printfulOrderId,
+          detected_at: new Date(),
+          reason: 'Sale not found in database'
+        }
+      },
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log (ya actualizado)
   }
 }
 
 /**
- * 🔄 Orden actualizada
+ * 🔍 Clasificar tipo de error para determinar acción
  */
-async function handleOrderUpdated(data) {
+function classifyError(errorMessage) {
+  const msg = errorMessage.toLowerCase();
+  
+  if (msg.includes('address') || msg.includes('shipping')) {
+    return 'ADDRESS_INVALID'; // Corregible por el cliente
+  }
+  if (msg.includes('payment') || msg.includes('insufficient')) {
+    return 'PAYMENT_ISSUE'; // Requiere acción financiera
+  }
+  if (msg.includes('discontinued') || msg.includes('out of stock')) {
+    return 'PRODUCT_UNAVAILABLE'; // Requiere cambio de producto
+  }
+  if (msg.includes('artwork') || msg.includes('design')) {
+    return 'ARTWORK_REJECTED'; // Requiere revisar diseño
+  }
+  
+  return 'UNKNOWN'; // Requiere revisión manual
+}
+
+/**
+ * 🔄 Orden actualizada - HANDLER PROFESIONAL
+ */
+async function handleOrderUpdated(data, webhookLog) {
   console.log('🔄 [WEBHOOK] Procesando order_updated...');
   
-  const orderId = data.data.order.id;
-  const status = data.data.order.status;
+  const order = data.data.order;
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
+  const newStatus = order.status;
+
+  console.log(`🔄 External ID: ${externalId} | Nuevo estado: ${newStatus}`);
 
   const sale = await Sale.findOne({
-    where: { printfulOrderId: orderId }
+    where: { id: externalId }
   });
 
   if (sale) {
+    const oldStatus = sale.printfulStatus;
+    
+    // Mapear estado de Printful a syncStatus
+    let syncStatus = 'pending';
+    if (newStatus === 'fulfilled') syncStatus = 'fulfilled';
+    if (newStatus === 'canceled' || newStatus === 'cancelled') syncStatus = 'canceled';
+    
+    // ✅ Actualización con detección de cambio de estado
     await sale.update({
-      printfulStatus: status,
+      printfulOrderId: printfulOrderId,
+      printfulStatus: newStatus,
+      syncStatus: syncStatus,
       printfulUpdatedAt: new Date()
     });
     
-    console.log(`✅ [WEBHOOK] Orden ${orderId} actualizada a: ${status}`);
+    // Si alcanzó estado fulfilled, marcar como completado
+    if (newStatus === 'fulfilled' && oldStatus !== 'fulfilled') {
+      await sale.update({
+        completedAt: new Date()
+      });
+      console.log(`🎉 [WEBHOOK] Orden #${sale.id} completada (fulfilled)`);
+    }
+    
+    console.log(`✅ [WEBHOOK] Orden #${sale.id}: ${oldStatus} → ${newStatus}`);
+    
+    return true; // Procesado exitosamente
+    
+  } else {
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan
+    await webhookLog.update({
+      event_type: `orphan_order_updated`,
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log
   }
 }
 
 /**
- * 🆕 Orden creada
+ * 🆕 Orden creada - HANDLER PROFESIONAL
  */
-async function handleOrderCreated(data) {
+async function handleOrderCreated(data, webhookLog) {
   console.log('🆕 [WEBHOOK] Procesando order_created...');
   
-  const orderId = data.data.order.id;
-  console.log(`✅ [WEBHOOK] Nueva orden creada: ${orderId}`);
-  
-  // En tu caso, las órdenes se crean desde el ecommerce
-  // Este evento puede servir para confirmar que Printful recibió la orden
+  const order = data.data.order;
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
+  const status = order.status;
+
+  console.log(`🆕 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+
+  const sale = await Sale.findOne({
+    where: { id: externalId }
+  });
+
+  if (sale) {
+    // ✅ Confirmar recepción y guardar ID de Printful
+    await sale.update({
+      printfulOrderId: printfulOrderId,
+      printfulStatus: status || 'pending',
+      syncStatus: 'pending',
+      printfulUpdatedAt: new Date(),
+      errorMessage: null // Limpiar error si hubo reintento
+    });
+    
+    console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
+    console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
+    
+    return true; // Procesado exitosamente
+    
+  } else {
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan
+    await webhookLog.update({
+      event_type: `orphan_order_created`,
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log
+  }
 }
 
 /**
  * 📦 Producto sincronizado
  */
-async function handleProductSynced(data) {
-  console.log('📦 [WEBHOOK] Procesando product_synced...');
+async function handleProductSynced(data, webhookLog) {
+  console.log('🔄 [WEBHOOK] Procesando product_synced...');
+  return true; // Procesado exitosamente
   
   const productId = data.data.sync_product.id;
   console.log(`✅ [WEBHOOK] Producto ${productId} sincronizado`);
@@ -205,14 +368,15 @@ async function handleProductSynced(data) {
 /**
  * 🔐 Verificar firma del webhook (seguridad)
  */
-function verifyWebhookSignature(data, signature) {
+function verifyWebhookSignature(req, signature) {
   const WEBHOOK_SECRET = process.env.PRINTFUL_WEBHOOK_SECRET;
   
   if (!WEBHOOK_SECRET || !signature) {
     return true; // Skip verification si no está configurado
   }
 
-  const payload = JSON.stringify(data);
+  // Usar rawBody en lugar de JSON.stringify para verificación correcta
+  const payload = req.rawBody || Buffer.from(JSON.stringify(req.body));
   const hash = crypto
     .createHmac('sha256', WEBHOOK_SECRET)
     .update(payload)
@@ -253,6 +417,8 @@ export const getWebhookLogs = async (req, res) => {
     });
   }
 };
+
+// Testing endpoints removed for production
 
 /**
  * 📊 Estadísticas de webhooks
@@ -297,3 +463,5 @@ export const getWebhookStats = async (req, res) => {
     });
   }
 };
+
+// logOrphanWebhook function removed - now we update the existing log instead of creating a new one

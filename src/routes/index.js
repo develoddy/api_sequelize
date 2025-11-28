@@ -60,7 +60,7 @@ app.use("/returns", ReturnRoutes);
 app.use("/inbox", Inbox);
 app.use("/receipts", receiptRoutes);
 // Webhook de Printful
-app.use("/printfulWebhook", printfulWebhook);
+app.use("/printful-webhook", printfulWebhook);
 app.use("/notifications", notifications);
 app.use("/prelaunch", prelaunchRoutes);
 app.use("/newsletter", newsletterRoutes);
