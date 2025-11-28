@@ -15,6 +15,7 @@ import { DiscountProduct } from './DiscountProduct.js';
 import { ReturnRequest } from './ReturnRequest.js';
 import { Inbox } from './Inbox.js';
 import { PrelaunchSubscriber } from './PrelaunchSubscriber.js';
+import { PrintfulWebhookLog } from './PrintfulWebhookLog.js';
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE

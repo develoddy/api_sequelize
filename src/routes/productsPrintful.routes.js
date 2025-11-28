@@ -29,6 +29,20 @@ import {
     getCountryStates
 } from "../controllers/proveedor/printful/shippingPrintful.controller.js";
 
+import {
+    syncStock,
+    getDiscontinuedProducts,
+    getPriceChanges,
+    updateProduct,
+    getStockStats
+} from "../controllers/proveedor/printful/stockSyncPrintful.controller.js";
+
+import {
+    handleWebhook,
+    getWebhookLogs,
+    getWebhookStats
+} from "../controllers/proveedor/printful/webhookPrintful.controller.js";
+
 const router = Router();
 
 // Product routes
@@ -54,5 +68,17 @@ router.get("/analytics/timeline", auth.verifyEcommerce, getTimeline);
 router.post("/shipping/rates", auth.verifyEcommerce, calculateShippingRates);
 router.get("/shipping/countries", auth.verifyEcommerce, getShippingCountries);
 router.get("/shipping/countries/:code/states", auth.verifyEcommerce, getCountryStates);
+
+// Stock Sync routes
+router.get("/stock/sync", auth.verifyEcommerce, syncStock);
+router.get("/stock/discontinued", auth.verifyEcommerce, getDiscontinuedProducts);
+router.get("/stock/price-changes", auth.verifyEcommerce, getPriceChanges);
+router.post("/stock/update/:id", auth.verifyEcommerce, updateProduct);
+router.get("/stock/stats", auth.verifyEcommerce, getStockStats);
+
+// Webhook routes (⚠️ Sin autenticación - Printful necesita acceso público)
+router.post("/webhook", handleWebhook);
+router.get("/webhook/logs", auth.verifyEcommerce, getWebhookLogs);
+router.get("/webhook/stats", auth.verifyEcommerce, getWebhookStats);
 
 export default router;
