@@ -31,6 +31,7 @@ import notifications from './notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from './postalCode.routes.js';
+import analyticsRoutes from './analytics.routes.js';
 
 const app = express();
 
@@ -65,5 +66,6 @@ app.use("/notifications", notifications);
 app.use("/prelaunch", prelaunchRoutes);
 app.use("/newsletter", newsletterRoutes);
 app.use("/postal-codes", postalCodeRoutes);
+app.use("/analytics", analyticsRoutes);
 
 export default app;
