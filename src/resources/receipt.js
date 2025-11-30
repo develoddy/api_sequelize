@@ -25,8 +25,11 @@ export default {
         title: detail.product.title,
         slug: detail.product.slug,
         imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + detail.product.portada,
-        price_usd: detail.product.price_usd,
-        price_soles: detail.product.price_soles,
+        price_eur: detail.product.price_usd, // Unified price in EUR
+        price: detail.product.price_usd, // Alias for consistency
+        currency: 'EUR',
+        price_usd: detail.product.price_usd, // Legacy - deprecated
+        price_soles: detail.product.price_soles, // Legacy - deprecated
         sku: detail.product.sku
       } : null,
       variedad: detail.variedade ? {

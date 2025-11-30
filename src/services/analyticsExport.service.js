@@ -343,7 +343,7 @@ export async function exportCostsReport(costsData, filename = 'costs_report.xlsx
           cost: data.cost || 0,
           shipping: data.shipping || 0,
           tax: data.tax || 0,
-          currency: data.currency || 'USD',
+          currency: data.currency || 'EUR',
           itemsCount: data.items?.length || 0
         });
       });

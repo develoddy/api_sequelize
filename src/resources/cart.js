@@ -10,8 +10,11 @@ export default {
                 slug: cart.product.slug,
                 imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+cart.product.portada, // Falta completar la ruta
                 categorie: cart.product.categorie,
-                price_soles: cart.product.price_soles,
-                price_usd: cart.product.price_usd,
+                price_eur: cart.product.price_usd, // Unified price in EUR
+                price: cart.product.price_usd, // Alias for consistency
+                currency: 'EUR',
+                price_soles: cart.product.price_soles, // Legacy - deprecated
+                price_usd: cart.product.price_usd, // Legacy - deprecated
             },
             type_discount: cart.type_discount,
             discount: cart.discount,

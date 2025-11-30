@@ -7,7 +7,7 @@ export const Sale = sequelize.define('sales', {
   method_payment: { type: DataTypes.STRING(50), allowNull: false },
   n_transaction: { type: DataTypes.STRING(200), allowNull: false },
   total: { type: DataTypes.FLOAT, allowNull: false },
-  curreny_total: { type: DataTypes.STRING(50), defaultValue: 'EUR' },
+  currency_total: { type: DataTypes.STRING(50), defaultValue: 'EUR' },
   price_dolar: { type: DataTypes.FLOAT, defaultValue: 0 },
   minDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
   maxDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },

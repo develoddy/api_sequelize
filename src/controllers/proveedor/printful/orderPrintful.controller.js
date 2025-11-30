@@ -27,7 +27,7 @@ export const getOrders = async (req, res) => {
   try {
     console.log('📦 Fetching Printful orders...');
 
-    const { status, limit = 100, offset = 0 } = req.query;
+    const { status, limit = 100, offset = 0, includeArchived = 'false' } = req.query;
 
     // Build query parameters
     const params = {
@@ -43,17 +43,29 @@ export const getOrders = async (req, res) => {
     const response = await printfulApi.get('/orders', { params });
 
     if (response.data && response.data.result) {
-      const orders = response.data.result.map(order => ({
+      let orders = response.data.result.map(order => ({
         ...order,
         items: Array.isArray(order.items) ? order.items.length : 0
       }));
 
-      console.log(`✅ Fetched ${orders.length} orders from Printful`);
+      // Filter archived orders by default (Printful doesn't delete orders, only archives them)
+      const totalOrders = orders.length;
+      if (includeArchived === 'false') {
+        orders = orders.filter(order => order.status !== 'archived');
+        console.log(`🔍 Filtered out ${totalOrders - orders.length} archived orders`);
+      }
+
+      console.log(`✅ Fetched ${orders.length} active orders from Printful (${totalOrders} total)`);
 
       return res.status(200).json({
         success: true,
         orders: orders,
-        paging: response.data.paging || {}
+        paging: response.data.paging || {},
+        stats: {
+          active: orders.length,
+          total: totalOrders,
+          archived: totalOrders - orders.length
+        }
       });
     }
 

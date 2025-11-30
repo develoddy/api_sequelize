@@ -52,7 +52,7 @@ export async function getPrintfulCostsFromWebhooks(startDate, endDate) {
             cost: orderTotal,
             shipping,
             tax,
-            currency: costs.currency || 'USD',
+            currency: costs.currency || 'EUR',
             items: [],
             receivedAt: log.received_at
           };

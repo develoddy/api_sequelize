@@ -31,8 +31,11 @@ export default {
             slug: product.slug,
             imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+product.portada, // Falta completar la ruta
             categorie: product.category, // product.categoryId, // product.categorie,
-            price_soles: product.price_soles,
-            price_usd: product.price_usd,
+            price_eur: product.price_usd, // Unified price in EUR
+            price: product.price_usd, // Alias for consistency
+            currency: 'EUR',
+            price_soles: product.price_soles, // Legacy - deprecated
+            price_usd: product.price_usd, // Legacy - deprecated
             stock: product.stock,
             description_en: product.description_en,
             description_es: product.description_es,

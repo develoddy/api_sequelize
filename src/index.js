@@ -189,15 +189,10 @@ async function main() {
         // -------------------------------------------
         const server = http.createServer(app);
 
-        // Iniciar Socket.IO
-        initSocketIO(server);
-
-        // Dar tiempo para iniciar internamente
-        setTimeout(() => {
-            const io = getIO();
-            setupChatSocketIO(io);
-            setupNotificationsSocketIO(io);
-        }, 300);
+        // Iniciar Socket.IO y esperar a que esté listo
+        const io = await initSocketIO(server);
+        setupChatSocketIO(io);
+        setupNotificationsSocketIO(io);
 
         // -------------------------------------------
         // 🚀 INICIAR SERVIDOR EXPRESS
