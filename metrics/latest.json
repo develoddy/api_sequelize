@@ -1,38 +1,38 @@
 {
-  "timestamp": "2025-12-02 15:43:17",
-  "timestamp_unix": 1764686599,
+  "timestamp": "2025-12-02 15:45:58",
+  "timestamp_unix": 1764690360,
   "version": "3.0.0",
   "summary": {
-    "total_checks": 23,
-    "passed": 21,
-    "warnings": 2,
+    "total_checks": 29,
+    "passed": 28,
+    "warnings": 1,
     "failed": 0,
-    "success_rate": 91.30
+    "success_rate": 96.55
   },
   "server": {
     "cpu_percent": 0,
     "memory_percent": 0,
     "disk_percent": 0,
-    "load_average": "N/A",
-    "uptime": "N/A"
+    "load_average": " 0.00, 0.00, 0.00",
+    "uptime": "1764689824019"
   },
   "api": {
     "http_code": "200",
-    "latency_ms": 139,
-    "size_bytes": 171,
+    "latency_ms": 96,
+    "size_bytes": 170,
     "ssl_days": "85"
   },
   "admin": {
     "http_code": "200",
-    "latency_ms": 163,
+    "latency_ms": 48,
     "size_bytes": 38503
   },
   "ecommerce": {
     "http_code": "200",
-    "latency_ms": 139,
+    "latency_ms": 83,
     "size_bytes": 9815
   },
   "alerts": [
-    "WARNING: Sistema Operativo - macOS - métricas de servidor no disponibles (umbral: )","WARNING: PM2 - No disponible (ejecutar en servidor) (umbral: )"
+    "WARNING:   │  └─ Restarts elevados - 6 restarts detectados (umbral: < 5 restarts)"
   ]
 }
