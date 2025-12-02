@@ -9,6 +9,7 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Obtener __dirname en ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -19,9 +20,14 @@ const envFile = process.env.NODE_ENV === 'production'
     ? '.env.production' 
     : '.env.development';
 
-// Ruta absoluta para asegurar que PM2 encuentre el archivo
-const envPath = path.resolve(__dirname, '../..', envFile);
+// Ruta absoluta: src/config/ -> sube a src/ -> sube a api/ -> .env.production
+const envPath = path.resolve(__dirname, '../../', envFile);
 dotenv.config({ path: envPath });
+
+// Debug temporal para producción
+console.error(`🔧 [env.js] Loading from: ${envPath}`);
+console.error(`🔧 [env.js] File exists: ${fs.existsSync(envPath)}`);
+console.error(`🔧 [env.js] DB_HOST: ${process.env.DB_HOST || 'NOT LOADED'}`);
 
 // Log solo en desarrollo
 if (process.env.NODE_ENV !== 'production') {
