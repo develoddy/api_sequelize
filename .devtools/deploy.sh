@@ -96,11 +96,11 @@ echo -e "${YELLOW}Esperando que el servidor esté listo...${NC}"
 sleep 5
 
 # Verificar health endpoint
-HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.lujandev.com/api/health)
+HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.lujandev.com/health)
 if [ "$HEALTH_STATUS" = "200" ]; then
-  echo -e "${GREEN}✅ /api/health - OK (200)${NC}"
+  echo -e "${GREEN}✅ /health - OK (200)${NC}"
 else
-  echo -e "${RED}❌ /api/health - Error ($HEALTH_STATUS)${NC}"
+  echo -e "${RED}❌ /health - Error ($HEALTH_STATUS)${NC}"
 fi
 
 # Verificar dashboard
@@ -126,7 +126,7 @@ echo -e "${MAGENTA}##       ✅ API actualizada y en producción ✅     ##${NC}
 echo -e "${MAGENTA}$divider${NC}"
 
 echo -e "\n${CYAN}📊 URLs Disponibles:${NC}"
-echo -e "   ${BLUE}https://api.lujandev.com/api/health${NC}"
+echo -e "   ${BLUE}https://api.lujandev.com/health${NC}"
 echo -e "   ${BLUE}https://api.lujandev.com/dashboard.html${NC}"
 echo -e "   ${BLUE}https://api.lujandev.com/metrics/latest.json${NC}"
 
