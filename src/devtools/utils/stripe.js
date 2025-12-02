@@ -1,27 +1,29 @@
 // src/devtools/utils/stripe.js
 import Stripe from 'stripe';
-import * as dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Obtener __dirname en ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Inicialización lazy: Solo se crea cuando se accede por primera vez
+// Las variables de entorno ya deben estar cargadas por index.js
+let stripeInstance = null;
 
-const envFile = process.env.NODE_ENV === 'production' 
-    ? '.env.production' 
-    : '.env.development';
-
-// Ruta absoluta para asegurar que PM2 encuentre el archivo
-const envPath = path.resolve(__dirname, '../../..', envFile);
-dotenv.config({ path: envPath });
-
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecret) {
-  console.error(`❌ STRIPE_SECRET_KEY no encontrada en: ${envPath}`);
-  console.error(`NODE_ENV: ${process.env.NODE_ENV}`);
-  throw new Error("❌ STRIPE_SECRET_KEY no encontrada. Revisa tu .env");
+function getStripeInstance() {
+  if (!stripeInstance) {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecret) {
+      console.error(`❌ STRIPE_SECRET_KEY no encontrada`);
+      console.error(`NODE_ENV: ${process.env.NODE_ENV}`);
+      console.error(`Variables disponibles:`, Object.keys(process.env).filter(k => k.includes('STRIPE')));
+      throw new Error("❌ STRIPE_SECRET_KEY no encontrada. Revisa tu .env");
+    }
+    stripeInstance = new Stripe(stripeSecret, { apiVersion: '2023-08-16' });
+  }
+  return stripeInstance;
 }
 
-const stripe = new Stripe(stripeSecret, { apiVersion: '2023-08-16' });
-export default stripe;
+// Proxy para que funcione como import default
+const stripeProxy = new Proxy({}, {
+  get(target, prop) {
+    return getStripeInstance()[prop];
+  }
+});
+
+export default stripeProxy;

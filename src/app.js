@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import fs from 'fs';
 import path from "path";
-import dotenv from 'dotenv';
 // import productsRoutes from './routes/products.routes.js';
 // import usersRoutes from './routes/users.routes.js';
 
@@ -10,8 +9,7 @@ import { fileURLToPath } from 'url';
 
 import router from './routes/index.js';
 
-//const app = express();
-dotenv.config();
+// Las variables de entorno ya están cargadas por index.js
 const app = express();
 app.use(cors());
 

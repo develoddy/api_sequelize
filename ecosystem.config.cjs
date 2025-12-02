@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'api_sequelize',
-      script: './index.js',
+      script: './src/index.js',
       env: {
         NODE_ENV: 'development',
         PORT: 3500

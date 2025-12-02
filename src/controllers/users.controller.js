@@ -13,9 +13,6 @@ import path from "path";
 import handlebars from 'handlebars';
 import ejs from 'ejs';
 import smtpTransport from 'nodemailer-smtp-transport';
-import dotenv from 'dotenv';
-dotenv.config(); // Cargar las variables de entorno
-
 import { verifyRecaptcha } from '../devtools/utils/verifyRecaptcha.js';
 
 // ------ Send Email -----

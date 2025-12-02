@@ -134,8 +134,6 @@ const envFile = process.env.NODE_ENV === 'production'
 const envPath = path.resolve(__dirname, '..', envFile);
 dotenv.config({ path: envPath });
 
-console.error(`🔧 Loading environment from: ${envPath}`);
-
 // ================================================================
 // 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
 // ================================================================
@@ -209,16 +207,13 @@ async function main() {
         // -------------------------------------------
         if (isDev) {
             console.log("🔧 DEV: autenticando DB (sin alterar tablas automáticamente)");
-            await sequelize.sync({ force: true });
-            //await sequelize.authenticate(); 
+            await sequelize.authenticate(); 
             console.log("✅ DEV: DB conectada");
             console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
         } else {
             console.log("🔥 PROD: autenticando la base de datos. NO sync automático");
             await sequelize.authenticate();
             console.log("✅ PROD: DB conectada. Ejecuta migraciones con 'npx sequelize-cli db:migrate'");
-            // ⚠️ Migraciones obligatorias
-            // npx sequelize-cli db:migrate
         }
 
         // -------------------------------------------

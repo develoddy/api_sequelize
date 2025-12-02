@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+// Las variables de entorno ya están cargadas por index.js
 
 export default {
 
