@@ -4,3 +4,10 @@
 .DS_Store
 ._*bfg.jar
 ._*
+
+# Logs del sistema de monitoreo
+logs/
+*.log
+
+# Métricas generadas
+metrics/
