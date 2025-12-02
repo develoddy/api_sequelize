@@ -36,6 +36,21 @@ import trackingRoutes from './tracking.routes.js';
 
 const app = express();
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    database: 'connected', // Sequelize ya validó la conexión en index.js
+    services: {
+      stripe: !!process.env.STRIPE_SECRET_KEY,
+      printful: !!process.env.PRINTFUL_API_KEY
+    }
+  });
+});
+
 app.use("/users", usersRoutes);
 app.use("/guests", guestsRoutes);
 app.use("/products", productsRoutes);
