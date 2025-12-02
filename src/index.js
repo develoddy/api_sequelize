@@ -117,22 +117,9 @@
 // -------------------------------
 //   INDEX.JS — BACKEND PRINCIPAL
 // -------------------------------
-import * as dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Obtener __dirname en ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Selecciona explícitamente el archivo según NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' 
-    ? '.env.production' 
-    : '.env.development';
-
-// Ruta absoluta para asegurar que PM2 encuentre el archivo
-const envPath = path.resolve(__dirname, '..', envFile);
-dotenv.config({ path: envPath });
+// ⚠️ IMPORTANTE: Cargar variables de entorno ANTES que cualquier otro módulo
+import './config/env.js';
 
 // ================================================================
 // 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
@@ -148,8 +135,6 @@ if (process.env.NODE_ENV === 'production') {
     // console.warn y console.error NO se desactivan
     
     console.warn('🔒 [PRODUCTION MODE] console.log/debug/info/table desactivados por seguridad');
-} else {
-    console.log(`🌐 Variables de entorno cargadas desde: ${envFile}`);
 }
 
 import http from 'http';
