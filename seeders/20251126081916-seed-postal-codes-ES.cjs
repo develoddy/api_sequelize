@@ -166,6 +166,19 @@ module.exports = {
     console.log('📦 CARGA DE CÓDIGOS POSTALES - MULTI-PAÍS');
     console.log('========================================');
 
+    // Verificar si ya existen registros de España
+    const [existingRecords] = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM postal_codes WHERE country = 'ES'"
+    );
+    
+    if (existingRecords[0].count > 0) {
+      console.log(`⚠️  Ya existen ${existingRecords[0].count} registros de España en la base de datos`);
+      console.log(`   Saltando inserción para evitar duplicados`);
+      console.log(`   Si quieres recargar los datos, primero elimina los registros existentes:`);
+      console.log(`   DELETE FROM postal_codes WHERE country = 'ES';`);
+      return;
+    }
+
     const globalStats = {
       totalProcessed: 0,
       totalValid: 0,

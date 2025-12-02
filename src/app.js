@@ -11,7 +11,21 @@ import router from './routes/index.js';
 
 // Las variables de entorno ya están cargadas por index.js
 const app = express();
-app.use(cors());
+
+// CORS configurado para producción
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        process.env.URL_FRONTEND,   // http://tienda.lujandev.com
+        process.env.URL_ADMIN,      // https://admin.lujandev.com
+      ].filter(Boolean)
+    : true, // Permitir todo en desarrollo
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 
 // -------------------- __dirname para ES Modules --------------------
 const __filename = fileURLToPath(import.meta.url);
