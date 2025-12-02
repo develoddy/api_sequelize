@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Health Dashboard - Lujandev</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header .timestamp {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .health-score {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .score-circle {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .score-100 { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .score-warning { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .score-critical { background: linear-gradient(135deg, #fa709a, #fee140); }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .metric-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .metric-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-ok {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alerts-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .alert-item {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .alert-item.critical {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 2s infinite;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏥 Production Health Dashboard</h1>
+            <p class="timestamp">Última actualización: <span id="lastUpdate">--</span></p>
+            <button class="refresh-btn" onclick="loadData()">🔄 Refrescar</button>
+            <div class="auto-refresh">
+                <input type="checkbox" id="autoRefresh" checked>
+                <label for="autoRefresh">Auto-refresh cada 30 segundos</label>
+            </div>
+        </div>
+
+        <!-- Health Score -->
+        <div class="health-score">
+            <div class="score-circle" id="scoreCircle">
+                <span id="scoreValue">--</span>
+            </div>
+            <h2>Health Score</h2>
+            <p id="scoreDescription">Cargando datos...</p>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>📊 Resumen de Checks</h3>
+                <div class="metric-item">
+                    <span class="metric-label">Total de checks</span>
+                    <span class="metric-value" id="totalChecks">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Exitosos</span>
+                    <span class="metric-value" style="color: #28a745;" id="passedChecks">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Warnings</span>
+                    <span class="metric-value" style="color: #ffc107;" id="warningChecks">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Fallidos</span>
+                    <span class="metric-value" style="color: #dc3545;" id="failedChecks">--</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>🖥️ Recursos del Servidor</h3>
+                <div class="metric-item">
+                    <span class="metric-label">CPU</span>
+                    <span class="metric-value" id="cpuUsage">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Memoria RAM</span>
+                    <span class="metric-value" id="memoryUsage">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Disco</span>
+                    <span class="metric-value" id="diskUsage">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value" id="uptime">--</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>🌐 API Backend</h3>
+                <div class="metric-item">
+                    <span class="metric-label">Status HTTP</span>
+                    <span class="metric-value" id="apiStatus">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Latencia</span>
+                    <span class="metric-value" id="apiLatency">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tamaño respuesta</span>
+                    <span class="metric-value" id="apiSize">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">SSL válido</span>
+                    <span class="metric-value" id="sslDays">--</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>🎨 Admin Panel</h3>
+                <div class="metric-item">
+                    <span class="metric-label">Status HTTP</span>
+                    <span class="metric-value" id="adminStatus">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Latencia</span>
+                    <span class="metric-value" id="adminLatency">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tamaño respuesta</span>
+                    <span class="metric-value" id="adminSize">--</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h3>🛒 Ecommerce</h3>
+                <div class="metric-item">
+                    <span class="metric-label">Status HTTP</span>
+                    <span class="metric-value" id="ecomStatus">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Latencia</span>
+                    <span class="metric-value" id="ecomLatency">--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tamaño respuesta</span>
+                    <span class="metric-value" id="ecomSize">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alerts-section" id="alertsSection" style="display: none;">
+            <h3 style="margin-bottom: 20px;">⚠️ Alertas Activas</h3>
+            <div id="alertsList"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>🚀 Production Health Monitor v3.0 - Enterprise Edition</p>
+            <p>Lujandev © 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // Cargar datos del JSON
+        async function loadData() {
+            try {
+                // Cambiar ruta según tu configuración
+                const response = await fetch('/metrics/latest.json');
+                const data = await response.json();
+
+                // Update timestamp
+                document.getElementById('lastUpdate').textContent = data.timestamp;
+
+                // Update health score
+                const score = parseFloat(data.summary.success_rate);
+                const scoreElement = document.getElementById('scoreValue');
+                const scoreCircle = document.getElementById('scoreCircle');
+                const scoreDesc = document.getElementById('scoreDescription');
+
+                scoreElement.textContent = score.toFixed(1) + '%';
+
+                if (score >= 95) {
+                    scoreCircle.className = 'score-circle score-100';
+                    scoreDesc.textContent = '✅ Todos los sistemas operativos - Salud óptima';
+                } else if (score >= 80) {
+                    scoreCircle.className = 'score-circle score-warning';
+                    scoreDesc.textContent = '⚠️ Sistemas operativos con advertencias';
+                } else {
+                    scoreCircle.className = 'score-circle score-critical';
+                    scoreDesc.textContent = '❌ Sistemas con fallos críticos detectados';
+                }
+
+                // Update summary
+                document.getElementById('totalChecks').textContent = data.summary.total_checks;
+                document.getElementById('passedChecks').textContent = data.summary.passed;
+                document.getElementById('warningChecks').textContent = data.summary.warnings;
+                document.getElementById('failedChecks').textContent = data.summary.failed;
+
+                // Update server metrics
+                document.getElementById('cpuUsage').textContent = data.server.cpu_percent + '%';
+                document.getElementById('memoryUsage').textContent = data.server.memory_percent + '%';
+                document.getElementById('diskUsage').textContent = data.server.disk_percent + '%';
+                document.getElementById('uptime').textContent = data.server.uptime;
+
+                // Update API metrics
+                document.getElementById('apiStatus').innerHTML = getStatusBadge(data.api.http_code);
+                document.getElementById('apiLatency').textContent = data.api.latency_ms + ' ms';
+                document.getElementById('apiSize').textContent = formatBytes(data.api.size_bytes);
+                document.getElementById('sslDays').textContent = data.api.ssl_days + ' días';
+
+                // Update Admin metrics
+                document.getElementById('adminStatus').innerHTML = getStatusBadge(data.admin.http_code);
+                document.getElementById('adminLatency').textContent = data.admin.latency_ms + ' ms';
+                document.getElementById('adminSize').textContent = formatBytes(data.admin.size_bytes);
+
+                // Update Ecommerce metrics
+                document.getElementById('ecomStatus').innerHTML = getStatusBadge(data.ecommerce.http_code);
+                document.getElementById('ecomLatency').textContent = data.ecommerce.latency_ms + ' ms';
+                document.getElementById('ecomSize').textContent = formatBytes(data.ecommerce.size_bytes);
+
+                // Update alerts
+                const alertsSection = document.getElementById('alertsSection');
+                const alertsList = document.getElementById('alertsList');
+                
+                if (data.alerts && data.alerts.length > 0) {
+                    alertsSection.style.display = 'block';
+                    alertsList.innerHTML = data.alerts.map(alert => {
+                        const isCritical = alert.includes('CRITICAL');
+                        return `<div class="alert-item ${isCritical ? 'critical' : ''}">${alert}</div>`;
+                    }).join('');
+                } else {
+                    alertsSection.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('scoreDescription').textContent = '❌ Error al cargar datos';
+            }
+        }
+
+        function getStatusBadge(code) {
+            if (code === '200') {
+                return '<span class="status-badge status-ok">' + code + ' OK</span>';
+            } else if (code >= '400') {
+                return '<span class="status-badge status-error">' + code + '</span>';
+            } else {
+                return '<span class="status-badge status-warning">' + code + '</span>';
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+
+        // Auto refresh
+        let autoRefreshInterval;
+        document.getElementById('autoRefresh').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                autoRefreshInterval = setInterval(loadData, 30000); // 30 segundos
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+
+        // Initial load
+        loadData();
+        autoRefreshInterval = setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
