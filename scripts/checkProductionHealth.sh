@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🏥 ULTRA PRO PRODUCTION HEALTH CHECK v2.0
+# 🏥 ULTRA PRO PRODUCTION HEALTH CHECK v3.0 - ENTERPRISE EDITION
 # ==============================================================================
 # Sistema completo de validación de salud para entornos de producción
 # 
@@ -14,12 +14,17 @@
 # - Logs con timestamps detallados
 # - Alertas inteligentes por umbrales
 # - Export de resultados a JSON
+# - 🆕 Alertas automáticas por Email (SMTP)
+# - 🆕 Notificaciones a Slack Webhook
+# - 🆕 Logs rotativos con historial
+# - 🆕 Exportación automática de métricas
 #
 # Uso:
 #   bash scripts/checkProductionHealth.sh                    # Modo normal
 #   bash scripts/checkProductionHealth.sh --verbose          # Modo detallado
 #   bash scripts/checkProductionHealth.sh --json output.json # Export JSON
 #   bash scripts/checkProductionHealth.sh --alert            # Solo alertas
+#   bash scripts/checkProductionHealth.sh --notify           # Con notificaciones
 # ==============================================================================
 
 # Colores profesionales
@@ -36,15 +41,39 @@ declare -r HEADER='\033[38;5;105m'      # Púrpura
 declare -r MUTED='\033[38;5;245m'       # Gris
 
 # Configuración
-declare -r SCRIPT_VERSION="2.0.0"
+declare -r SCRIPT_VERSION="3.0.0"
 declare -r TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-declare -r LOG_FILE="logs/health-check-$(date '+%Y%m%d-%H%M%S').log"
+declare -r LOG_DIR="logs"
+declare -r LOG_FILE="$LOG_DIR/health-check-$(date '+%Y%m%d-%H%M%S').log"
+declare -r JSON_METRICS_DIR="metrics"
+declare -r JSON_LATEST="$JSON_METRICS_DIR/latest.json"
+
+# Crear directorios si no existen
+mkdir -p "$LOG_DIR" "$JSON_METRICS_DIR"
+
+# Configuración de alertas (cargar desde .env si existe)
+if [ -f ".env.monitoring" ]; then
+  source .env.monitoring
+fi
+
+# Email Configuration (SMTP)
+EMAIL_ENABLED="${EMAIL_ENABLED:-false}"
+SMTP_HOST="${SMTP_HOST:-smtp.gmail.com}"
+SMTP_PORT="${SMTP_PORT:-587}"
+SMTP_USER="${SMTP_USER:-}"
+SMTP_PASS="${SMTP_PASS:-}"
+ALERT_EMAIL="${ALERT_EMAIL:-admin@lujandev.com}"
+
+# Slack Configuration
+SLACK_ENABLED="${SLACK_ENABLED:-false}"
+SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"
 
 # Flags de modo
 VERBOSE=false
 ALERT_ONLY=false
-JSON_EXPORT=false
+JSON_EXPORT=true  # Siempre exportar JSON por defecto
 JSON_OUTPUT=""
+NOTIFICATIONS_ENABLED=false
 
 # Parse argumentos
 while [[ $# -gt 0 ]]; do
@@ -61,6 +90,10 @@ while [[ $# -gt 0 ]]; do
       JSON_EXPORT=true
       JSON_OUTPUT="$2"
       shift 2
+      ;;
+    --notify|-n)
+      NOTIFICATIONS_ENABLED=true
+      shift
       ;;
     *)
       shift
@@ -197,6 +230,93 @@ check_ssl() {
   local days_remaining=$(( (expiry_epoch - current_epoch) / 86400 ))
   
   echo "$days_remaining"
+}
+
+# ==============================================================================
+# FUNCIONES DE NOTIFICACIÓN
+# ==============================================================================
+
+# Enviar notificación por Email usando curl con SMTP
+send_email_alert() {
+  if [[ "$EMAIL_ENABLED" != "true" ]] || [[ -z "$SMTP_USER" ]] || [[ -z "$ALERT_EMAIL" ]]; then
+    return
+  fi
+  
+  local subject="$1"
+  local body="$2"
+  
+  local email_body="Subject: $subject
+From: $SMTP_USER
+To: $ALERT_EMAIL
+Content-Type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html>
+<head><meta charset='UTF-8'></head>
+<body style='font-family: Arial, sans-serif; padding: 20px;'>
+  <h2 style='color: #e74c3c;'>⚠️ Production Health Alert</h2>
+  <p><strong>Timestamp:</strong> $TIMESTAMP</p>
+  <hr>
+  <pre style='background: #f4f4f4; padding: 15px; border-radius: 5px;'>$body</pre>
+  <hr>
+  <p style='color: #7f8c8d; font-size: 12px;'>
+    Este es un mensaje automático del sistema de monitoreo de producción.
+  </p>
+</body>
+</html>"
+
+  # Enviar usando curl con SMTP
+  echo "$email_body" | curl --url "smtp://$SMTP_HOST:$SMTP_PORT" \
+    --mail-from "$SMTP_USER" \
+    --mail-rcpt "$ALERT_EMAIL" \
+    --user "$SMTP_USER:$SMTP_PASS" \
+    --upload-file - \
+    --ssl-reqd \
+    --silent 2>/dev/null
+    
+  if [[ $? -eq 0 ]]; then
+    log "INFO" "Email alert sent to $ALERT_EMAIL"
+  else
+    log "ERROR" "Failed to send email alert"
+  fi
+}
+
+# Enviar notificación a Slack
+send_slack_alert() {
+  if [[ "$SLACK_ENABLED" != "true" ]] || [[ -z "$SLACK_WEBHOOK_URL" ]]; then
+    return
+  fi
+  
+  local title="$1"
+  local message="$2"
+  local color="$3"  # good, warning, danger
+  
+  local payload=$(cat <<EOF
+{
+  "attachments": [
+    {
+      "color": "$color",
+      "title": "$title",
+      "text": "$message",
+      "footer": "Production Health Monitor",
+      "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
+      "ts": $(date +%s)
+    }
+  ]
+}
+EOF
+)
+
+  curl -X POST "$SLACK_WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    --silent 2>/dev/null
+    
+  if [[ $? -eq 0 ]]; then
+    log "INFO" "Slack notification sent"
+  else
+    log "ERROR" "Failed to send Slack notification"
+  fi
 }
 
 # ==============================================================================
@@ -533,12 +653,15 @@ if [[ ${#ALERTS[@]} -gt 0 ]]; then
 fi
 
 # ==============================================================================
-# EXPORT A JSON (opcional)
+# EXPORT A JSON (siempre, para histórico y dashboards)
 # ==============================================================================
-if [[ "$JSON_EXPORT" == true ]]; then
-  JSON_CONTENT=$(cat <<EOF
+JSON_TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
+JSON_FILE="${JSON_OUTPUT:-$JSON_METRICS_DIR/health-$JSON_TIMESTAMP.json}"
+
+JSON_CONTENT=$(cat <<EOF
 {
   "timestamp": "$TIMESTAMP",
+  "timestamp_unix": $(date +%s),
   "version": "$SCRIPT_VERSION",
   "summary": {
     "total_checks": $TOTAL_CHECKS,
@@ -546,6 +669,13 @@ if [[ "$JSON_EXPORT" == true ]]; then
     "warnings": $WARNING_CHECKS,
     "failed": $FAILED_CHECKS,
     "success_rate": $SUCCESS_RATE
+  },
+  "server": {
+    "cpu_percent": $CPU_PERCENT,
+    "memory_percent": $MEMORY_PERCENT,
+    "disk_percent": $DISK_PERCENT,
+    "load_average": "$LOAD_AVG",
+    "uptime": "$UPTIME"
   },
   "api": {
     "http_code": "$API_CODE",
@@ -569,9 +699,66 @@ if [[ "$JSON_EXPORT" == true ]]; then
 }
 EOF
 )
-  echo "$JSON_CONTENT" > "$JSON_OUTPUT"
-  log "INFO" "Resultados exportados a $JSON_OUTPUT"
-  echo -e "\n${INFO}✓${RESET} Resultados exportados a: ${BOLD}$JSON_OUTPUT${RESET}"
+
+# Guardar JSON histórico
+echo "$JSON_CONTENT" > "$JSON_FILE"
+
+# Actualizar JSON latest (para dashboards)
+echo "$JSON_CONTENT" > "$JSON_LATEST"
+
+log "INFO" "Resultados exportados a $JSON_FILE y $JSON_LATEST"
+echo -e "\n${INFO}✓${RESET} Métricas exportadas: ${BOLD}$JSON_FILE${RESET}"
+
+# ==============================================================================
+# ENVIAR NOTIFICACIONES SI HAY PROBLEMAS
+# ==============================================================================
+if [[ "$NOTIFICATIONS_ENABLED" == true ]] && [[ ($WARNING_CHECKS -gt 0 || $FAILED_CHECKS -gt 0) ]]; then
+  
+  # Determinar severidad
+  if [[ $FAILED_CHECKS -gt 0 ]]; then
+    SEVERITY="CRÍTICO"
+    COLOR="danger"
+  else
+    SEVERITY="ADVERTENCIA"
+    COLOR="warning"
+  fi
+  
+  # Construir mensaje
+  ALERT_MESSAGE=$(cat <<EOF
+🏥 Health Check: $SEVERITY
+
+📊 Resumen:
+   • Total checks: $TOTAL_CHECKS
+   • Exitosos: $PASSED_CHECKS
+   • Warnings: $WARNING_CHECKS
+   • Fallos: $FAILED_CHECKS
+   • Health Score: ${SUCCESS_RATE}%
+
+⚠️ Alertas detectadas:
+$(printf '   • %s\n' "${ALERTS[@]}")
+
+🖥️ Servidor:
+   • CPU: ${CPU_PERCENT}%
+   • RAM: ${MEMORY_PERCENT}%
+   • Disco: ${DISK_PERCENT}%
+
+🌐 Servicios:
+   • API: ${API_CODE} (${API_LATENCY_MS}ms)
+   • Admin: ${ADMIN_CODE} (${ADMIN_LATENCY_MS}ms)
+   • Ecommerce: ${ECOM_CODE} (${ECOM_LATENCY_MS}ms)
+
+🕐 Timestamp: $TIMESTAMP
+EOF
+)
+  
+  # Enviar a Slack
+  send_slack_alert "🚨 Production Health Alert - $SEVERITY" "$ALERT_MESSAGE" "$COLOR"
+  
+  # Enviar por Email
+  send_email_alert "🚨 Production Health Alert - $SEVERITY" "$ALERT_MESSAGE"
+  
+  echo -e "\n${WARNING}📧${RESET} Notificaciones de alerta enviadas"
+  log "INFO" "Notificaciones enviadas: $WARNING_CHECKS warnings, $FAILED_CHECKS failures"
 fi
 
 # ==============================================================================

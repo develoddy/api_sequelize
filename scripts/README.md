@@ -1,21 +1,51 @@
-# 🏥 Ultra Pro Production Health Check v2.0
+# 🏥 Ultra Pro Production Health Check v3.0 - ENTERPRISE EDITION
 
-Sistema profesional de validación de salud para entornos de producción con monitoreo avanzado, alertas inteligentes y export a JSON.
+Sistema profesional de validación de salud para entornos de producción con monitoreo avanzado, **alertas automáticas**, **logs rotativos**, **dashboard HTML** y export a JSON.
 
-## 🚀 Inicio Rápido
+## 🆕 Novedades en v3.0
+
+- ✅ **Alertas automáticas por Email** (SMTP)
+- ✅ **Notificaciones a Slack** (Webhooks)
+- ✅ **Logs rotativos** con logrotate (mantiene histórico sin saturar disco)
+- ✅ **Dashboard HTML** interactivo con auto-refresh
+- ✅ **Export JSON automático** para integración con Grafana/Prometheus
+- ✅ **Instalador automatizado** con configuración de cron jobs
+- ✅ **Sistema de métricas históricas** para análisis de tendencias
+
+## 🚀 Instalación Rápida (Recomendado)
 
 ```bash
-# Instalaciones básicas
+# 1. Ejecutar instalador automático
+bash scripts/install-monitoring.sh
+
+# El instalador configurará:
+# - Validación de dependencias
+# - Estructura de directorios
+# - Cron jobs automáticos
+# - Rotación de logs
+# - Permisos correctos
+```
+
+## 📖 Uso Manual
+
+```bash
+# Ejecución básica
 bash scripts/checkProductionHealth.sh
 
 # Con detalles completos
 bash scripts/checkProductionHealth.sh --verbose
 
+# Con notificaciones (Email + Slack)
+bash scripts/checkProductionHealth.sh --notify
+
 # Solo mostrar alertas (ideal para cron)
 bash scripts/checkProductionHealth.sh --alert
 
-# Exportar a JSON
-bash scripts/checkProductionHealth.sh --json output.json
+# Exportar a JSON personalizado
+bash scripts/checkProductionHealth.sh --json custom-output.json
+
+# Combinación
+bash scripts/checkProductionHealth.sh --verbose --notify --json report.json
 ```
 
 ## ✨ Características
@@ -63,20 +93,71 @@ Sistema de umbrales configurables:
 ### Servidor de Producción (Linux)
 ```bash
 # Ubuntu/Debian
-apt install bc jq openssl curl
+sudo apt update && sudo apt install -y bc jq openssl curl
 
 # CentOS/RHEL
-yum install bc jq openssl curl
+sudo yum install -y bc jq openssl curl
 ```
 
 ### Desarrollo Local (macOS)
 ```bash
-brew install bc jq
+brew install bc jq openssl curl
 ```
 
 ### PM2 (opcional pero recomendado)
 ```bash
 npm install -g pm2
+```
+
+## ⚙️ Configuración de Alertas
+
+### 1. Crear archivo de configuración
+```bash
+cd /var/www/api_sequelize  # O tu ruta de proyecto
+cp .env.monitoring.example .env.monitoring
+nano .env.monitoring
+```
+
+### 2. Configurar Email (Gmail)
+
+```bash
+# .env.monitoring
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu-correo@gmail.com
+SMTP_PASS=tu-app-password
+ALERT_EMAIL=admin@lujandev.com
+```
+
+**Obtener contraseña de aplicación de Gmail:**
+1. Activar autenticación de 2 factores: https://myaccount.google.com/security
+2. Generar contraseña de aplicación: https://myaccount.google.com/apppasswords
+3. Seleccionar "Correo" y "Otro dispositivo"
+4. Copiar contraseña generada en `SMTP_PASS`
+
+### 3. Configurar Slack
+
+```bash
+# .env.monitoring
+SLACK_ENABLED=true
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+```
+
+**Obtener Webhook de Slack:**
+1. Ir a: https://api.slack.com/apps
+2. Crear app o usar existente
+3. Activar "Incoming Webhooks"
+4. Añadir webhook para canal específico (#monitoring, #alerts, etc.)
+5. Copiar URL y pegar en configuración
+
+### 4. Probar notificaciones
+
+```bash
+# Ejecutar con notificaciones activadas
+bash scripts/checkProductionHealth.sh --notify --verbose
+
+# Si hay warnings o errores, se enviarán automáticamente
 ```
 
 ## 🎯 Ejemplos de Uso
@@ -225,24 +306,49 @@ declare -r ECOMMERCE_URL="https://tienda.lujandev.com"
 
 ## 🤖 Automatización
 
-### Cron Job - Monitoreo cada hora
+### Instalación Automatizada (Recomendado)
+
+El script `install-monitoring.sh` configura todo automáticamente:
+
+```bash
+bash scripts/install-monitoring.sh
+
+# El instalador te preguntará:
+# - Intervalo de ejecución (cada hora, 30min, 15min, etc.)
+# - Activar notificaciones automáticas
+# - Y configurará cron automáticamente
+```
+
+### Configuración Manual de Cron
+
+#### 1. Monitoreo cada hora con alertas
 ```bash
 crontab -e
 
-# Ejecutar cada hora
-0 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh >> /var/log/health-checks.log 2>&1
+# Ejecutar cada hora con notificaciones
+0 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh --notify >> logs/cron.log 2>&1
 ```
 
-### Cron Job - Alertas por email
+#### 2. Monitoreo intensivo (cada 15 minutos)
 ```bash
-# Cada 15 min, enviar email solo si falla
-*/15 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh --alert || echo "Health check failed" | mail -s "⚠️ Alerta" admin@domain.com
+# Cada 15 minutos, con alertas solo en errores
+*/15 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh --alert --notify >> logs/cron.log 2>&1
 ```
 
-### Cron Job - Export JSON para Grafana
+#### 3. Export JSON para Grafana (cada 5 minutos)
 ```bash
-# Cada 5 min, generar JSON
-*/5 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh --json /var/www/monitoring/health.json
+# Cada 5 minutos, actualizar métricas para dashboard
+*/5 * * * * cd /var/www/api_sequelize && bash scripts/checkProductionHealth.sh >> logs/cron.log 2>&1
+# El JSON se exporta automáticamente a metrics/latest.json
+```
+
+#### 4. Verificar cron instalado
+```bash
+# Ver cron jobs actuales
+crontab -l
+
+# Ver logs de ejecución
+tail -f /var/www/api_sequelize/logs/cron.log
 ```
 
 ### Systemd Timer (alternativa a cron)
@@ -450,7 +556,211 @@ Ver `deployment/PRODUCTION-HEALTH-CHECK.md` para guía detallada con:
 - Logs no contienen credenciales
 - JSON export solo métricas públicas
 
+## 🔄 Sistema de Logs Rotativos
+
+El sistema incluye rotación automática de logs para evitar saturación de disco:
+
+### Configuración de Logrotate
+
+```bash
+# El archivo scripts/logrotate.conf está preconfigurado
+
+# Para activar en sistema (requiere sudo):
+sudo cp scripts/logrotate.conf /etc/logrotate.d/health-check
+
+# O ejecutar manualmente:
+logrotate -f scripts/logrotate.conf
+```
+
+### Características de Rotación
+- **Frecuencia**: Diaria
+- **Retención**: 30 días
+- **Compresión**: Automática (gzip)
+- **Tamaño máximo**: 100MB por archivo
+- **Limpieza JSON**: Automática (métricas > 7 días)
+
+### Ver logs históricos
+```bash
+# Logs actuales
+ls -lh logs/
+
+# Logs comprimidos
+ls -lh logs/*.gz
+
+# Ver log específico
+cat logs/health-check-20251202-140530.log
+
+# Ver log comprimido
+zcat logs/health-check-20251201-120000.log.gz
+```
+
+## 📊 Dashboard HTML
+
+El sistema incluye un dashboard interactivo para visualizar métricas en tiempo real.
+
+### Acceso al Dashboard
+
+```bash
+# El dashboard está en: public/dashboard.html
+# Acceder vía browser:
+https://api.lujandev.com/dashboard.html
+```
+
+### Características del Dashboard
+- 📈 **Visualización en tiempo real** de todas las métricas
+- 🔄 **Auto-refresh** cada 30 segundos (configurable)
+- 📊 **Health Score** con indicador visual
+- 🖥️ **Recursos del servidor** (CPU, RAM, Disco)
+- 🌐 **Estado de servicios** (API, Admin, Ecommerce)
+- ⚠️ **Alertas activas** destacadas
+- 📱 **Responsive design** (móvil y desktop)
+
+### Configurar Endpoint en Backend
+
+Añadir ruta en Express para servir métricas:
+
+```javascript
+// En routes/index.js o app.js
+app.get('/metrics/latest.json', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  const metricsFile = path.join(__dirname, '../metrics/latest.json');
+  
+  if (fs.existsSync(metricsFile)) {
+    const data = fs.readFileSync(metricsFile, 'utf8');
+    res.json(JSON.parse(data));
+  } else {
+    res.status(404).json({ error: 'Metrics not found' });
+  }
+});
+```
+
+## 🔔 Guía de Alertas
+
+### Tipos de Alertas
+
+| Severidad | Condición | Acción |
+|-----------|-----------|--------|
+| 🟢 **OK** | Todos los checks exitosos | Ninguna |
+| 🟡 **WARNING** | Umbrales excedidos | Email + Slack (si `--notify`) |
+| 🔴 **CRITICAL** | Servicios caídos | Email + Slack + Log |
+
+### Umbrales Configurables
+
+Editar en `checkProductionHealth.sh`:
+
+```bash
+declare -r MAX_LATENCY_MS=500      # Latencia máxima
+declare -r MAX_CPU_PERCENT=70      # CPU máximo
+declare -r MAX_MEMORY_MB=300       # Memoria máxima del proceso
+declare -r MAX_DISK_PERCENT=80     # Disco máximo
+declare -r MIN_SSL_DAYS=30         # Días mínimos SSL
+```
+
+### Ejemplos de Notificaciones
+
+**Email:**
+```
+Subject: 🚨 Production Health Alert - CRÍTICO
+
+📊 Resumen:
+   • Total checks: 28
+   • Exitosos: 26
+   • Warnings: 0
+   • Fallos: 2
+   • Health Score: 92.86%
+
+⚠️ Alertas detectadas:
+   • CRITICAL: HTTP Status - 500
+   • CRITICAL: Backend API - No responde
+
+🕐 Timestamp: 2025-12-02 15:30:45
+```
+
+**Slack:**
+```
+🚨 Production Health Alert - ADVERTENCIA
+
+📊 Health Score: 89.29%
+⚠️ 3 warnings detectados
+🖥️ CPU: 75% (⚠️ umbral: 70%)
+💾 Disco: 85% (⚠️ umbral: 80%)
+```
+
+## 🔗 Integración con Grafana/Prometheus
+
+### Opción 1: SimpleJSON Plugin (Grafana)
+
+```bash
+# 1. Instalar plugin en Grafana
+grafana-cli plugins install grafana-simple-json-datasource
+
+# 2. Añadir datasource apuntando a:
+https://api.lujandev.com/metrics/latest.json
+
+# 3. Crear dashboard con queries JSON path:
+$.summary.success_rate
+$.server.cpu_percent
+$.api.latency_ms
+```
+
+### Opción 2: Prometheus Exporter
+
+Crear script `export-prometheus.sh`:
+
+```bash
+#!/bin/bash
+cd /var/www/api_sequelize
+bash scripts/checkProductionHealth.sh > /dev/null
+
+# Convertir JSON a formato Prometheus
+METRICS_FILE="metrics/latest.json"
+PROM_FILE="/var/lib/node_exporter/textfile_collector/health.prom"
+
+if [ -f "$METRICS_FILE" ]; then
+  HEALTH_SCORE=$(jq -r '.summary.success_rate' "$METRICS_FILE")
+  API_LATENCY=$(jq -r '.api.latency_ms' "$METRICS_FILE")
+  CPU=$(jq -r '.server.cpu_percent' "$METRICS_FILE")
+  MEMORY=$(jq -r '.server.memory_percent' "$METRICS_FILE")
+  
+  cat > "$PROM_FILE" <<EOF
+# HELP health_score Overall health score percentage
+# TYPE health_score gauge
+health_score $HEALTH_SCORE
+
+# HELP api_latency_milliseconds API latency in milliseconds
+# TYPE api_latency_milliseconds gauge
+api_latency_milliseconds $API_LATENCY
+
+# HELP server_cpu_percent Server CPU usage percentage
+# TYPE server_cpu_percent gauge
+server_cpu_percent $CPU
+
+# HELP server_memory_percent Server memory usage percentage
+# TYPE server_memory_percent gauge
+server_memory_percent $MEMORY
+EOF
+fi
+```
+
+Cron para actualizar cada 5 minutos:
+```bash
+*/5 * * * * /var/www/api_sequelize/scripts/export-prometheus.sh
+```
+
 ## 📝 Changelog
+
+### v3.0.0 (2025-12-02) - ENTERPRISE EDITION 🚀
+- ✨ **Alertas automáticas por Email** (SMTP con curl)
+- ✨ **Notificaciones a Slack** (Webhook integration)
+- ✨ **Dashboard HTML** interactivo con auto-refresh
+- ✨ **Logs rotativos** con logrotate (30 días retención)
+- ✨ **Export JSON automático** a metrics/latest.json
+- ✨ **Instalador automatizado** (install-monitoring.sh)
+- ✨ **Configuración .env.monitoring** para credenciales
+- ✨ **Métricas históricas** con limpieza automática
+- 📖 **Documentación completa** de instalación enterprise
 
 ### v2.0.0 (2025-12-02)
 - ✨ Medición de latencia en milisegundos
@@ -473,13 +783,23 @@ Ver `deployment/PRODUCTION-HEALTH-CHECK.md` para guía detallada con:
 ## 📞 Soporte
 
 Para issues, consultas o mejoras:
-- GitHub Issues: [tu-repo/issues]
+- GitHub Issues: [develoddy/api_sequelize]
 - Email: admin@lujandev.com
 - Documentación: `deployment/PRODUCTION-HEALTH-CHECK.md`
 
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Para cambios importantes:
+1. Fork del repositorio
+2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
+5. Abrir Pull Request
+
 ---
 
-**Versión:** 2.0.0  
+**Versión:** 3.0.0 - Enterprise Edition  
 **Última actualización:** 2 de Diciembre de 2025  
 **Licencia:** MIT  
-**Autor:** Lujandev Team
+**Autor:** Lujandev Development Team  
+**Mantenedor:** @develoddy
