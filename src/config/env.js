@@ -24,11 +24,6 @@ const envFile = process.env.NODE_ENV === 'production'
 const envPath = path.resolve(__dirname, '../../', envFile);
 dotenv.config({ path: envPath });
 
-// Debug temporal para producción
-console.error(`🔧 [env.js] Loading from: ${envPath}`);
-console.error(`🔧 [env.js] File exists: ${fs.existsSync(envPath)}`);
-console.error(`🔧 [env.js] DB_HOST: ${process.env.DB_HOST || 'NOT LOADED'}`);
-
 // Log solo en desarrollo
 if (process.env.NODE_ENV !== 'production') {
     console.log(`🌐 Variables de entorno cargadas desde: ${envFile}`);

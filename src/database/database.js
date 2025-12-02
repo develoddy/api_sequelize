@@ -13,8 +13,6 @@ if (!process.env.DB_NAME || !process.env.DB_HOST) {
 
 const isDev = process.env.NODE_ENV !== "production";
 
-console.error(`✅ [database.js] Creando conexión a: ${process.env.DB_HOST}/${process.env.DB_NAME}`);
-
 // Inicialización directa - las variables ya están disponibles cuando se importa este módulo
 export const sequelize = new Sequelize(
   process.env.DB_NAME,
