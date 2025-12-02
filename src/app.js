@@ -22,7 +22,7 @@ const corsOptions = {
     : true, // Permitir todo en desarrollo
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'token', 'x-guest-data']
 };
 
 app.use(cors(corsOptions));
