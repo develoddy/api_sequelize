@@ -185,7 +185,7 @@ import './models/Associations.js';
 async function main() {
     try {
         const isDev = process.env.NODE_ENV !== 'production';
-        console.log(`Environment: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'}`);
+        console.warn(`Environment: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'}`);
 
         // -------------------------------------------
         // 🔐 SEGURIDAD DB - DEV vs PRODUCTION
@@ -196,9 +196,9 @@ async function main() {
             console.log("✅ DEV: DB conectada");
             console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
         } else {
-            console.log("🔥 PROD: autenticando la base de datos. NO sync automático");
+            console.warn("🔥 PROD: autenticando la base de datos. NO sync automático");
             await sequelize.authenticate();
-            console.log("✅ PROD: DB conectada. Ejecuta migraciones con 'npx sequelize-cli db:migrate'");
+            console.warn("✅ PROD: DB conectada. Ejecuta migraciones con 'npx sequelize-cli db:migrate'");
         }
 
         // -------------------------------------------
@@ -217,8 +217,8 @@ async function main() {
         const PORT = process.env.PORT || 3500;
 
         server.listen(PORT, async () => {
-            console.log(`🚀 Server running on port ${PORT}`);
-            console.log("📡 WebSockets ready");
+            console.warn(`🚀 Server running on port ${PORT}`);
+            console.warn("📡 WebSockets ready");
 
             // Inicializar cron jobs (Sprint 6B - Iteración 4)
             try {
