@@ -102,7 +102,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # URLs de producción
-declare -r API_URL="https://api.lujandev.com/api/health"
+declare -r API_URL="https://api.lujandev.com/health"
 declare -r API_BASE="https://api.lujandev.com"
 declare -r ADMIN_URL="https://admin.lujandev.com"
 declare -r ECOMMERCE_URL="https://tienda.lujandev.com"
