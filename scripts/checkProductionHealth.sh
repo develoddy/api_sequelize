@@ -668,6 +668,11 @@ fi
 JSON_TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
 JSON_FILE="${JSON_OUTPUT:-$JSON_METRICS_DIR/health-$JSON_TIMESTAMP.json}"
 
+# Asignar variables para JSON export
+CPU_PERCENT="${CPU_USAGE:-0}"
+MEMORY_PERCENT="${RAM_PERCENT:-0}"
+DISK_PERCENT="${DISK_USAGE:-0}"
+
 JSON_CONTENT=$(cat <<EOF
 {
   "timestamp": "$TIMESTAMP",
