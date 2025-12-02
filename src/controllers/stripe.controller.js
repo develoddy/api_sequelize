@@ -1,5 +1,6 @@
 import { Op, Sequelize } from 'sequelize';
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import { Sale } from '../models/Sale.js';
 import { Receipt } from '../models/Receipt.js';
 import { SaleDetail } from '../models/SaleDetail.js';
@@ -248,6 +249,9 @@ export const stripeWebhook = async (req, res) => {
   const guestId = Number(session.metadata.guestId) || null;
 
   try {
+    // 🔒 Generar token único para tracking público
+    const trackingToken = crypto.randomBytes(16).toString('hex'); // 32 caracteres
+
     // Crear venta con ID amigable
     const sale = await Sale.create({
       userId,
@@ -257,12 +261,14 @@ export const stripeWebhook = async (req, res) => {
       n_transaction: 'temp', // Se actualizará después de obtener el ID
       stripeSessionId: session.id,
       total: (session.amount_total ?? 0) / 100,
+      trackingToken, // 🔒 Token de seguridad para tracking
     });
 
     // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}
     const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
     await sale.update({ n_transaction: friendlyTransactionId });
     console.log(`✅ [Stripe] Transaction ID generado: ${friendlyTransactionId}`);
+    console.log(`🔒 [Stripe] Tracking token generado: ${trackingToken}`);
 
     // Crear detalles del carrito
     let cartItems = [];

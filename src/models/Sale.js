@@ -43,6 +43,13 @@ export const Sale = sequelize.define('sales', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  // Security: Token for public tracking access
+  trackingToken: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    unique: true,
+    comment: 'Token único para acceso público al tracking'
+  },
   // Error handling
   errorMessage: {
     type: DataTypes.TEXT,

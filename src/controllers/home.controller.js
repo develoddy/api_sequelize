@@ -17,6 +17,7 @@ import { SaleDetail } from '../models/SaleDetail.js';
 import { Sale } from '../models/Sale.js';
 import { SaleAddress } from "../models/SaleAddress.js";
 import { AddressClient } from "../models/AddressClient.js";
+// Shipment not needed - tracking data is directly in Sale model
 
 // RESOURCES
 import resources from "../resources/index.js";
@@ -433,6 +434,7 @@ export const profile_client = async (req, res) => {
         let user_id = req.body.user_id;
 
         // Obtener órdenes del usuario ordenadas por fecha de creación descendente (más recientes primero)
+        // Sale model ya contiene campos de tracking de Printful: trackingNumber, trackingUrl, carrier, syncStatus, shippedAt
         let Orders = await Sale.findAll({ 
             where: { userId: user_id },
             order: [['createdAt', 'DESC']]
@@ -498,8 +500,27 @@ export const profile_client = async (req, res) => {
                     review: reviewS,
                 });
             }
+
+            // Preparar información de la venta con tracking de Printful
+            const saleWithShipments = {
+                ...order.get({ plain: true }), // Convertir Sequelize instance a objeto plano
+                shipments: order.shipments ? order.shipments.map(shipment => ({
+                    id: shipment.id,
+                    printfulShipmentId: shipment.printfulShipmentId,
+                    carrier: shipment.carrier,
+                    service: shipment.service,
+                    trackingNumber: shipment.trackingNumber,
+                    trackingUrl: shipment.trackingUrl,
+                    status: shipment.status,
+                    shippedAt: shipment.shippedAt,
+                    deliveredAt: shipment.deliveredAt,
+                    createdAt: shipment.createdAt,
+                    updatedAt: shipment.updatedAt
+                })) : []
+            };
+
             sale_orders.push({
-                sale: order,
+                sale: saleWithShipments,
                 sale_details: collection_detail_orders,
                 sale_address: sale_address,
             });

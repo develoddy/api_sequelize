@@ -32,6 +32,7 @@ import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from './postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
+import trackingRoutes from './tracking.routes.js';
 
 const app = express();
 
@@ -67,5 +68,6 @@ app.use("/prelaunch", prelaunchRoutes);
 app.use("/newsletter", newsletterRoutes);
 app.use("/postal-codes", postalCodeRoutes);
 app.use("/analytics", analyticsRoutes);
+app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
 
 export default app;

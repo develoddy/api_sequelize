@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Sale } from '../../models/Sale.js';
 import { SaleAddress } from '../../models/SaleAddress.js';
 import { SaleDetail } from '../../models/SaleDetail.js';
@@ -7,6 +8,9 @@ import { SaleDetail } from '../../models/SaleDetail.js';
  */
 export const createTestSale = async (req, res) => {
   try {
+    // 🔒 Generar token único para tracking público
+    const trackingToken = crypto.randomBytes(16).toString('hex'); // 32 caracteres
+
     // Crear Sale
     const sale = await Sale.create({
       method_payment: 'stripe',
@@ -15,7 +19,8 @@ export const createTestSale = async (req, res) => {
       currency_payment: 'EUR',
       curreny_total: 'EUR',
       price_dolar: 0,
-      syncStatus: 'pending'
+      syncStatus: 'pending',
+      trackingToken // 🔒 Token de seguridad para tracking
     });
 
     // Crear SaleAddress

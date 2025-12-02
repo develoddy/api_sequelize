@@ -26,6 +26,7 @@ import smtpTransport from 'nodemailer-smtp-transport';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
+import crypto from 'crypto';
 
 /**
  * Aplica redondeo .95 para mantener consistencia con el frontend
@@ -547,6 +548,9 @@ export const register = async (req, res) => {
 const createSale = async (saleData) => {
     saleData.userId = saleData.user;
     
+    // 🔒 Generar token único para tracking público
+    saleData.trackingToken = crypto.randomBytes(16).toString('hex'); // 32 caracteres
+    
     // Si no viene n_transaction o es genérico (PAYPAL_xxx, STRIPE_xxx), crear uno temporal
     if (!saleData.n_transaction || saleData.n_transaction.startsWith('PAYPAL_') || saleData.n_transaction.startsWith('STRIPE_')) {
         saleData.n_transaction = 'temp';
@@ -560,6 +564,8 @@ const createSale = async (saleData) => {
         await sale.update({ n_transaction: friendlyTransactionId });
         console.log(`✅ [Sale] Transaction ID generado: ${friendlyTransactionId}`);
     }
+    
+    console.log(`🔒 [Sale] Tracking token generado: ${saleData.trackingToken}`);
     
     return sale;
 };
