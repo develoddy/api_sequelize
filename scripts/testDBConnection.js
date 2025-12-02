@@ -1,3 +1,5 @@
+// Cargar variables de entorno PRIMERO
+import '../src/config/env.js';
 import { sequelize } from '../src/database/database.js';
 
 async function testConnection() {
