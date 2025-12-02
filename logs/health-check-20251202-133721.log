@@ -1,0 +1,9 @@
+[2025-12-02 13:37:21] [INFO] === Iniciando health check v2.0.0 ===
+[2025-12-02 13:37:21] [INFO] Modo: NORMAL
+[2025-12-02 13:37:21] [WARN] Sistema Operativo: macOS - métricas de servidor no disponibles (umbral: )
+[2025-12-02 13:37:21] [WARN] PM2: No disponible (ejecutar en servidor) (umbral: )
+[2025-12-02 13:37:21] [ERROR] Health Status: 
+[2025-12-02 13:37:22] [ERROR] Stripe API Key: No configurado
+[2025-12-02 13:37:22] [WARN] Printful API Key: No configurado (umbral: )
+[2025-12-02 13:37:24] [ERROR] Angular App: <app-root> NO encontrado
+[2025-12-02 13:37:25] [INFO] Health check finalizado - Passed: 17, Warnings: 3, Failed: 3

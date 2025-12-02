@@ -1,0 +1,7 @@
+[2025-12-02 13:40:48] [INFO] === Iniciando health check v2.0.0 ===
+[2025-12-02 13:40:48] [INFO] Modo: VERBOSE
+[2025-12-02 13:40:48] [WARN] Sistema Operativo: macOS - métricas de servidor no disponibles (umbral: )
+[2025-12-02 13:40:48] [WARN] PM2: No disponible (ejecutar en servidor) (umbral: )
+[2025-12-02 13:40:48] [WARN] Printful API Key: No configurado (umbral: )
+[2025-12-02 13:40:49] [ERROR] Angular App: <app-root> NO encontrado
+[2025-12-02 13:40:50] [INFO] Health check finalizado - Passed: 19, Warnings: 3, Failed: 1

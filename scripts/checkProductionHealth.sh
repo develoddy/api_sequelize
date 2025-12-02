@@ -1,186 +1,574 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🏥 SCRIPT DE VALIDACIÓN DE SALUD - PRODUCCIÓN
+# 🏥 ULTRA PRO PRODUCTION HEALTH CHECK v2.0
 # ==============================================================================
-# Valida que los 3 entornos de la plataforma estén operativos:
-# - API Backend (Node.js + PM2)
-# - Admin Panel (Angular)
-# - Ecommerce Frontend (Angular)
+# Sistema completo de validación de salud para entornos de producción
+# 
+# Características:
+# - Medición de latencia y performance
+# - Validación de certificados SSL
+# - Monitoreo de recursos del servidor (CPU, RAM, Disco)
+# - Estado de todos los procesos PM2
+# - Análisis de tamaño de respuestas
+# - Logs con timestamps detallados
+# - Alertas inteligentes por umbrales
+# - Export de resultados a JSON
 #
 # Uso:
-#   bash scripts/checkProductionHealth.sh
-#   bash scripts/checkProductionHealth.sh --verbose
+#   bash scripts/checkProductionHealth.sh                    # Modo normal
+#   bash scripts/checkProductionHealth.sh --verbose          # Modo detallado
+#   bash scripts/checkProductionHealth.sh --json output.json # Export JSON
+#   bash scripts/checkProductionHealth.sh --alert            # Solo alertas
 # ==============================================================================
 
-# Colores para output
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Colores profesionales
+declare -r RESET='\033[0m'
+declare -r BOLD='\033[1m'
+declare -r DIM='\033[2m'
 
+# Colores principales
+declare -r SUCCESS='\033[38;5;46m'      # Verde brillante
+declare -r ERROR='\033[38;5;196m'       # Rojo brillante
+declare -r WARNING='\033[38;5;214m'     # Naranja
+declare -r INFO='\033[38;5;39m'         # Azul cyan
+declare -r HEADER='\033[38;5;105m'      # Púrpura
+declare -r MUTED='\033[38;5;245m'       # Gris
+
+# Configuración
+declare -r SCRIPT_VERSION="2.0.0"
+declare -r TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+declare -r LOG_FILE="logs/health-check-$(date '+%Y%m%d-%H%M%S').log"
+
+# Flags de modo
 VERBOSE=false
-if [[ "$1" == "--verbose" ]]; then
-  VERBOSE=true
-fi
+ALERT_ONLY=false
+JSON_EXPORT=false
+JSON_OUTPUT=""
+
+# Parse argumentos
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --verbose|-v)
+      VERBOSE=true
+      shift
+      ;;
+    --alert|-a)
+      ALERT_ONLY=true
+      shift
+      ;;
+    --json|-j)
+      JSON_EXPORT=true
+      JSON_OUTPUT="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 # URLs de producción
-API_URL="https://api.lujandev.com/api/health"
-ADMIN_URL="https://admin.lujandev.com"
-ECOMMERCE_URL="https://tienda.lujandev.com"
+declare -r API_URL="https://api.lujandev.com/api/health"
+declare -r API_BASE="https://api.lujandev.com"
+declare -r ADMIN_URL="https://admin.lujandev.com"
+declare -r ECOMMERCE_URL="https://tienda.lujandev.com"
 
-echo ""
-echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║         🏥 VALIDACIÓN DE SALUD - PRODUCCIÓN                    ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
-echo ""
+# Umbrales de alerta
+declare -r MAX_LATENCY_MS=500
+declare -r MAX_CPU_PERCENT=70
+declare -r MAX_MEMORY_MB=300
+declare -r MAX_DISK_PERCENT=80
+declare -r MIN_SSL_DAYS=30
+
+# Variables globales para resultados
+ALERTS=()
+TOTAL_CHECKS=0
+PASSED_CHECKS=0
+FAILED_CHECKS=0
+WARNING_CHECKS=0
 
 # ==============================================================================
-# 1. CHECK BACKEND API
+# FUNCIONES AUXILIARES
 # ==============================================================================
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}🔧 1. BACKEND API (Node.js + PM2)${NC}"
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-# Check PM2 status (solo si estamos en el servidor)
+# Logging con timestamp
+log() {
+  local level=$1
+  shift
+  local message="$@"
+  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+}
+
+# Print con formato
+print_header() {
+  if [[ "$ALERT_ONLY" == false ]]; then
+    echo ""
+    echo -e "${HEADER}${BOLD}╔════════════════════════════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${HEADER}${BOLD}║  $1${RESET}"
+    echo -e "${HEADER}${BOLD}╚════════════════════════════════════════════════════════════════════════════╝${RESET}"
+    echo ""
+  fi
+}
+
+print_section() {
+  if [[ "$ALERT_ONLY" == false ]]; then
+    echo ""
+    echo -e "${INFO}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "${INFO}${BOLD}$1${RESET}"
+    echo -e "${INFO}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  fi
+}
+
+print_check() {
+  local status=$1
+  local label=$2
+  local value=$3
+  local threshold=$4
+  
+  ((TOTAL_CHECKS++))
+  
+  case $status in
+    "OK")
+      ((PASSED_CHECKS++))
+      [[ "$ALERT_ONLY" == false ]] && echo -e "   ${SUCCESS}✓${RESET} ${BOLD}$label:${RESET} $value"
+      ;;
+    "WARN")
+      ((WARNING_CHECKS++))
+      echo -e "   ${WARNING}⚠${RESET} ${BOLD}$label:${RESET} $value ${DIM}(umbral: $threshold)${RESET}"
+      ALERTS+=("WARNING: $label - $value (umbral: $threshold)")
+      log "WARN" "$label: $value (umbral: $threshold)"
+      ;;
+    "FAIL")
+      ((FAILED_CHECKS++))
+      echo -e "   ${ERROR}✗${RESET} ${BOLD}$label:${RESET} $value"
+      ALERTS+=("CRITICAL: $label - $value")
+      log "ERROR" "$label: $value"
+      ;;
+  esac
+}
+
+# Formatear bytes a humano
+format_bytes() {
+  local bytes=$1
+  if [[ $bytes -lt 1024 ]]; then
+    echo "${bytes}B"
+  elif [[ $bytes -lt 1048576 ]]; then
+    echo "$(echo "scale=2; $bytes/1024" | bc)KB"
+  else
+    echo "$(echo "scale=2; $bytes/1048576" | bc)MB"
+  fi
+}
+
+# Medir latencia con curl
+measure_latency() {
+  local url=$1
+  local response=$(curl -o /dev/null -s -w "%{time_total},%{http_code},%{size_download}" "$url" --connect-timeout 10 --max-time 30)
+  echo "$response"
+}
+
+# Validar SSL
+check_ssl() {
+  local domain=$1
+  local expiry_date=$(echo | openssl s_client -servername "$domain" -connect "$domain":443 2>/dev/null | openssl x509 -noout -dates 2>/dev/null | grep "notAfter" | cut -d= -f2)
+  
+  if [[ -z "$expiry_date" ]]; then
+    echo "ERROR"
+    return
+  fi
+  
+  local expiry_epoch=$(date -j -f "%b %d %H:%M:%S %Y %Z" "$expiry_date" "+%s" 2>/dev/null)
+  local current_epoch=$(date +%s)
+  local days_remaining=$(( (expiry_epoch - current_epoch) / 86400 ))
+  
+  echo "$days_remaining"
+}
+
+# ==============================================================================
+# INICIO DEL SCRIPT
+# ==============================================================================
+
+# Crear directorio de logs si no existe
+mkdir -p logs
+
+# Header
+print_header "🏥 ULTRA PRO PRODUCTION HEALTH CHECK v${SCRIPT_VERSION}    🚀 $TIMESTAMP"
+
+log "INFO" "=== Iniciando health check v${SCRIPT_VERSION} ==="
+log "INFO" "Modo: $([ "$VERBOSE" == true ] && echo "VERBOSE" || echo "NORMAL")"
+
+# ==============================================================================
+# 1. RECURSOS DEL SERVIDOR
+# ==============================================================================
+print_section "💻 RECURSOS DEL SERVIDOR"
+
+if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ -f /proc/meminfo ]]; then
+  # CPU
+  CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+  if (( $(echo "$CPU_USAGE > $MAX_CPU_PERCENT" | bc -l) )); then
+    print_check "WARN" "Uso de CPU" "${CPU_USAGE}%" "${MAX_CPU_PERCENT}%"
+  else
+    print_check "OK" "Uso de CPU" "${CPU_USAGE}%"
+  fi
+  
+  # RAM
+  TOTAL_RAM=$(free -m | awk 'NR==2{print $2}')
+  USED_RAM=$(free -m | awk 'NR==2{print $3}')
+  RAM_PERCENT=$(echo "scale=2; $USED_RAM*100/$TOTAL_RAM" | bc)
+  print_check "OK" "Memoria RAM" "${USED_RAM}MB / ${TOTAL_RAM}MB (${RAM_PERCENT}%)"
+  
+  # Disco
+  DISK_USAGE=$(df -h / | awk 'NR==2{print $5}' | cut -d'%' -f1)
+  DISK_SIZE=$(df -h / | awk 'NR==2{print $2}')
+  DISK_USED=$(df -h / | awk 'NR==2{print $3}')
+  
+  if [[ $DISK_USAGE -gt $MAX_DISK_PERCENT ]]; then
+    print_check "WARN" "Disco (/)" "${DISK_USED} / ${DISK_SIZE} (${DISK_USAGE}%)" "${MAX_DISK_PERCENT}%"
+  else
+    print_check "OK" "Disco (/)" "${DISK_USED} / ${DISK_SIZE} (${DISK_USAGE}%)"
+  fi
+  
+  # Load Average
+  LOAD_AVG=$(uptime | awk -F'load average:' '{print $2}')
+  print_check "OK" "Load Average" "$LOAD_AVG"
+  
+  # Uptime
+  UPTIME=$(uptime -p 2>/dev/null || uptime | awk '{print $3,$4}')
+  print_check "OK" "Server Uptime" "$UPTIME"
+  
+else
+  print_check "WARN" "Sistema Operativo" "macOS - métricas de servidor no disponibles"
+fi
+
+# ==============================================================================
+# 2. PROCESOS PM2
+# ==============================================================================
+print_section "⚙️  PROCESOS PM2"
+
 if command -v pm2 &> /dev/null; then
-  echo -e "📊 Estado de PM2:"
-  PM2_STATUS=$(pm2 jlist | jq -r '.[] | select(.name=="api_sequelize") | .pm2_env.status')
-  PM2_CPU=$(pm2 jlist | jq -r '.[] | select(.name=="api_sequelize") | .monit.cpu')
-  PM2_MEMORY=$(pm2 jlist | jq -r '.[] | select(.name=="api_sequelize") | .monit.memory')
-  PM2_UPTIME=$(pm2 jlist | jq -r '.[] | select(.name=="api_sequelize") | .pm2_env.pm_uptime')
+  PM2_LIST=$(pm2 jlist)
+  PM2_COUNT=$(echo "$PM2_LIST" | jq 'length')
   
-  if [[ "$PM2_STATUS" == "online" ]]; then
-    echo -e "   ✅ Estado: ${GREEN}ONLINE${NC}"
-    echo -e "   🧠 CPU: ${PM2_CPU}%"
-    echo -e "   💾 Memoria: $(echo "scale=2; $PM2_MEMORY/1048576" | bc) MB"
+  if [[ $PM2_COUNT -eq 0 ]]; then
+    print_check "FAIL" "Procesos PM2" "No hay procesos en ejecución"
+  else
+    print_check "OK" "Total de procesos" "$PM2_COUNT"
     
-    if [[ "$VERBOSE" == true ]]; then
-      UPTIME_SECONDS=$(( ($(date +%s) - PM2_UPTIME/1000) ))
-      UPTIME_DAYS=$(( UPTIME_SECONDS / 86400 ))
-      echo -e "   ⏰ Uptime: ${UPTIME_DAYS} días"
+    # Iterar sobre cada proceso
+    for i in $(seq 0 $((PM2_COUNT - 1))); do
+      NAME=$(echo "$PM2_LIST" | jq -r ".[$i].name")
+      STATUS=$(echo "$PM2_LIST" | jq -r ".[$i].pm2_env.status")
+      CPU=$(echo "$PM2_LIST" | jq -r ".[$i].monit.cpu")
+      MEMORY=$(echo "$PM2_LIST" | jq -r ".[$i].monit.memory")
+      MEMORY_MB=$(echo "scale=2; $MEMORY/1048576" | bc)
+      RESTARTS=$(echo "$PM2_LIST" | jq -r ".[$i].pm2_env.restart_time")
+      UPTIME=$(echo "$PM2_LIST" | jq -r ".[$i].pm2_env.pm_uptime")
+      
+      if [[ "$STATUS" == "online" ]]; then
+        if (( $(echo "$MEMORY_MB > $MAX_MEMORY_MB" | bc -l) )); then
+          print_check "WARN" "  ├─ $NAME" "ONLINE | CPU: ${CPU}% | RAM: ${MEMORY_MB}MB | Restarts: $RESTARTS" "${MAX_MEMORY_MB}MB RAM"
+        else
+          print_check "OK" "  ├─ $NAME" "ONLINE | CPU: ${CPU}% | RAM: ${MEMORY_MB}MB | Restarts: $RESTARTS"
+        fi
+        
+        if [[ $RESTARTS -gt 5 ]]; then
+          print_check "WARN" "  │  └─ Restarts elevados" "$RESTARTS restarts detectados" "< 5 restarts"
+        fi
+      else
+        print_check "FAIL" "  ├─ $NAME" "STATUS: $STATUS"
+      fi
+    done
+  fi
+else
+  print_check "WARN" "PM2" "No disponible (ejecutar en servidor)"
+fi
+
+# ==============================================================================
+# 3. BACKEND API
+# ==============================================================================
+print_section "🔧 BACKEND API (Node.js)"
+
+# Medir latencia y performance
+API_METRICS=$(measure_latency "$API_URL")
+API_TIME=$(echo "$API_METRICS" | cut -d',' -f1)
+API_CODE=$(echo "$API_METRICS" | cut -d',' -f2)
+API_SIZE=$(echo "$API_METRICS" | cut -d',' -f3)
+API_LATENCY_MS=$(echo "$API_TIME * 1000" | bc | cut -d'.' -f1)
+
+# HTTP Status
+if [[ "$API_CODE" == "200" ]]; then
+  print_check "OK" "HTTP Status" "$API_CODE OK"
+else
+  print_check "FAIL" "HTTP Status" "$API_CODE"
+fi
+
+# Latencia
+if [[ $API_LATENCY_MS -gt $MAX_LATENCY_MS ]]; then
+  print_check "WARN" "Latencia" "${API_LATENCY_MS}ms" "< ${MAX_LATENCY_MS}ms"
+else
+  print_check "OK" "Latencia" "${API_LATENCY_MS}ms"
+fi
+
+# Tamaño de respuesta
+API_SIZE_FORMATTED=$(format_bytes $API_SIZE)
+print_check "OK" "Tamaño respuesta" "$API_SIZE_FORMATTED"
+
+# Validar contenido del health check
+if [[ "$API_CODE" == "200" ]]; then
+  HEALTH_DATA=$(curl -s "$API_URL" 2>/dev/null)
+  
+  if command -v jq &> /dev/null; then
+    HEALTH_STATUS=$(echo "$HEALTH_DATA" | jq -r '.status' 2>/dev/null || echo "")
+    HEALTH_ENV=$(echo "$HEALTH_DATA" | jq -r '.environment' 2>/dev/null || echo "")
+    HEALTH_UPTIME=$(echo "$HEALTH_DATA" | jq -r '.uptime' 2>/dev/null || echo "")
+    HEALTH_STRIPE=$(echo "$HEALTH_DATA" | jq -r '.services.stripe' 2>/dev/null || echo "")
+    HEALTH_PRINTFUL=$(echo "$HEALTH_DATA" | jq -r '.services.printful' 2>/dev/null || echo "")
+    
+    if [[ "$HEALTH_STATUS" == "ok" ]]; then
+      print_check "OK" "Health Status" "$HEALTH_STATUS"
+    elif [[ -n "$HEALTH_STATUS" ]]; then
+      print_check "FAIL" "Health Status" "$HEALTH_STATUS"
+    else
+      print_check "WARN" "Health Status" "No se pudo parsear respuesta"
+    fi
+    
+    if [[ -n "$HEALTH_ENV" ]]; then
+      print_check "OK" "Environment" "$HEALTH_ENV"
+    fi
+    
+    # Uptime del proceso
+    if [[ "$HEALTH_UPTIME" != "null" ]] && [[ -n "$HEALTH_UPTIME" ]]; then
+      UPTIME_HOURS=$(echo "scale=2; $HEALTH_UPTIME/3600" | bc 2>/dev/null || echo "0")
+      print_check "OK" "Process Uptime" "${UPTIME_HOURS}h"
+    fi
+    
+    # Servicios externos
+    if [[ "$HEALTH_STRIPE" == "true" ]]; then
+      print_check "OK" "Stripe API Key" "Configurado"
+    elif [[ -n "$HEALTH_STRIPE" ]]; then
+      print_check "FAIL" "Stripe API Key" "No configurado"
+    fi
+    
+    if [[ "$HEALTH_PRINTFUL" == "true" ]]; then
+      print_check "OK" "Printful API Key" "Configurado"
+    elif [[ -n "$HEALTH_PRINTFUL" ]]; then
+      print_check "WARN" "Printful API Key" "No configurado"
     fi
   else
-    echo -e "   ❌ Estado: ${RED}$PM2_STATUS${NC}"
+    print_check "WARN" "Health Data" "jq no disponible - no se puede parsear JSON"
   fi
-else
-  echo -e "   ⚠️  PM2 no disponible (ejecutar en servidor)"
 fi
 
-echo ""
-echo -e "🌐 Comprobando endpoint /health..."
-API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL" --connect-timeout 10)
+# SSL Certificate
+API_DOMAIN=$(echo "$API_BASE" | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1)
+SSL_DAYS=$(check_ssl "$API_DOMAIN")
 
-if [[ "$API_RESPONSE" == "200" ]]; then
-  echo -e "   ✅ Respuesta: ${GREEN}200 OK${NC}"
+if [[ "$SSL_DAYS" == "ERROR" ]]; then
+  print_check "FAIL" "Certificado SSL" "Error al obtener información"
+elif [[ $SSL_DAYS -lt $MIN_SSL_DAYS ]]; then
+  print_check "WARN" "Certificado SSL" "Expira en ${SSL_DAYS} días" "> ${MIN_SSL_DAYS} días"
+else
+  print_check "OK" "Certificado SSL" "Válido por ${SSL_DAYS} días"
+fi
+
+# ==============================================================================
+# 4. ADMIN PANEL
+# ==============================================================================
+print_section "👨‍💼 ADMIN PANEL (Angular)"
+
+# Medir latencia
+ADMIN_METRICS=$(measure_latency "$ADMIN_URL")
+ADMIN_TIME=$(echo "$ADMIN_METRICS" | cut -d',' -f1)
+ADMIN_CODE=$(echo "$ADMIN_METRICS" | cut -d',' -f2)
+ADMIN_SIZE=$(echo "$ADMIN_METRICS" | cut -d',' -f3)
+ADMIN_LATENCY_MS=$(echo "$ADMIN_TIME * 1000" | bc | cut -d'.' -f1)
+
+# HTTP Status
+if [[ "$ADMIN_CODE" == "200" ]]; then
+  print_check "OK" "HTTP Status" "$ADMIN_CODE OK"
+else
+  print_check "FAIL" "HTTP Status" "$ADMIN_CODE"
+fi
+
+# Latencia
+if [[ $ADMIN_LATENCY_MS -gt 2000 ]]; then
+  print_check "WARN" "Latencia" "${ADMIN_LATENCY_MS}ms" "< 2000ms"
+else
+  print_check "OK" "Latencia" "${ADMIN_LATENCY_MS}ms"
+fi
+
+# Tamaño
+ADMIN_SIZE_FORMATTED=$(format_bytes $ADMIN_SIZE)
+print_check "OK" "Tamaño HTML" "$ADMIN_SIZE_FORMATTED"
+
+# Validar Angular
+if [[ "$ADMIN_CODE" == "200" ]]; then
+  ADMIN_HTML=$(curl -s "$ADMIN_URL")
   
-  if [[ "$VERBOSE" == true ]]; then
-    HEALTH_DATA=$(curl -s "$API_URL")
-    echo -e "   📋 Detalles:"
-    echo "$HEALTH_DATA" | jq '.'
+  if echo "$ADMIN_HTML" | grep -q "<app-root"; then
+    print_check "OK" "Angular App" "<app-root> encontrado"
   else
-    HEALTH_STATUS=$(curl -s "$API_URL" | jq -r '.status')
-    HEALTH_ENV=$(curl -s "$API_URL" | jq -r '.environment')
-    echo -e "   📊 Status: $HEALTH_STATUS"
-    echo -e "   🌍 Environment: $HEALTH_ENV"
+    print_check "FAIL" "Angular App" "<app-root> NO encontrado"
   fi
+  
+  if echo "$ADMIN_HTML" | grep -q "runtime"; then
+    print_check "OK" "JS Bundles" "runtime.js cargado"
+  else
+    print_check "WARN" "JS Bundles" "runtime.js no detectado"
+  fi
+fi
+
+# SSL Certificate
+ADMIN_DOMAIN=$(echo "$ADMIN_URL" | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1)
+SSL_DAYS=$(check_ssl "$ADMIN_DOMAIN")
+
+if [[ "$SSL_DAYS" == "ERROR" ]]; then
+  print_check "FAIL" "Certificado SSL" "Error al obtener información"
+elif [[ $SSL_DAYS -lt $MIN_SSL_DAYS ]]; then
+  print_check "WARN" "Certificado SSL" "Expira en ${SSL_DAYS} días" "> ${MIN_SSL_DAYS} días"
 else
-  echo -e "   ❌ Error: ${RED}HTTP $API_RESPONSE${NC}"
+  print_check "OK" "Certificado SSL" "Válido por ${SSL_DAYS} días"
 fi
 
 # ==============================================================================
-# 2. CHECK ADMIN PANEL
+# 5. ECOMMERCE FRONTEND
 # ==============================================================================
-echo ""
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}👨‍💼 2. ADMIN PANEL (Angular)${NC}"
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+print_section "🛒 ECOMMERCE FRONTEND (Angular)"
 
-ADMIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$ADMIN_URL" --connect-timeout 10)
+# Medir latencia
+ECOM_METRICS=$(measure_latency "$ECOMMERCE_URL")
+ECOM_TIME=$(echo "$ECOM_METRICS" | cut -d',' -f1)
+ECOM_CODE=$(echo "$ECOM_METRICS" | cut -d',' -f2)
+ECOM_SIZE=$(echo "$ECOM_METRICS" | cut -d',' -f3)
+ECOM_LATENCY_MS=$(echo "$ECOM_TIME * 1000" | bc | cut -d'.' -f1)
 
-if [[ "$ADMIN_RESPONSE" == "200" ]]; then
-  echo -e "   ✅ Respuesta: ${GREEN}200 OK${NC}"
-  
-  if [[ "$VERBOSE" == true ]]; then
-    ADMIN_HTML=$(curl -s "$ADMIN_URL")
-    if echo "$ADMIN_HTML" | grep -q "<app-root"; then
-      echo -e "   ✅ Tag <app-root> encontrado"
-    fi
-    if echo "$ADMIN_HTML" | grep -q "runtime"; then
-      echo -e "   ✅ Bundles de Angular cargados"
-    fi
-  fi
+# HTTP Status
+if [[ "$ECOM_CODE" == "200" ]]; then
+  print_check "OK" "HTTP Status" "$ECOM_CODE OK"
 else
-  echo -e "   ❌ Error: ${RED}HTTP $ADMIN_RESPONSE${NC}"
+  print_check "FAIL" "HTTP Status" "$ECOM_CODE"
 fi
 
-# ==============================================================================
-# 3. CHECK ECOMMERCE FRONTEND
-# ==============================================================================
-echo ""
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}🛒 3. ECOMMERCE FRONTEND (Angular)${NC}"
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-ECOMMERCE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$ECOMMERCE_URL" --connect-timeout 10)
-
-if [[ "$ECOMMERCE_RESPONSE" == "200" ]]; then
-  echo -e "   ✅ Respuesta: ${GREEN}200 OK${NC}"
-  
-  if [[ "$VERBOSE" == true ]]; then
-    ECOMMERCE_HTML=$(curl -s "$ECOMMERCE_URL")
-    if echo "$ECOMMERCE_HTML" | grep -q "<app-root"; then
-      echo -e "   ✅ Tag <app-root> encontrado"
-    fi
-    if echo "$ECOMMERCE_HTML" | grep -q "runtime"; then
-      echo -e "   ✅ Bundles de Angular cargados"
-    fi
-  fi
+# Latencia
+if [[ $ECOM_LATENCY_MS -gt 2000 ]]; then
+  print_check "WARN" "Latencia" "${ECOM_LATENCY_MS}ms" "< 2000ms"
 else
-  echo -e "   ❌ Error: ${RED}HTTP $ECOMMERCE_RESPONSE${NC}"
+  print_check "OK" "Latencia" "${ECOM_LATENCY_MS}ms"
+fi
+
+# Tamaño
+ECOM_SIZE_FORMATTED=$(format_bytes $ECOM_SIZE)
+print_check "OK" "Tamaño HTML" "$ECOM_SIZE_FORMATTED"
+
+# Validar Angular
+if [[ "$ECOM_CODE" == "200" ]]; then
+  ECOM_HTML=$(curl -s "$ECOMMERCE_URL")
+  
+  if echo "$ECOM_HTML" | grep -q "<app-root"; then
+    print_check "OK" "Angular App" "<app-root> encontrado"
+  else
+    print_check "FAIL" "Angular App" "<app-root> NO encontrado"
+  fi
+  
+  if echo "$ECOM_HTML" | grep -q "runtime"; then
+    print_check "OK" "JS Bundles" "runtime.js cargado"
+  else
+    print_check "WARN" "JS Bundles" "runtime.js no detectado"
+  fi
+fi
+
+# SSL Certificate
+ECOM_DOMAIN=$(echo "$ECOMMERCE_URL" | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1)
+SSL_DAYS=$(check_ssl "$ECOM_DOMAIN")
+
+if [[ "$SSL_DAYS" == "ERROR" ]]; then
+  print_check "FAIL" "Certificado SSL" "Error al obtener información"
+elif [[ $SSL_DAYS -lt $MIN_SSL_DAYS ]]; then
+  print_check "WARN" "Certificado SSL" "Expira en ${SSL_DAYS} días" "> ${MIN_SSL_DAYS} días"
+else
+  print_check "OK" "Certificado SSL" "Válido por ${SSL_DAYS} días"
 fi
 
 # ==============================================================================
 # RESUMEN FINAL
 # ==============================================================================
+print_section "📊 RESUMEN DE VALIDACIÓN"
+
+echo -e "   ${INFO}Total de checks:${RESET}     $TOTAL_CHECKS"
+echo -e "   ${SUCCESS}Checks exitosos:${RESET}     $PASSED_CHECKS"
+echo -e "   ${WARNING}Warnings:${RESET}            $WARNING_CHECKS"
+echo -e "   ${ERROR}Checks fallidos:${RESET}     $FAILED_CHECKS"
 echo ""
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}📊 RESUMEN${NC}"
-echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-ALL_OK=true
+# Score
+SUCCESS_RATE=$(echo "scale=2; $PASSED_CHECKS*100/$TOTAL_CHECKS" | bc)
+echo -e "   ${BOLD}Health Score:${RESET}        ${SUCCESS}${SUCCESS_RATE}%${RESET}"
 
-if [[ "$API_RESPONSE" == "200" ]]; then
-  echo -e "   API Backend:   ${GREEN}✅ OPERATIVO${NC}"
-else
-  echo -e "   API Backend:   ${RED}❌ CAÍDO${NC}"
-  ALL_OK=false
+# Alertas
+if [[ ${#ALERTS[@]} -gt 0 ]]; then
+  echo ""
+  echo -e "${WARNING}${BOLD}⚠️  ALERTAS DETECTADAS:${RESET}"
+  for alert in "${ALERTS[@]}"; do
+    echo -e "   ${WARNING}•${RESET} $alert"
+  done
 fi
 
-if [[ "$ADMIN_RESPONSE" == "200" ]]; then
-  echo -e "   Admin Panel:   ${GREEN}✅ OPERATIVO${NC}"
-else
-  echo -e "   Admin Panel:   ${RED}❌ CAÍDO${NC}"
-  ALL_OK=false
+# ==============================================================================
+# EXPORT A JSON (opcional)
+# ==============================================================================
+if [[ "$JSON_EXPORT" == true ]]; then
+  JSON_CONTENT=$(cat <<EOF
+{
+  "timestamp": "$TIMESTAMP",
+  "version": "$SCRIPT_VERSION",
+  "summary": {
+    "total_checks": $TOTAL_CHECKS,
+    "passed": $PASSED_CHECKS,
+    "warnings": $WARNING_CHECKS,
+    "failed": $FAILED_CHECKS,
+    "success_rate": $SUCCESS_RATE
+  },
+  "api": {
+    "http_code": "$API_CODE",
+    "latency_ms": $API_LATENCY_MS,
+    "size_bytes": $API_SIZE,
+    "ssl_days": "$SSL_DAYS"
+  },
+  "admin": {
+    "http_code": "$ADMIN_CODE",
+    "latency_ms": $ADMIN_LATENCY_MS,
+    "size_bytes": $ADMIN_SIZE
+  },
+  "ecommerce": {
+    "http_code": "$ECOM_CODE",
+    "latency_ms": $ECOM_LATENCY_MS,
+    "size_bytes": $ECOM_SIZE
+  },
+  "alerts": [
+    $(printf '"%s",' "${ALERTS[@]}" | sed 's/,$//')
+  ]
+}
+EOF
+)
+  echo "$JSON_CONTENT" > "$JSON_OUTPUT"
+  log "INFO" "Resultados exportados a $JSON_OUTPUT"
+  echo -e "\n${INFO}✓${RESET} Resultados exportados a: ${BOLD}$JSON_OUTPUT${RESET}"
 fi
 
-if [[ "$ECOMMERCE_RESPONSE" == "200" ]]; then
-  echo -e "   Ecommerce:     ${GREEN}✅ OPERATIVO${NC}"
-else
-  echo -e "   Ecommerce:     ${RED}❌ CAÍDO${NC}"
-  ALL_OK=false
-fi
-
+# ==============================================================================
+# EXIT CODE
+# ==============================================================================
 echo ""
-if [[ "$ALL_OK" == true ]]; then
-  echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║  ✅ TODOS LOS SERVICIOS OPERATIVOS                             ║${NC}"
-  echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+log "INFO" "Health check finalizado - Passed: $PASSED_CHECKS, Warnings: $WARNING_CHECKS, Failed: $FAILED_CHECKS"
+
+if [[ $FAILED_CHECKS -eq 0 ]] && [[ $WARNING_CHECKS -eq 0 ]]; then
+  print_header "✅ TODOS LOS SISTEMAS OPERATIVOS - SALUD ÓPTIMA"
+  exit 0
+elif [[ $FAILED_CHECKS -eq 0 ]]; then
+  print_header "⚠️  SISTEMAS OPERATIVOS CON ADVERTENCIAS"
   exit 0
 else
-  echo -e "${RED}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${RED}║  ⚠️  ALGUNOS SERVICIOS NO ESTÁN OPERATIVOS                     ║${NC}"
-  echo -e "${RED}╚════════════════════════════════════════════════════════════════╝${NC}"
+  print_header "❌ SISTEMAS CON FALLOS CRÍTICOS DETECTADOS"
   exit 1
 fi
