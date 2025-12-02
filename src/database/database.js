@@ -1,8 +1,15 @@
 import { Sequelize }  from "sequelize";
 import * as dotenv from 'dotenv';
-//dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config({ path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' });
+// Obtener __dirname en ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+const envPath = path.resolve(__dirname, '../..', envFile);
+dotenv.config({ path: envPath });
 
 const isDev = process.env.NODE_ENV !== "production";
 
