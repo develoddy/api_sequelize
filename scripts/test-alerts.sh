@@ -80,12 +80,20 @@ Content-Type: text/html; charset=UTF-8
 </body>
 </html>"
     
+    # Determinar flags SSL según el puerto
+    SSL_FLAGS=""
+    if [[ "$SMTP_PORT" == "465" ]]; then
+      SSL_FLAGS="--ssl"
+    else
+      SSL_FLAGS="--ssl-reqd"
+    fi
+    
     echo "$TEST_EMAIL_BODY" | curl --url "smtp://$SMTP_HOST:$SMTP_PORT" \
       --mail-from "$SMTP_USER" \
       --mail-rcpt "$ALERT_EMAIL" \
       --user "$SMTP_USER:$SMTP_PASS" \
       --upload-file - \
-      --ssl-reqd \
+      $SSL_FLAGS \
       --silent 2>&1
     
     if [ $? -eq 0 ]; then
@@ -97,6 +105,7 @@ Content-Type: text/html; charset=UTF-8
       echo "     - Credenciales SMTP correctas"
       echo "     - Puerto y host correctos"
       echo "     - Firewall permite conexiones SMTP"
+      echo "   Debug: curl usó flags: $SSL_FLAGS para puerto $SMTP_PORT"
     fi
   fi
 else

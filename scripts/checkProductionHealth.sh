@@ -265,13 +265,23 @@ Content-Type: text/html; charset=UTF-8
 </body>
 </html>"
 
+  # Determinar flags SSL según el puerto
+  local SSL_FLAGS=""
+  if [[ "$SMTP_PORT" == "465" ]]; then
+    # Puerto 465 usa SSL directo (smtps)
+    SSL_FLAGS="--ssl"
+  else
+    # Puerto 587 usa STARTTLS
+    SSL_FLAGS="--ssl-reqd"
+  fi
+  
   # Enviar usando curl con SMTP
   echo "$email_body" | curl --url "smtp://$SMTP_HOST:$SMTP_PORT" \
     --mail-from "$SMTP_USER" \
     --mail-rcpt "$ALERT_EMAIL" \
     --user "$SMTP_USER:$SMTP_PASS" \
     --upload-file - \
-    --ssl-reqd \
+    $SSL_FLAGS \
     --silent 2>/dev/null
     
   if [[ $? -eq 0 ]]; then
@@ -671,11 +681,11 @@ JSON_CONTENT=$(cat <<EOF
     "success_rate": $SUCCESS_RATE
   },
   "server": {
-    "cpu_percent": $CPU_PERCENT,
-    "memory_percent": $MEMORY_PERCENT,
-    "disk_percent": $DISK_PERCENT,
-    "load_average": "$LOAD_AVG",
-    "uptime": "$UPTIME"
+    "cpu_percent": ${CPU_PERCENT:-0},
+    "memory_percent": ${MEMORY_PERCENT:-0},
+    "disk_percent": ${DISK_PERCENT:-0},
+    "load_average": "${LOAD_AVG:-N/A}",
+    "uptime": "${UPTIME:-N/A}"
   },
   "api": {
     "http_code": "$API_CODE",

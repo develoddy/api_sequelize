@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-12-02 15:43:17",
+  "timestamp_unix": 1764686599,
+  "version": "3.0.0",
+  "summary": {
+    "total_checks": 23,
+    "passed": 21,
+    "warnings": 2,
+    "failed": 0,
+    "success_rate": 91.30
+  },
+  "server": {
+    "cpu_percent": 0,
+    "memory_percent": 0,
+    "disk_percent": 0,
+    "load_average": "N/A",
+    "uptime": "N/A"
+  },
+  "api": {
+    "http_code": "200",
+    "latency_ms": 139,
+    "size_bytes": 171,
+    "ssl_days": "85"
+  },
+  "admin": {
+    "http_code": "200",
+    "latency_ms": 163,
+    "size_bytes": 38503
+  },
+  "ecommerce": {
+    "http_code": "200",
+    "latency_ms": 139,
+    "size_bytes": 9815
+  },
+  "alerts": [
+    "WARNING: Sistema Operativo - macOS - métricas de servidor no disponibles (umbral: )","WARNING: PM2 - No disponible (ejecutar en servidor) (umbral: )"
+  ]
+}
