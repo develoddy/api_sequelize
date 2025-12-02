@@ -67,6 +67,10 @@ echo -e "\n${CYAN}3️⃣ PASO 3: Reiniciar PM2 y validar${NC}"
 ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 << 'EOF'
   cd /var/www/api_sequelize
   
+  # Cargar NVM
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  
   # Dar permisos a scripts
   chmod +x scripts/*.sh
   
