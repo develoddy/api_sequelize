@@ -46,7 +46,7 @@ app.get('/health', (req, res) => {
     database: 'connected', // Sequelize ya validó la conexión en index.js
     services: {
       stripe: !!process.env.STRIPE_SECRET_KEY,
-      printful: !!process.env.PRINTFUL_API_KEY
+      printful: !!process.env.PRINTFUL_API_TOKEN  // Corregido: TOKEN en vez de KEY
     }
   });
 });
