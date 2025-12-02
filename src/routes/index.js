@@ -33,68 +33,8 @@ import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from './postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    database: 'connected', // Sequelize ya validó la conexión en index.js
-    services: {
-      stripe: !!process.env.STRIPE_SECRET_KEY,
-      printful: !!process.env.PRINTFUL_API_TOKEN  // Corregido: TOKEN en vez de KEY
-    }
-  });
-});
-
-// Dashboard HTML (Enterprise Monitoring)
-app.get('/dashboard.html', (req, res) => {
-  const dashboardPath = path.join(__dirname, '../../public/dashboard.html');
-  
-  if (fs.existsSync(dashboardPath)) {
-    res.sendFile(dashboardPath);
-  } else {
-    res.status(404).json({ 
-      error: 'Dashboard not found',
-      message: 'El archivo dashboard.html no existe en /public/',
-      path: dashboardPath
-    });
-  }
-});
-
-// Métricas JSON para Dashboard
-app.get('/metrics/latest.json', (req, res) => {
-  const metricsPath = path.join(__dirname, '../../metrics/latest.json');
-  
-  if (fs.existsSync(metricsPath)) {
-    try {
-      const data = fs.readFileSync(metricsPath, 'utf8');
-      const jsonData = JSON.parse(data);
-      res.json(jsonData);
-    } catch (error) {
-      res.status(500).json({ 
-        error: 'Error reading metrics',
-        message: error.message 
-      });
-    }
-  } else {
-    res.status(404).json({ 
-      error: 'Metrics not found',
-      message: 'Ejecuta: bash scripts/checkProductionHealth.sh',
-      path: metricsPath
-    });
-  }
-});
 
 app.use("/users", usersRoutes);
 app.use("/guests", guestsRoutes);

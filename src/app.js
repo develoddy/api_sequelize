@@ -74,6 +74,61 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
+// -------------------- Enterprise Monitoring Endpoints --------------------
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    database: 'connected',
+    services: {
+      stripe: !!process.env.STRIPE_SECRET_KEY,
+      printful: !!process.env.PRINTFUL_API_TOKEN
+    }
+  });
+});
+
+// Dashboard HTML
+app.get('/dashboard.html', (req, res) => {
+  const dashboardPath = path.join(__dirname, 'public', 'dashboard.html');
+  
+  if (fs.existsSync(dashboardPath)) {
+    res.sendFile(dashboardPath);
+  } else {
+    res.status(404).json({ 
+      error: 'Dashboard not found',
+      message: 'El archivo dashboard.html no existe en public/',
+      path: dashboardPath
+    });
+  }
+});
+
+// Métricas JSON para Dashboard
+app.get('/metrics/latest.json', (req, res) => {
+  const metricsPath = path.join(__dirname, '../metrics/latest.json');
+  
+  if (fs.existsSync(metricsPath)) {
+    try {
+      const data = fs.readFileSync(metricsPath, 'utf8');
+      const jsonData = JSON.parse(data);
+      res.json(jsonData);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Error reading metrics',
+        message: error.message 
+      });
+    }
+  } else {
+    res.status(404).json({ 
+      error: 'Metrics not found',
+      message: 'Ejecuta: bash scripts/checkProductionHealth.sh',
+      path: metricsPath
+    });
+  }
+});
+
 // -------------------- Archivos estáticos --------------------
 app.use(express.static(path.join(__dirname,'public')));
 app.use('/api/', router);
