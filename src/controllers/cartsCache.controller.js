@@ -18,17 +18,15 @@ export const register = async (req, res) => {
 
         // VALIDAR QUE EL GUEST EXISTA
         const guestId = data.user;
-        console.log("=======> Guest ID:", guestId); // Depuración: Verificar el valor de guestId
-        // const guestExists = await sequelize.models.Guest?.findOne?.({ where: { id: guestId } });
+        
         let guestExists = await Guest.findOne({
             where: {
                 id: guestId,
             }
         });
-        console.log("=======> Guest Exists:", guestExists); // Depuración: Verificar si guestExists tiene un valor
+        // Depuración: Verificar si guestExists tiene un valor
         
         if (!guestExists) {
-            console.log(" ========> El invitado (guest) no existe o la sesión ha expirado. Por favor, recarga la página o inicia una nueva sesión.");
             
             res.status(400).json({
                 message: 400,
@@ -138,7 +136,7 @@ export const register = async (req, res) => {
         res.status(500).send({
             message: "debug: CartController register: OCURRIÓ UN PROBLEMA"
         });
-        console.log("------> register cache error: ", error);
+        
     }
 }
 

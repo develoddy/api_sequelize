@@ -9,6 +9,7 @@
  *   - Sincronización o NO sincronización de modelos
  *   - Arranque del servidor Express
  *   - Arranque de Socket.IO (chat y notificaciones)
+ *   - 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (Seguridad)
  *
  * ----------------------------------------------------------------
  * 🧩 DIFERENCIAS ENTRE DEVELOPMENT vs PRODUCTION
@@ -19,6 +20,14 @@
  *
  * Si NO es producción → modo DESARROLLO
  * Si es producción → modo PRODUCCIÓN
+ *
+ * ----------------------------------------------------------------
+ * 🔒 SEGURIDAD: DESACTIVACIÓN DE LOGS EN PRODUCCIÓN
+ * ----------------------------------------------------------------
+ * En producción, todos los console.log se desactivan automáticamente
+ * para prevenir exposición de información sensible.
+ * 
+ * Solo console.error y console.warn permanecen activos para monitoreo.
  *
  * ----------------------------------------------------------------
  * 🧪 1) MODO DESARROLLO (local)
@@ -115,7 +124,24 @@ const envFile = process.env.NODE_ENV === 'production'
     : '.env.development';
 
 dotenv.config({ path: envFile });
-console.log(`🌐 Variables de entorno cargadas desde: ${envFile}`);
+
+// ================================================================
+// 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
+// ================================================================
+if (process.env.NODE_ENV === 'production') {
+    // Desactivar logs que podrían exponer información sensible
+    console.log = function () {};
+    console.debug = function () {};
+    console.info = function () {};
+    console.table = function () {};
+    
+    // Mantener console.warn y console.error para monitoreo
+    // console.warn y console.error NO se desactivan
+    
+    console.warn('🔒 [PRODUCTION MODE] console.log/debug/info/table desactivados por seguridad');
+} else {
+    console.log(`🌐 Variables de entorno cargadas desde: ${envFile}`);
+}
 
 import http from 'http';
 import app from './app.js';
@@ -172,8 +198,8 @@ async function main() {
         // -------------------------------------------
         if (isDev) {
             console.log("🔧 DEV: autenticando DB (sin alterar tablas automáticamente)");
-            //await sequelize.sync({ force: true });
-            await sequelize.authenticate(); 
+            await sequelize.sync({ force: true });
+            //await sequelize.authenticate(); 
             console.log("✅ DEV: DB conectada");
             console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
         } else {

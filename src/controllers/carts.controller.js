@@ -53,16 +53,6 @@ export const list = async (req, res) => {
                 return resources.Cart.cart_list(cart);
             });
 
-            // 🔍 DEBUG LOG
-            console.log('🛒 [CARTS LIST] Enviando carritos al frontend:', {
-                count: CARTS.length,
-                firstCart: CARTS[0] ? {
-                    productTitle: CARTS[0].product?.title,
-                    type_campaign: CARTS[0].type_campaign,
-                    code_discount: CARTS[0].code_discount,
-                    discount: CARTS[0].discount
-                } : null
-            });
 
             // Enviando la respuesta
             res.status(200).json({
@@ -74,7 +64,6 @@ export const list = async (req, res) => {
             res.status(200).json({ carts: [] });
         }
     } catch (error) {
-        console.log(error);
         res.status(500).send({
             message: "debug: CartController list OCURRIÓ UN PROBLEMA"
         });
@@ -330,7 +319,7 @@ export const update = async (req, res) => {
 export const apllyCupon = async (req, res) => {
     try {
         let data = req.body;
-        console.log("💡 [applyCupon] Datos recibidos del front:", data);
+   
 
         // Validar la existencia del cupón y sus condiciones
         const { Op } = await import('sequelize');
@@ -354,7 +343,7 @@ export const apllyCupon = async (req, res) => {
         });
 
         if (!cupon) {
-            console.log("❌ [applyCupon] Cupón no encontrado o sin usos disponibles:", data.code);
+          
             
             // Verificar si existe pero está agotado o inactivo
             const cuponExists = await Cupone.findOne({
@@ -381,14 +370,7 @@ export const apllyCupon = async (req, res) => {
             });
         }
 
-        console.log("✅ [applyCupon] Cupón encontrado:", {
-            code: cupon.code,
-            type_discount: cupon.type_discount,
-            discount: cupon.discount,
-            type_count: cupon.type_count,
-            num_use: cupon.num_use,
-            state: cupon.state
-        });
+       
 
         // Verificar si el cupón ya está aplicado en algún item del carrito
         const existingCoupon = await Cart.findOne({
@@ -399,7 +381,7 @@ export const apllyCupon = async (req, res) => {
         });
 
         if (existingCoupon) {
-            console.log(`⚠️ [applyCupon] Cupón ya aplicado previamente:`, data.code);
+            
             return res.status(200).json({
                 message: 403,
                 message_text: "Este cupón ya ha sido aplicado a tu carrito."
@@ -412,14 +394,10 @@ export const apllyCupon = async (req, res) => {
             include: [{ model: Product }]
         });
 
-        console.log(`💼 [applyCupon] Carrito encontrado (${carts.length} items)`);
-
 
         let products = cupon.cupones_products.map(cuponeProduct => cuponeProduct.productId);
         let categories = cupon.cupones_categories.map(cuponeCategorie => cuponeCategorie.categoryId);
-        console.log("📦 [applyCupon] Productos aplicables del cupón:", products);
-        console.log("🗂️ [applyCupon] Categorías aplicables del cupón:", categories);
-        console.log("🎯 [applyCupon] type_segment del cupón:", cupon.type_segment);
+        
 
         for (const cart of carts) {
             let subtotal = cart.price_unitario;
@@ -445,21 +423,11 @@ export const apllyCupon = async (req, res) => {
             const hasExistingCampaignDiscount = cart.discount && cart.type_discount && !cart.code_cupon;
             const isEligibleForCoupon = !hasExistingCampaignDiscount && appliesToThisProduct;
 
-            // DEBUG COMPLETO
-            console.log(`🔍 [applyCupon] Analizando ${cart.product.title}:`);
-            console.log(`   - productId: ${cart.product.id}`);
-            console.log(`   - categoryId: ${cart.product.categoryId}`);
-            console.log(`   - discount: ${cart.discount}`);
-            console.log(`   - code_cupon: ${cart.code_cupon}`);
-            console.log(`   - type_discount: ${cart.type_discount}`);
-            console.log(`   - type_segment: ${cupon.type_segment}`);
-            console.log(`   - appliesToThisProduct: ${appliesToThisProduct}`);
-            console.log(`   - hasExistingCampaignDiscount: ${hasExistingCampaignDiscount}`);
-            console.log(`   - isEligibleForCoupon: ${isEligibleForCoupon}`);
+            
 
             // LIMPIEZA: Si tiene discount pero no type_discount, limpiar datos residuales
             if (cart.discount && !cart.type_discount && !cart.code_cupon) {
-                console.log(`🧹 [applyCupon] Limpiando datos residuales de ${cart.product.title}`);
+                
                 await Cart.update({
                     discount: null,
                     subtotal: cart.price_unitario,
@@ -495,9 +463,7 @@ export const apllyCupon = async (req, res) => {
                     where: { id: cart.id }
                 });
 
-                console.log(`💰 [applyCupon] CUPÓN aplicado con redondeo .95: ${cart.price_unitario} → ${finalPriceWithRounding}`);
-
-                console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
+                
             } else {
                 if (hasExistingCampaignDiscount) {
                     console.log(`🚫 [applyCupon] ${cart.product.title} NO elegible - ya tiene campaign discount`);
@@ -507,54 +473,7 @@ export const apllyCupon = async (req, res) => {
             }
         }
 
-        // for (const cart of carts) {
-        //     let subtotal = 0;
-        //     let total = 0;
-
-        //     if (products.length > 0 && products.includes(cart.product.id)) {
-        //         if ( cupon.type_discount == 1 ) { // Por porcentaje
-        //             subtotal = parseFloat((cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01)).toFixed(2));
-        //         } else { // Por moneda
-        //             subtotal = cart.price_unitario - cupon.discount;
-        //         }
-
-        //         total = subtotal * cart.cantidad;
-
-        //         await Cart.update({
-        //             subtotal: subtotal,
-        //             total: total,
-        //             type_discount: cupon.type_discount,
-        //             discount: cupon.discount,
-        //             code_cupon: cupon.code,
-        //         }, {
-        //             where: { id: cart.id }
-        //         });
-
-        //         console.log(`✅ [applyCupon] Descuento aplicado a ${cart.product.title}: subtotal=${subtotal}, total=${total}`);
-        //     } else {
-        //         console.log(`ℹ️ [applyCupon] Cupón NO aplica a ${cart.product.title}`);
-        //     }
-
-
-        //     if (categories.length > 0 && categories.includes(cart.product.categoryId)) {
-        //         if ( cupon.type_discount == 1 ) { // Por porcentaje
-        //             subtotal = cart.price_unitario - cart.price_unitario * (cupon.discount * 0.01);
-        //         } else { // Por moneda
-        //             subtotal = cart.price_unitario - cupon.discount;
-        //         }
-
-        //         total = subtotal * cart.cantidad;
-        //         await Cart.update({
-        //             subtotal: subtotal,
-        //             total: total,
-        //             type_discount: cupon.type_discount,
-        //             discount: cupon.discount,
-        //             code_cupon: cupon.code,
-        //         }, {
-        //             where: { id: cart.id }
-        //         });
-        //     }
-        // }
+        
 
         res.status(200).json({
             message: 200,
@@ -571,7 +490,7 @@ export const apllyCupon = async (req, res) => {
 export const removeCupon = async (req, res) => {
     try {
         let data = req.body;
-        console.log("🗑️ [removeCupon] Datos recibidos del front:", data);
+       
 
         if (!data.user_id) {
             res.status(200).json({
@@ -587,7 +506,7 @@ export const removeCupon = async (req, res) => {
             include: [{ model: Product }]
         });
 
-        console.log(`🛒 [removeCupon] Carrito encontrado (${carts.length} items)`);
+        
 
         if (carts.length === 0) {
             res.status(200).json({
@@ -608,7 +527,7 @@ export const removeCupon = async (req, res) => {
             return;
         }
 
-        console.log(`🎫 [removeCupon] Productos con cupón encontrados: ${cartsWithCoupons.length}`);
+        
 
         // Remover cupones SOLO de productos que tienen cupón aplicado
         // PRESERVAR campaign discounts en productos que no tienen cupón
@@ -647,7 +566,7 @@ export const removeCupon = async (req, res) => {
                     where: { id: cart.id }
                 });
 
-                console.log(`✅ [removeCupon] Cupón removido de ${cart.product.title}: ${cart.price_unitario} → ${originalPrice}`);
+             
             } else if (cart.discount && !cart.code_cupon) {
                 // Este producto tiene campaign discount SIN cupón -> PRESERVAR
                 console.log(`ℹ️ [removeCupon] Preservando campaign discount en ${cart.product.title}: discount=${cart.discount}`);
@@ -754,203 +673,3 @@ export const mergeCart = async (req, res) => {
     }
 };
 
-
-
-/*export const mergeCart = async (req, res) => {
-    try {
-        // Obtener el ID del usuario autenticado desde el token de autenticación
-        const user_id = req.query.user_id;
-        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
-
-        if (!user_id) {
-            return res.status(400).json({ message: "El ID de usuario es necesario." });
-        }
-
-        if (!localCartItems || !Array.isArray(localCartItems) || localCartItems.length === 0) {
-            return res.status(400).json({ message: "No se proporcionaron artículos en el carrito." });
-        }
-        
-        // Obtener el carrito del usuario autenticado desde la base de datos
-        let backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Crear un mapa de los artículos en el carrito del backend para búsqueda rápida
-        const backendItemMap = new Map();
-        backendCartItems.forEach(item => {
-            const key = `${item.productId}-${item.variedadId}`; // Crear una clave única
-            backendItemMap.set(key, item);
-        });
-       
-        // Fusionar los carritos
-        for (const localItem of localCartItems) {
-            const key = `${localItem.product._id}-${localItem.variedad.id}`; // Crear la misma clave
-
-            // Verificar si el producto local ya existe en el carrito del backend
-            const existingItem = backendItemMap.get(key);
-
-            if (!existingItem) {
-                // Si no existe, agregar el artículo al carrito del backend
-                
-                // Determinar type_campaign
-                let type_campaign = null;
-                if (localItem.code_cupon) {
-                    type_campaign = 3; // Cupón
-                } else if (localItem.code_discount) {
-                    const discount = await Discount.findByPk(localItem.code_discount);
-                    type_campaign = discount ? discount.type_campaign : null;
-                } else if (localItem.discount && localItem.discount > 0) {
-                    type_campaign = 1; // Campaign Discount sin código
-                }
-                
-                await Cart.create({
-                    userId: user_id,
-                    productId: localItem.product._id,
-                    variedadId: localItem.variedad.id,
-                    type_discount: localItem.type_discount,
-                    discount: localItem.discount,
-                    cantidad: Number(localItem.cantidad),
-                    code_cupon: localItem.code_cupon,
-                    code_discount: localItem.code_discount,
-                    type_campaign: type_campaign,
-                    price_unitario: localItem.price_unitario,
-                    subtotal: localItem.subtotal,
-                    total: localItem.total
-                });
-            }
-        }
-
-        // Volver a cargar el carrito actualizado desde la base de datos
-        backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Transformar los resultados para enviarlos al frontend
-        const CARTS = backendCartItems.map(cart => resources.Cart.cart_list(cart));
-
-        res.status(200).json({
-            carts: CARTS,
-            message: 'Carrito fusionado exitosamente'
-        });
-
-        // Borrar todos los artículos en cartsCache
-        await CartCache.destroy({
-            where: { user_status: "Guest" }  // Asegúrate de que se borren solo los del usuario autenticado
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send({
-            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
-        });
-    }
-};*/
-
-
-/*
-export const mergeCart = async (req, res) => {
-    try {
-        // Obtener el ID del usuario autenticado desde el token de autenticación
-        const user_id = req.query.user_id;
-        const localCartItems = req.body.data;  // Carrito local enviado desde el frontend
-
-        if (!user_id) {
-            return res.status(400).json({ message: "El ID de usuario es necesario." });
-        }
-
-        if (!localCartItems || !Array.isArray(localCartItems) || localCartItems.length === 0) {
-            return res.status(400).json({ message: "No se proporcionaron artículos en el carrito." });
-        }
-        
-        // Obtener el carrito del usuario autenticado desde la base de datos
-        let backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Crear un mapa de los artículos en el carrito del backend para búsqueda rápida
-        const backendItemMap = new Map();
-        backendCartItems.forEach(item => {
-            const key = `${item.productId}-${item.variedadId}`; // Crear una clave única
-            backendItemMap.set(key, item);
-        });
-       
-
-        // Fusionar los carritos
-        for (const localItem of localCartItems) {
-            
-            const key = `${localItem.product._id}-${localItem.variedad.id}`; // Crear la misma clave
-
-            // Verificar si el producto local ya existe en el carrito del backend
-            const existingItem = backendItemMap.get(key);
-
-            if (existingItem) {
-                // Si existe, actualizar la cantidad (sumarla)
-                existingItem.cantidad += localItem.cantidad;
-                await existingItem.save();  // Guardar los cambios en la base de datos
-            } else {
-                // Si no existe, agregar el artículo al carrito del backend
-                
-                // Determinar type_campaign
-                let type_campaign = null;
-                if (localItem.code_cupon) {
-                    type_campaign = 3; // Cupón
-                } else if (localItem.code_discount) {
-                    const discount = await Discount.findByPk(localItem.code_discount);
-                    type_campaign = discount ? discount.type_campaign : null;
-                } else if (localItem.discount && localItem.discount > 0) {
-                    type_campaign = 1; // Campaign Discount sin código
-                }
-                
-                await Cart.create({
-                    userId: user_id,
-                    productId: localItem.product._id,
-                    variedadId: localItem.variedad.id,
-                    type_discount: localItem.type_discount,
-                    discount: localItem.discount,
-                    cantidad: Number(localItem.cantidad),
-                    code_cupon: localItem.code_cupon,
-                    code_discount: localItem.code_discount,
-                    type_campaign: type_campaign,
-                    price_unitario: localItem.price_unitario,
-                    subtotal: localItem.subtotal,
-                    total: localItem.total
-                });
-            }
-        }
-
-        // Volver a cargar el carrito actualizado desde la base de datos
-        backendCartItems = await Cart.findAll({
-            where: { userId: user_id },
-            include: [
-                { model: Variedad, include: { model: File } },
-                { model: Product, include: { model: Categorie } }
-            ]
-        });
-
-        // Transformar los resultados para enviarlos al frontend
-        const CARTS = backendCartItems.map(cart => resources.Cart.cart_list(cart));
-
-        res.status(200).json({
-            carts: CARTS,
-            message: 'Carrito fusionado exitosamente'
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send({
-            message: "debug: CartController merge: OCURRIÓ UN PROBLEMA"
-        });
-    }
-};
-*/

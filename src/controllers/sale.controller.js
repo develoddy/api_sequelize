@@ -564,8 +564,7 @@ const createSale = async (saleData) => {
         await sale.update({ n_transaction: friendlyTransactionId });
         console.log(`✅ [Sale] Transaction ID generado: ${friendlyTransactionId}`);
     }
-    
-    console.log(`🔒 [Sale] Tracking token generado: ${saleData.trackingToken}`);
+
     
     return sale;
 };

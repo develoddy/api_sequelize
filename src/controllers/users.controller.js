@@ -8,6 +8,7 @@ import { getPrintfulProducts } from './proveedor/printful/productPrintful.contro
 import jwt from "jsonwebtoken";
 import nodemailer from 'nodemailer';
 import fs from 'fs';
+import { logger, sanitize } from '../utils/logger.js';
 import path from "path";
 import handlebars from 'handlebars';
 import ejs from 'ejs';
@@ -52,9 +53,9 @@ async function sendEmailResetPassword(email, token) {
     // Verificar conexión SMTP
     try {
         await transporter.verify();
-        console.log('[Reset Password] SMTP connection verified successfully');
+        logger.debug('SMTP connection verified successfully');
     } catch (error) {
-        console.error('[Reset Password] SMTP verification failed:', error);
+        logger.error('SMTP verification failed:', error.message);
         throw new Error('SMTP configuration error');
     }
 
@@ -77,10 +78,9 @@ async function sendEmailResetPassword(email, token) {
         html: renderedHTML
     };
 
-    console.log('[Reset Password] Sending email to:', email);
     const result = await transporter.sendMail(mailOptions);
-    console.log('[Reset Password] Email sent successfully:', result.messageId);
-    
+    logger.debug('[Reset Password] Email sent successfully to:', sanitize.email(email));
+  
     // Cerrar el transporter para evitar memory leaks
     transporter.close();
     
@@ -91,8 +91,6 @@ async function sendEmailResetPassword(email, token) {
 export const requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
-
-        console.log('[Reset Password] Request received for email:', email);
 
         if (!email) {
             return res.status(400).send({ message: 'Email es requerido' });
@@ -107,32 +105,31 @@ export const requestPasswordReset = async (req, res) => {
         });
 
         if (!user) {
-            console.log('[Reset Password] User not found:', email);
             return res.status(404).send({ message: 'Usuario no encontrado' });
         }
 
-        console.log('[Reset Password] User found, ID:', user.id);
 
         // Comprobar si JWT_SECRET tiene un valor
         if (!JWT_SECRET) {
-            console.error('[Reset Password] JWT_SECRET not configured');
+           
             return res.status(500).send({ message: 'Error del servidor: JWT_SECRET no está configurado.' });
         }
 
         // Crear un token JWT
         const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
-        console.log('[Reset Password] Token generated successfully');
+        
 
         // Enviar el correo electrónico con el enlace de restablecimiento
         try {
             const emailResult = await sendEmailResetPassword(email, token);
-            console.log('[Reset Password] Email sent successfully to:', email);
+            logger.debug('[Reset Password] Request processed for email:', sanitize.email(email));
+            
             res.status(200).send({ 
                 message: 'Correo de restablecimiento enviado exitosamente',
                 success: true 
             });
         } catch (emailError) {
-            console.error('[Reset Password] Email sending failed:', emailError);
+            
             res.status(500).send({ 
                 message: 'Error al enviar el correo: ' + emailError.message,
                 success: false 

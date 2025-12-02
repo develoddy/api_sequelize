@@ -41,7 +41,6 @@ export const getTrackingStatus = async (req, res) => {
     // 🧹 Limpiar orderId: remover #PF si viene en el formato #PF135327909
     orderId = orderId.replace(/^#?PF/i, '').trim();
 
-    console.log(`🔍 [TRACKING] Consultando orden: ${orderId} con token: ${token.substring(0, 8)}...`);
 
     // 1️⃣ Buscar en BD local con validación de token (SEGURIDAD)
     // Prioridad: printfulOrderId → sale.id (fallback)

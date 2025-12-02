@@ -9,19 +9,17 @@ export const getPostalCodeInfo = async (req, res) => {
   try {
     const { country, postalCode } = req.params;
     
-    console.log(`📍 [PostalCode Controller] GET /${country}/${postalCode}`);
-    
     const result = await PostalCode.findByPostalCode(country.toUpperCase(), postalCode);
     
     if (!result.exists) {
-      console.log(`❌ [PostalCode Controller] CP ${postalCode} not found in ${country}`);
+      
       return res.status(404).json({
         exists: false,
         message: `Código postal ${postalCode} no encontrado en ${country}`
       });
     }
     
-    console.log(`✅ [PostalCode Controller] CP ${postalCode} found:`, result);
+    
     res.json(result);
     
   } catch (error) {
@@ -42,8 +40,7 @@ export const validateCombination = async (req, res) => {
   try {
     const { country, postalCode, city, province } = req.body;
     
-    console.log(`🔍 [PostalCode Controller] POST /validate`, req.body);
-    
+   
     if (!country || !postalCode || !city) {
       return res.status(400).json({
         valid: false,
@@ -58,7 +55,6 @@ export const validateCombination = async (req, res) => {
       province
     );
     
-    console.log(`✅ [PostalCode Controller] Validation result:`, result);
     res.json(result);
     
   } catch (error) {
@@ -80,11 +76,8 @@ export const getProvincesByCountry = async (req, res) => {
   try {
     const { country } = req.params;
     
-    console.log(`📍 [PostalCode Controller] GET /provinces/${country}`);
-    
     const provinces = await PostalCode.getProvincesByCountry(country.toUpperCase());
-    
-    console.log(`✅ [PostalCode Controller] Found ${provinces.length} provinces`);
+   
     res.json({ provinces });
     
   } catch (error) {
@@ -103,11 +96,8 @@ export const getProvincesByCountry = async (req, res) => {
  */
 export const getStats = async (req, res) => {
   try {
-    console.log(`📊 [PostalCode Controller] GET /stats`);
     
     const stats = await PostalCode.getStats();
-    
-    console.log(`✅ [PostalCode Controller] Stats:`, stats);
     res.json(stats);
     
   } catch (error) {
@@ -128,8 +118,6 @@ export const searchByCity = async (req, res) => {
   try {
     const { country, city } = req.query;
     
-    console.log(`🔍 [PostalCode Controller] GET /search?country=${country}&city=${city}`);
-    
     if (!country || !city) {
       return res.status(400).json({
         error: 'Parámetros obligatorios: country, city'
@@ -138,7 +126,6 @@ export const searchByCity = async (req, res) => {
     
     const results = await PostalCode.searchByCity(country.toUpperCase(), city);
     
-    console.log(`✅ [PostalCode Controller] Found ${results.length} results`);
     res.json(results);
     
   } catch (error) {

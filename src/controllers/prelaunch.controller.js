@@ -7,6 +7,7 @@ import ejs from 'ejs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger, sanitize } from '../utils/logger.js';
 
 // Para usar __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -97,9 +98,9 @@ export const subscribe = async (req, res) => {
         // Enviar email de bienvenida inmediato
         try {
             await sendWelcomeEmail(newSubscriber.id);
-            console.log('✅ Welcome email sent to:', newSubscriber.email);
+            logger.debug('Welcome email sent to:', sanitize.email(newSubscriber.email));
         } catch (emailError) {
-            console.error('❌ Error sending welcome email:', emailError);
+            logger.error('Error sending welcome email:', emailError.message);
             // No fallar la respuesta por error de email
         }
 
@@ -604,7 +605,7 @@ export const sendLaunchEmailsCampaign = async (req, res) => {
             featured_products: launchData.featured_products || []
         };
 
-        console.log('🚀 Starting launch email campaign with data:', emailData);
+        logger.debug('Starting launch email campaign with data:', emailData);
         
         const result = await sendLaunchEmails(emailData);
         
@@ -715,7 +716,6 @@ export const getSubscriberById = async (req, res) => {
  */
 export const previewLaunchEmail = async (req, res) => {
     try {
-        console.log('📧 Preview request received:', req.body);
         
         const { coupon_discount, coupon_expiry_days, featured_products } = req.body;
 
@@ -730,11 +730,8 @@ export const previewLaunchEmail = async (req, res) => {
             store_url: process.env.URL_FRONTEND || 'http://localhost:4200'
         };
 
-        console.log('📋 Preview data prepared:', previewData);
-
         // Cargar y compilar template con EJS
         const templatePath = path.join(process.cwd(), 'src/mails/email_prelaunch_launch.html');
-        console.log('📂 Loading template from:', templatePath);
         
         // Renderizar con EJS
         const html = await ejs.renderFile(templatePath, {
@@ -744,15 +741,11 @@ export const previewLaunchEmail = async (req, res) => {
             unsubscribe_url: `${process.env.URL_BACKEND || 'http://localhost:3500'}/api/prelaunch/unsubscribe/PREVIEW`,
             ...previewData
         });
-        
-        console.log('✅ HTML generated with EJS, size:', html.length, 'bytes');
 
         res.status(200).json({
             status: 200,
             html
         });
-        
-        console.log('📤 Preview response sent');
 
     } catch (error) {
         console.error('❌ Error generating preview:', error);

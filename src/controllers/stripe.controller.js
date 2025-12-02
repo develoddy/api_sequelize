@@ -60,9 +60,6 @@ export const createCheckoutSession = async (req, res) => {
   try {
     const { cart, userId, guestId, address } = req.body;
 
-    // Log incoming payload for debugging metadata issues
-    console.log('[Stripe] createCheckoutSession incoming payload: userId type=', typeof userId, 'userId=', userId, 'guestId type=', typeof guestId, 'guestId=', guestId);
-
     // Normalize userId/guestId to simple scalar strings for Stripe metadata
     const normalizeIdForMetadata = (id) => {
       try {
@@ -267,8 +264,7 @@ export const stripeWebhook = async (req, res) => {
     // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}
     const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
     await sale.update({ n_transaction: friendlyTransactionId });
-    console.log(`✅ [Stripe] Transaction ID generado: ${friendlyTransactionId}`);
-    console.log(`🔒 [Stripe] Tracking token generado: ${trackingToken}`);
+    
 
     // Crear detalles del carrito
     let cartItems = [];
@@ -565,15 +561,14 @@ export const stripeWebhook = async (req, res) => {
       }
     }
 
-    console.log('[Stripe Webhook] Created SaleDetails count=', createdDetailsCount, 'for saleId=', sale.id);
+    
 
     // Verificar que se crearon TODOS los SaleDetails esperados
     const saleDetailsCreationSuccess = (expectedCount > 0 && createdDetailsCount === expectedCount);
-    console.log(`[Stripe Webhook] 📊 SaleDetails verification: expected=${expectedCount}, created=${createdDetailsCount}, success=${saleDetailsCreationSuccess}`);
+    
 
     if (!saleDetailsCreationSuccess) {
-      console.error(`[Stripe Webhook] ❌ ERROR: No se crearon todos los SaleDetails. Expected: ${expectedCount}, Created: ${createdDetailsCount}`);
-      console.error(`[Stripe Webhook] ❌ NO SE LIMPIARÁ EL CARRITO para preservar datos para debugging`);
+      
       return res.status(500).json({ 
         received: false, 
         error: 'SaleDetails creation failed',
@@ -583,7 +578,7 @@ export const stripeWebhook = async (req, res) => {
     }
 
     // Decrementar cupones solo si todos los SaleDetails se crearon exitosamente
-    console.log(`🎟️ [Stripe Webhook] Iniciando decremento de cupones para ${cartItems.length} items`);
+    
     await decrementCouponUsageForStripe(cartItems);
 
     // === Printful + email flow ===

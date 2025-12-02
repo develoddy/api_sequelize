@@ -4,10 +4,7 @@ import { User } from "../models/User.js";
 
 
 export const register = async (req, res) => {
-    console.log('🔥 [Backend] register() called');
-    console.log('🔥 [Backend] Request body:', req.body);
-    console.log('🔥 [Backend] Request timestamp:', new Date().toISOString());
-    
+
     try {
         // Verifica si el usuario existe antes de crear la dirección
         const { user: userId, usual_shipping_address, ...addressData } = req.body;
@@ -26,13 +23,13 @@ export const register = async (req, res) => {
         }
 
         // Si la nueva dirección es marcada como habitual, actualiza las anteriores a false
-        console.log('💾 [Backend] About to create address in database');
+        
         const addressClient = await AddressClient.create({ 
             ...addressData, 
             usual_shipping_address: usual_shipping_address || false,
             userId ,
         });
-        console.log('✅ [Backend] Address created successfully with ID:', addressClient.id);
+        
 
         res.status(200).json({
             status: 200,

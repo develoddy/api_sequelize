@@ -257,7 +257,7 @@ export const generatePdf = async (req, res) => {
     });
 
     if (!receipt) {
-      console.log('⚠️ Recibo no encontrado');
+     
       return res.status(404).json({ message: 'Recibo no encontrado' });
     }
 
@@ -270,26 +270,11 @@ export const generatePdf = async (req, res) => {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
 
-    //console.log('🔹 Sale obtenido:', JSON.stringify(sale, null, 2));
-
-    // 🛒 Preparar detalles de venta - USAR DATOS YA CALCULADOS Y GUARDADOS
-    console.log('🔍 DEBUG PDF: Estructura completa del primer detalle:');
-    console.log(JSON.stringify(sale.sale_details[0], null, 2));
+    
     
     // Debug específico de campos de descuento para todos los productos
     sale.sale_details.forEach((detail, index) => {
       const d = detail.toJSON();
-      console.log(`🔍 Producto ${index + 1} - Campos de descuento:`, {
-        product_title: d.product?.title,
-        price_unitario: d.price_unitario,
-        code_cupon: d.code_cupon,
-        code_discount: d.code_discount,
-        discount: d.discount,
-        type_discount: d.type_discount,
-        cantidad: d.cantidad,
-        variedad_retail_price: d.variedad?.retail_price || d.variedade?.retail_price,
-        product_price_usd: d.product?.price_usd
-      });
     });
     
     const saleDetails = sale.sale_details.map(detail => {
@@ -360,11 +345,6 @@ export const generatePdf = async (req, res) => {
         }
       }
       
-      // 🔍 DEBUG DETALLADO POR PRODUCTO
-      console.log(`📊 Producto: ${d.product?.title}`);
-      console.log(`   Original: ${originalUnitPrice}, Final: ${finalUnitPrice}`);
-      console.log(`   Ahorro: ${discountAmountPerUnit}, Porcentaje: ${discountPercentage}%`);
-      console.log(`   Tipo: ${discountType}, hasDiscount: ${hasDiscount}`);
 
       const variedadImage = getVariedadImage(variedad);
 
@@ -379,8 +359,6 @@ export const generatePdf = async (req, res) => {
       const portada = d.product?.portada 
         ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
         : null;
-
-      //console.log("PRODUCT DEBUG:", d.product);
 
       return { 
         ...d, 
@@ -398,17 +376,11 @@ export const generatePdf = async (req, res) => {
       };
     });
 
-    //console.log('🔹 Detalles de venta procesados:', JSON.stringify(saleDetails, null, 2));
-
-    // 🔹 Revisar si existen direcciones
-    //console.log('🔹 sale.saleAddresses raw:', sale.saleAddresses);
 
     const sale_address = (sale.sale_addresses && sale.sale_addresses.length > 0)
     ? sale.sale_addresses[0]
     : null;
 
-
-    //console.log('🔹 sale_address asignado:', sale_address);
 
     // 💰 Aplicar redondeo .95 solo a precios unitarios, NO a totales individuales
     const saleDetailsWithRounding = saleDetails.map(detail => ({
@@ -427,7 +399,7 @@ export const generatePdf = async (req, res) => {
     };
 
     const customerName = receipt.user?.name || receipt.guest?.name || 'Invitado';
-    //console.log('🔹 customerName:', customerName);
+  
 
     // 📄 Leer template PDF
     const templatePath = path.resolve('src/mails/receipt_template.html');
@@ -441,7 +413,6 @@ export const generatePdf = async (req, res) => {
       customerName
     });
 
-    //console.log('🔹 HTML generado (primeros 300 chars):', html.substring(0, 300));
 
     if (!html || html.trim().length < 100) {
       console.error('⚠️ HTML vacío o inválido');
@@ -506,8 +477,7 @@ export const getClientReceiptBySale = async (req, res) => {
   try {
     const { saleId } = req.params;
     const userId = req.user.id; // Del middleware auth.verifyEcommerce (usa 'id' no '_id')
-    
-    console.log(`[Client Receipt] Usuario ${userId} solicitando recibo para venta ${saleId}`);
+  
 
     // Verificar que la venta pertenece al usuario autenticado
     const sale = await Sale.findOne({
@@ -589,7 +559,6 @@ export const generateClientReceiptPdf = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id; // Del middleware auth.verifyEcommerce (usa 'id' no '_id')
 
-    console.log(`🔍 [Client Receipt PDF] Usuario ${userId} solicitando PDF del recibo ${id}`);
 
     // Obtener recibo con verificación de ownership
     const receipt = await Receipt.findByPk(id, {
