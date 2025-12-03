@@ -18,30 +18,15 @@ import path from 'path';
 import ejs from 'ejs';
 
 /**
- * 💰 HELPER: Aplica redondeo .95 para consistencia con frontend
- * @param {number} price - Precio a redondear
- * @returns {number} Precio redondeado terminando en .95
+ * 💰 HELPER: Formatea precio a 2 decimales exactos usando redondeo estándar
+ * @param {number} price - Precio a formatear
+ * @returns {number} Precio con 2 decimales exactos
  */
-const applyRoundingTo95 = (price) => {
-  if (price < 0.95) {
-    return 0.95; // Precio mínimo
+const formatPrice = (price) => {
+  if (!price || price <= 0) {
+    return 0.00;
   }
-
-  const integerPart = Math.floor(price);
-  const decimalPart = price - integerPart;
-
-  // Si ya termina en .95, mantenerlo
-  if (Math.abs(decimalPart - 0.95) < 0.001) {
-    return parseFloat(price.toFixed(2));
-  }
-
-  // Si el decimal es menor a .95, redondear al .95 del mismo entero
-  // Si es mayor o igual a .95, redondear al .95 del siguiente entero
-  if (decimalPart < 0.95) {
-    return parseFloat((integerPart + 0.95).toFixed(2));
-  } else {
-    return parseFloat(((integerPart + 1) + 0.95).toFixed(2));
-  }
+  return parseFloat(price.toFixed(2));
 };
 
 /**
@@ -382,12 +367,21 @@ export const generatePdf = async (req, res) => {
     : null;
 
 
-    // 💰 Aplicar redondeo .95 solo a precios unitarios, NO a totales individuales
-    const saleDetailsWithRounding = saleDetails.map(detail => ({
-      ...detail,
-      unitPrice: applyRoundingTo95(detail.unitPrice || 0),
-      total: parseFloat(detail.total || 0) // ✅ Mantener total exacto del producto
-    }));
+    // 💰 NO aplicar ningún redondeo adicional - usar valores tal como están en BD
+    const saleDetailsWithRounding = saleDetails.map(detail => {
+      console.log('[Receipt PDF - Auth] Detail pricing:', {
+        price_unitario_original: detail.price_unitario,
+        unitPrice_calculated: detail.unitPrice,
+        originalPrice: detail.originalPrice,
+        discountAmount: detail.discountAmount
+      });
+      
+      return {
+        ...detail,
+        unitPrice: parseFloat((detail.unitPrice || 0).toFixed(2)), // ✅ Solo formatear, no redondear
+        total: parseFloat((detail.total || 0).toFixed(2)) // ✅ Mantener total exacto del producto
+      };
+    });
 
     // 💰 Total debe ser suma exacta, NO aplicar redondeo .95
     const saleData = {
@@ -634,75 +628,70 @@ export const generateClientReceiptPdf = async (req, res) => {
         files: d.variedade.files || []
       } : null;
 
-      // 🔧 RECALCULAR PARA COINCIDIR CON FRONTEND (que aplica redondeo .95)
+      // 🚫 NO RECALCULAR - USAR VALORES YA GUARDADOS EN LA BD
       
-      // 1. PRECIO ORIGINAL: usar el campo disponible en BD
+      // 1. PRECIO FINAL UNITARIO: usar price_unitario tal como está guardado
+      const finalUnitPrice = parseFloat(d.price_unitario || 0);
+      
+      // 2. PRECIO ORIGINAL: usar el campo disponible en BD o calcular mínimo necesario
       let originalUnitPrice = 0;
       if (variedad?.retail_price) {
         originalUnitPrice = parseFloat(variedad.retail_price);
       } else if (d.product?.price_usd) {
         originalUnitPrice = parseFloat(d.product.price_usd);
+      } else {
+        // Fallback: si no hay precio original, asumir que finalPrice es correcto
+        originalUnitPrice = finalUnitPrice;
       }
       
-      // 2. DETECTAR TIPO DE DESCUENTO - USAR type_campaign
-      let discountType = '';
-      let discountPercentage = 0;
-      let hasDiscount = false;
-      
-      if (d.type_campaign === 3 || d.code_cupon) {
-        hasDiscount = true;
-        discountType = `Cupón ${d.code_cupon || ''}`;
-        // Para cupones, extraer porcentaje del código
-        const cuponMatch = d.code_cupon ? d.code_cupon.toUpperCase().match(/(\d+)/) : null;
-        discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : parseInt(d.discount || 50);
-      } else if (d.type_campaign === 2) {
-        hasDiscount = true;
-        discountType = 'Flash Sale';
-        discountPercentage = parseInt(d.discount || 10);
-      } else if (d.type_campaign === 1) {
-        hasDiscount = true;
-        discountType = 'Campaign Discount';
-        discountPercentage = parseInt(d.discount || 10);
-      } else if (d.code_discount || d.discount) {
-        // Fallback para registros antiguos sin type_campaign
-        hasDiscount = true;
-        if (d.code_discount) {
-          discountType = 'Flash Sale';
-        } else {
-          discountType = 'Campaign Discount';
-        }
-        discountPercentage = parseInt(d.discount || 10);
-      }
-      
-      // 3. CALCULAR PRECIO FINAL CORRECTO (como lo hace el frontend)
-      let finalUnitPrice = originalUnitPrice;
-      let discountAmountPerUnit = 0;
-      
-      if (hasDiscount && discountPercentage > 0) {
-        // Calcular descuento basado en porcentaje
-        discountAmountPerUnit = (originalUnitPrice * discountPercentage) / 100;
-        finalUnitPrice = originalUnitPrice - discountAmountPerUnit;
-        
-        // Aplicar redondeo .95 (como hace el frontend)
-        finalUnitPrice = Math.floor(finalUnitPrice) + 0.95;
-        
-        // Recalcular ahorro real basado en precio final con redondeo
-        // El ahorro también debe terminar en .95 para ser consistente
-        discountAmountPerUnit = originalUnitPrice - finalUnitPrice;
-        // Redondear el ahorro para que termine en .95
-        discountAmountPerUnit = Math.floor(discountAmountPerUnit) + 0.95;
-      }
-      
-      // 4. CANTIDAD Y TOTAL
+      // 3. CANTIDAD
       const cantidad = parseFloat(d.cantidad || 1);
+      
+      // 4. TOTAL (precio final * cantidad)
       const total = parseFloat((finalUnitPrice * cantidad).toFixed(2));
       
-      // 🔍 DEBUG DETALLADO POR PRODUCTO (CLIENTE)
-      console.log(`📊 Cliente Producto: ${d.product?.title}`);
-      console.log(`   Original: ${originalUnitPrice}, Final calculado: ${finalUnitPrice}`);
-      console.log(`   BD Final: ${d.price_unitario}, Ahorro calculado: ${discountAmountPerUnit}`);
-      console.log(`   Porcentaje: ${discountPercentage}%, Tipo: ${discountType}`);
-
+      // 5. DETECTAR DESCUENTO APLICADO (simple verificación)
+      const hasDiscount = (originalUnitPrice > finalUnitPrice) || d.code_cupon || d.code_discount || d.discount;
+      
+      // 6. AHORRO POR UNIDAD (diferencia real entre precios guardados)
+      const discountAmountPerUnit = hasDiscount ? (originalUnitPrice - finalUnitPrice) : 0;
+      
+      // 7. PORCENTAJE (basado en diferencia real)
+      let discountPercentage = 0;
+      if (hasDiscount && originalUnitPrice > 0) {
+        if (d.code_cupon) {
+          // Para cupones, extraer del código si es posible
+          const cuponMatch = d.code_cupon.toUpperCase().match(/(\d+)/);
+          discountPercentage = cuponMatch ? parseInt(cuponMatch[1]) : Math.round((discountAmountPerUnit / originalUnitPrice) * 100);
+        } else {
+          // Para otros descuentos, calcular basado en diferencia real
+          discountPercentage = Math.round((discountAmountPerUnit / originalUnitPrice) * 100);
+        }
+      }
+      
+      // 8. TIPO DE DESCUENTO - USAR type_campaign
+      let discountType = '';
+      if (hasDiscount) {
+        if (d.type_campaign === 3 || d.code_cupon) {
+          discountType = `Cupón ${d.code_cupon || ''}`;
+        } else if (d.type_campaign === 2) {
+          discountType = 'Flash Sale';
+        } else if (d.type_campaign === 1) {
+          discountType = 'Campaign Discount';
+        } else {
+          // Fallback para registros antiguos sin type_campaign
+          if (d.code_cupon) {
+            discountType = `Cupón ${d.code_cupon}`;
+          } else if (d.code_discount) {
+            discountType = 'Flash Sale';
+          } else if (d.discount) {
+            discountType = 'Campaign Discount';
+          } else {
+            discountType = 'Descuento';
+          }
+        }
+      }
+      
       // Construir URL de portada si existe
       const portada = d.product?.portada 
         ? process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada
@@ -727,12 +716,21 @@ export const generateClientReceiptPdf = async (req, res) => {
       };
     });
 
-    // 💰 Aplicar redondeo .95 solo a precios unitarios, NO a totales individuales
-    const saleDetailsWithRounding = saleDetails.map(detail => ({
-      ...detail,
-      unitPrice: applyRoundingTo95(detail.unitPrice || 0),
-      total: parseFloat(detail.total || 0) // ✅ Mantener total exacto del producto
-    }));
+    // 💰 NO aplicar ningún redondeo adicional - usar valores tal como están en BD
+    const saleDetailsWithRounding = saleDetails.map(detail => {
+      console.log('[Receipt PDF - Guest] Detail pricing:', {
+        price_unitario_original: detail.price_unitario,
+        unitPrice_calculated: detail.unitPrice,
+        originalPrice: detail.originalPrice,
+        discountAmount: detail.discountAmount
+      });
+      
+      return {
+        ...detail,
+        unitPrice: parseFloat((detail.unitPrice || 0).toFixed(2)), // ✅ Solo formatear, no redondear
+        total: parseFloat((detail.total || 0).toFixed(2)) // ✅ Mantener total exacto del producto
+      };
+    });
 
     // 💰 Total debe ser suma exacta, NO aplicar redondeo .95
     const saleData = {

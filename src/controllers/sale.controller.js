@@ -29,27 +29,24 @@ import { createSaleReceipt } from './helpers/receipt.helper.js';
 import crypto from 'crypto';
 
 /**
- * Aplica redondeo .95 para mantener consistencia con el frontend
- * @param {number} price - Precio a redondear
- * @returns {number} Precio con redondeo .95
+ * Formatea precio a 2 decimales exactos usando redondeo estándar
+ * @param {number} price - Precio a formatear
+ * @returns {number} Precio con 2 decimales exactos
  */
-function applyRoundingTo95(price) {
+function formatPrice(price) {
   if (!price || price <= 0) {
-    return 0.95;
+    return 0.00;
   }
-  
-  const integerPart = Math.floor(price);
-  return parseFloat((integerPart + 0.95).toFixed(2));
+  return parseFloat(price.toFixed(2));
 }
 
 
 async function send_email(sale_id) {
     try {
-        // Función para aplicar redondeo .95 (mismo que el frontend)
-        const applyRoundingTo95 = (price) => {
-            if (price <= 0) return 0;
-            const integerPart = Math.floor(price);
-            return parseFloat((integerPart + 0.95).toFixed(2));
+        // Función para formatear precios a 2 decimales estándar
+        const formatPrice = (price) => {
+            if (price <= 0) return 0.00;
+            return parseFloat(price.toFixed(2));
         };
 
         const readHTMLFile = (path, callback) => {
@@ -175,12 +172,12 @@ async function send_email(sale_id) {
                     }
                 }
                 
-                // Asegurar que el precio final no sea negativo y aplicar redondeo .95
+                // Asegurar que el precio final no sea negativo
                 finalPrice = Math.max(0, finalPrice);
                 
-                // Aplicar redondeo .95 para cupones y flash sales (como en el frontend)
+                // Aplicar formateo estándar a 2 decimales
                 if (d.code_cupon || (d.code_discount && !d.code_cupon)) {
-                    finalPrice = applyRoundingTo95(finalPrice);
+                    finalPrice = formatPrice(finalPrice);
                 }
                 
                 d.unitPrice = parseFloat(finalPrice.toFixed(2));
@@ -585,6 +582,149 @@ const getUserCartsCache = async (guest_id) => {
     return await CartCache.findAll({ where: { guest_id } });
 };
 
+// 🔥 NUEVA FUNCIÓN: Calcular precio final con descuento aplicado (igual que createSaleDetail pero solo devuelve el precio)
+const calculateFinalPriceForCart = async (cart) => {
+    let type_campaign = null;
+    let discount = 0;
+    let type_discount = cart.type_discount || 1;
+    let code_cupon = cart.code_cupon || null;
+    let code_discount = cart.code_discount || null;
+
+    // Importar modelos dinámicamente para evitar ciclos
+    const { Discount } = await import('../models/Discount.js');
+    const { DiscountProduct } = await import('../models/DiscountProduct.js');
+    const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
+    const { Cupone } = await import('../models/Cupone.js');
+
+    // Resolver productId y categoryId
+    let resolvedProductId = cart.productId || null;
+    let resolvedCategoryId = null;
+    if (!resolvedProductId && cart.variedadId) {
+        try {
+            const variedadRow = await Variedad.findByPk(cart.variedadId);
+            if (variedadRow && variedadRow.productId) {
+                resolvedProductId = variedadRow.productId;
+            }
+        } catch {}
+    }
+    if (resolvedProductId) {
+        try {
+            const productRow = await Product.findByPk(resolvedProductId);
+            if (productRow && productRow.categoryId) {
+                resolvedCategoryId = productRow.categoryId;
+            }
+        } catch {}
+    }
+
+    // === VALIDAR CUPONES (type_campaign = 3) ===
+    let cuponRow = null;
+    let cuponValid = false;
+    if (code_cupon) {
+        try {
+            cuponRow = await Cupone.findOne({ where: { code: code_cupon, state: 1 } });
+            if (cuponRow) {
+                const { CuponeProduct } = await import('../models/CuponeProduct.js');
+                const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+                if (cuponRow.type_segment === 1 && resolvedProductId) {
+                    const cuponProduct = await CuponeProduct.findOne({
+                        where: { cuponeId: cuponRow.id, productId: resolvedProductId }
+                    });
+                    cuponValid = !!cuponProduct;
+                } else if (cuponRow.type_segment === 2 && resolvedCategoryId) {
+                    const cuponCategorie = await CuponeCategorie.findOne({
+                        where: { cuponeId: cuponRow.id, categoryId: resolvedCategoryId }
+                    });
+                    cuponValid = !!cuponCategorie;
+                } else if (cuponRow.type_segment === 3) {
+                    cuponValid = true;
+                }
+            }
+        } catch (err) {
+            console.warn('[calculateFinalPrice] Error validando cupón:', err);
+        }
+    }
+
+    // === VALIDAR CAMPAIGN DISCOUNT / FLASH SALE (type_campaign = 1 o 2) ===
+    let discountRow = null;
+    let discountValid = false;
+    if (code_discount) {
+        discountRow = await Discount.findByPk(code_discount);
+        if (discountRow && discountRow.state === 1) {
+            if (discountRow.type_campaign === 1) {
+                if (resolvedProductId) {
+                    const productDiscount = await DiscountProduct.findOne({ 
+                        where: { discountId: code_discount, productId: resolvedProductId } 
+                    });
+                    if (productDiscount) discountValid = true;
+                }
+                if (!discountValid && resolvedCategoryId) {
+                    const categoryDiscount = await DiscountCategorie.findOne({ 
+                        where: { discountId: code_discount, categoryId: resolvedCategoryId } 
+                    });
+                    if (categoryDiscount) discountValid = true;
+                }
+            } else if (discountRow.type_campaign === 2 && resolvedProductId) {
+                const productDiscount = await DiscountProduct.findOne({ 
+                    where: { discountId: code_discount, productId: resolvedProductId } 
+                });
+                discountValid = !!productDiscount;
+            }
+        }
+    }
+
+    // === ASIGNAR VALORES SEGÚN VALIDACIÓN ===
+    if (cuponValid && cuponRow) {
+        type_campaign = 3;
+        discount = cuponRow.discount;
+        type_discount = cuponRow.type_discount;
+    } else if (discountValid && discountRow) {
+        type_campaign = discountRow.type_campaign;
+        discount = discountRow.discount;
+        type_discount = discountRow.type_discount;
+    } else {
+        type_campaign = null;
+        discount = 0;
+        code_cupon = null;
+        code_discount = null;
+    }
+
+    // 🔍 Obtener precio original de la variedad
+    let originalPrice = null;
+    if (cart.variedadId) {
+        try {
+            const variedad = await Variedad.findByPk(cart.variedadId);
+            if (variedad) {
+                originalPrice = parseFloat(variedad.retail_price || 0);
+            }
+        } catch {}
+    }
+
+    if (!originalPrice || originalPrice <= 0) {
+        originalPrice = parseFloat(cart.price_unitario || cart.price || 0);
+    }
+
+    // 💰 Aplicar lógica de precios con formatPrice (2 decimales estándar)
+    let finalPrice = parseFloat(cart.price_unitario || cart.price || 0);
+    
+    if (type_campaign !== null && discount > 0 && originalPrice > 0) {
+        if (type_discount === 1) {
+            // Descuento porcentual
+            const discountAmount = (originalPrice * discount) / 100;
+            const calculatedFinalPrice = originalPrice - discountAmount;
+            finalPrice = formatPrice(calculatedFinalPrice);
+        } else if (type_discount === 2) {
+            // Descuento fijo
+            const calculatedFinalPrice = originalPrice - discount;
+            finalPrice = formatPrice(calculatedFinalPrice);
+        }
+    } else if (originalPrice > 0) {
+        // Sin descuento, aplicar formatPrice al precio original
+        finalPrice = formatPrice(originalPrice);
+    }
+
+    return finalPrice;
+};
+
 // Preparar los datos de los items para enviar a Printful
 const prepareItemsForPrintful = async (carts, sale) => {
     const items = [];
@@ -595,9 +735,14 @@ const prepareItemsForPrintful = async (carts, sale) => {
 
     for (const cart of carts) {
         console.log('[prepareItemsForPrintful] processing cart id=', cart.id, 'productId=', cart.productId, 'variedadId=', cart.variedadId, 'cantidad=', cart.cantidad);
+        
+        // 🔥 CALCULAR PRECIO FINAL CON DESCUENTO ANTES de crear el item
+        const finalPrice = await calculateFinalPriceForCart(cart);
+        console.log('[prepareItemsForPrintful] finalPrice calculated:', finalPrice, 'original cart.price_unitario:', cart.price_unitario);
+        
         const itemFiles = await getItemFiles(cart); // Solo url de imagen
         const itemOptions = await getItemOptions(cart); // Color, talla, etc.
-        const item = await createItem(cart, itemFiles, itemOptions);
+        const item = await createItem(cart, itemFiles, itemOptions, finalPrice);
         items.push(item);
 
         // Reducir el stock del producto o variante
@@ -755,19 +900,22 @@ const isPublicHttpsUrl = (url) => {
 };
 
 // Crear el objeto de ítem
-const createItem = async (cart, itemFiles, itemOptions) => {
+const createItem = async (cart, itemFiles, itemOptions, finalPrice) => {
     const variantId = cart.variedadId ? await getVariantId(cart.variedadId) : null;
 
     if (variantId && typeof variantId !== 'number') {
         throw new Error(`Expected variant_id to be a number, but got ${typeof variantId}`);
     }
 
+    // 🔥 USAR PRECIO FINAL CON DESCUENTO APLICADO (no el precio original del carrito)
+    const priceToSend = finalPrice != null ? finalPrice : cart.price_unitario;
+    
     return {
         variant_id: variantId, // Asegúrate de que variant_id sea un número & Obligatorio: número
         quantity: cart.cantidad,
         name: await getProductTitle(cart.productId),
-        price: cart.price_unitario.toString(),
-        retail_price: cart.price_unitario.toString(),
+        price: priceToSend.toString(),
+        retail_price: priceToSend.toString(),
         files: itemFiles,
         options: itemOptions,
         sku: null,
@@ -957,24 +1105,24 @@ const createSaleDetail = async (cart, saleId) => {
         originalPrice = parseFloat(cart.price_unitario || cart.price || 0);
     }
 
-    // 💰 Aplicar lógica de precios con redondeo .95 (IGUAL QUE STRIPE)
+    // 💰 Aplicar lógica de precios con formateo estándar a 2 decimales
     let finalPrice = parseFloat(cart.price_unitario || cart.price || 0);
     
-    // Si hay descuento real, recalcular con .95
+    // Si hay descuento real, recalcular
     if (type_campaign !== null && discount > 0 && originalPrice > 0) {
         if (type_discount === 1) {
             // Descuento porcentual
             const discountAmount = (originalPrice * discount) / 100;
             const calculatedFinalPrice = originalPrice - discountAmount;
-            finalPrice = applyRoundingTo95(calculatedFinalPrice);
+            finalPrice = formatPrice(calculatedFinalPrice);
         } else if (type_discount === 2) {
             // Descuento fijo
             const calculatedFinalPrice = originalPrice - discount;
-            finalPrice = applyRoundingTo95(calculatedFinalPrice);
+            finalPrice = formatPrice(calculatedFinalPrice);
         }
     } else if (originalPrice > 0) {
-        // Sin descuento, aplicar redondeo .95 al precio original
-        finalPrice = applyRoundingTo95(originalPrice);
+        // Sin descuento, aplicar formateo estándar al precio original
+        finalPrice = formatPrice(originalPrice);
     }
 
     // Ensure numeric fields

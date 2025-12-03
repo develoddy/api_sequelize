@@ -448,14 +448,14 @@ export const apllyCupon = async (req, res) => {
 
                 total = parseFloat((subtotal * cart.cantidad).toFixed(2));
 
-                // 🔧 APLICAR REDONDEO .95 AL PRECIO FINAL DEL CUPÓN
-                const finalPriceWithRounding = Math.floor(subtotal) + 0.95;
-                const finalTotal = parseFloat((finalPriceWithRounding * cart.cantidad).toFixed(2));
+                // ✅ NO aplicar redondeo .95 - usar precio exacto con 2 decimales
+                const finalPriceWithDiscount = parseFloat(subtotal.toFixed(2));
+                const finalTotal = parseFloat((finalPriceWithDiscount * cart.cantidad).toFixed(2));
 
                 await Cart.update({
-                    price_unitario: finalPriceWithRounding,  // ⚠️ ACTUALIZAR PRECIO UNITARIO
-                    subtotal: finalPriceWithRounding,        // Usar precio con redondeo  
-                    total: finalTotal,                       // Total recalculado
+                    price_unitario: finalPriceWithDiscount,  // ✅ Precio exacto con descuento
+                    subtotal: finalPriceWithDiscount,        // ✅ Precio exacto
+                    total: finalTotal,                       // ✅ Total exacto
                     type_discount: cupon.type_discount,
                     discount: cupon.discount,
                     code_cupon: cupon.code,

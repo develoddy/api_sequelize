@@ -114,10 +114,12 @@ ChatConversation.belongsTo(Guest, {
 
 User.hasMany(ChatConversation, { 
   foreignKey: 'user_id',
-  as: 'conversations'
+  as: 'conversations',
+  constraints: false
 });
 
 Guest.hasMany(ChatConversation, { 
   foreignKey: 'guest_id',
-  as: 'conversations'
+  as: 'conversations',
+  constraints: false
 });

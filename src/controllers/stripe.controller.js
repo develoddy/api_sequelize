@@ -26,30 +26,16 @@ import stripe from '../devtools/utils/stripe.js';
 // });
 
 /**
- * 🔧 Aplica el algoritmo de redondeo hacia arriba al .95 más cercano
- * @param {number} price - Precio a redondear
- * @returns {number} Precio redondeado terminado en .95
+ * Formatea precio a 2 decimales exactos usando redondeo estándar
+ * Mantiene consistencia con Printful, frontend y base de datos
+ * @param {number} price - Precio a formatear
+ * @returns {number} Precio con 2 decimales exactos
  */
-const applyRoundingTo95 = (price) => {
+const formatPrice = (price) => {
   if (!price || price <= 0) {
-    return 0.95; // Precio mínimo
+    return 0.00;
   }
-
-  const integerPart = Math.floor(price);
-  const decimalPart = price - integerPart;
-
-  // Si ya termina en .95, mantenerlo
-  if (Math.abs(decimalPart - 0.95) < 0.001) {
-    return parseFloat(price.toFixed(2));
-  }
-
-  // Si el decimal es menor a .95, redondear al .95 del mismo entero
-  // Si es mayor o igual a .95, redondear al .95 del siguiente entero
-  if (decimalPart < 0.95) {
-    return parseFloat((integerPart + 0.95).toFixed(2));
-  } else {
-    return parseFloat(((integerPart + 1) + 0.95).toFixed(2));
-  }
+  return parseFloat(price.toFixed(2));
 };
 
 /**
@@ -500,15 +486,15 @@ export const stripeWebhook = async (req, res) => {
           categoryId: resolvedCategoryId
         });
 
-        // 🔧 USAR finalPrice si llega del frontend, o calcular redondeo .95 como fallback
+        // 🔧 USAR finalPrice si llega del frontend con descuento aplicado
         let price_unitario;
         if (item.finalPrice != null) {
           price_unitario = Number(item.finalPrice);
         } else {
           const rawPrice = item.price_unitario != null ? Number(item.price_unitario) : 
                           (item.price != null ? Number(item.price) : 0);
-          price_unitario = applyRoundingTo95(rawPrice);
-          console.log(`[Stripe Webhook] ⚠️ finalPrice not received, applied .95 rounding: ${rawPrice} -> ${price_unitario}`);
+          price_unitario = formatPrice(rawPrice);
+          console.log(`[Stripe Webhook] ⚠️ finalPrice not received, using price_unitario with standard formatting: ${rawPrice} -> ${price_unitario}`);
         }
         
         const cantidad = item.cantidad != null ? Number(item.cantidad) : 1;
@@ -616,7 +602,15 @@ export const stripeWebhook = async (req, res) => {
         let subtotal = 0;
         for (const it of cartItems) {
           const cantidad = it.cantidad != null ? Number(it.cantidad) : 1;
-          const price_unitario = it.price_unitario != null ? Number(it.price_unitario) : (it.price != null ? Number(it.price) : 0);
+          // 🔥 USAR finalPrice si existe (con descuento aplicado), sino price_unitario original
+          const price_unitario = it.finalPrice != null ? Number(it.finalPrice) : (it.price_unitario != null ? Number(it.price_unitario) : (it.price != null ? Number(it.price) : 0));
+          console.log('[Stripe Webhook] Item pricing:', { 
+            finalPrice: it.finalPrice, 
+            price_unitario: it.price_unitario, 
+            used: price_unitario,
+            hasDiscount: it.hasDiscount,
+            discount: it.discount
+          });
           subtotal += price_unitario * cantidad;
 
           let variant_id = null;

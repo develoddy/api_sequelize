@@ -13,7 +13,7 @@ export const ChatConversation = sequelize.define('ChatConversation', {
     comment: 'ID del usuario si está autenticado'
   },
   guest_id: {
-    type: DataTypes.STRING,
+    type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'ID del invitado si no está autenticado'
   },
