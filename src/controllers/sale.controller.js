@@ -1030,7 +1030,7 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
     items: items,
     retail_costs: {
         subtotal: costs.subtotal,
-        discount: costs.discount,
+        discount: '0.00', // ✅ FIX: Siempre '0.00' como Stripe (descuentos ya aplicados en retail_price)
         shipping: costs.shipping,
         tax: costs.tax
     },
@@ -1058,6 +1058,7 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
             variant_id: item.variant_id,
             quantity: item.quantity,
             name: item.name || '',
+            price: item.price || item.retail_price, // ✅ FIX: Añadir price (igual a retail_price si no existe)
             retail_price: item.retail_price,
             files: Array.isArray(item.files) ? item.files.map(f => ({ url: f.url, type: f.type, filename: f.filename })) : []
         };
