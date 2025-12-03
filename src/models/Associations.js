@@ -92,3 +92,32 @@ Sale.hasMany(RetryQueue, { foreignKey: 'saleId' });
  */
 ProductAnalytics.belongsTo(Product, { foreignKey: 'productId' });
 Product.hasMany(ProductAnalytics, { foreignKey: 'productId' });
+
+/*
+ * CHAT CONVERSATION
+ * RELACION CHAT_CONVERSATION -> USER
+ * RELACION CHAT_CONVERSATION -> GUEST
+ */
+import { ChatConversation } from './chat/ChatConversation.js';
+
+ChatConversation.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user',
+  constraints: false 
+});
+
+ChatConversation.belongsTo(Guest, { 
+  foreignKey: 'guest_id',
+  as: 'guest',
+  constraints: false
+});
+
+User.hasMany(ChatConversation, { 
+  foreignKey: 'user_id',
+  as: 'conversations'
+});
+
+Guest.hasMany(ChatConversation, { 
+  foreignKey: 'guest_id',
+  as: 'conversations'
+});

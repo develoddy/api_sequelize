@@ -1,5 +1,7 @@
 import { ChatConversation } from '../../models/chat/ChatConversation.js';
 import { ChatMessage } from '../../models/chat/ChatMessage.js';
+import { User } from '../../models/User.js';
+import { Guest } from '../../models/Guest.js';
 import { sequelize } from '../../database/database.js';
 import { Op } from 'sequelize';
 import moment from 'moment';
@@ -135,11 +137,25 @@ class ChatService {
   async getConversationById(id) {
     try {
       return await ChatConversation.findByPk(id, {
-        include: [{
-          model: ChatMessage,
-          as: 'messages',
-          order: [['created_at', 'ASC']]
-        }]
+        include: [
+          {
+            model: ChatMessage,
+            as: 'messages',
+            order: [['created_at', 'ASC']]
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'surname', 'email', 'avatar'],
+            required: false
+          },
+          {
+            model: Guest,
+            as: 'guest',
+            attributes: ['id', 'session_id', 'name', 'email', 'avatar'],
+            required: false
+          }
+        ]
       });
     } catch (error) {
       console.error("Error obteniendo conversación por ID:", error);
@@ -159,11 +175,25 @@ class ChatService {
           session_id: sessionId,
           is_active: true
         },
-        include: [{
-          model: ChatMessage,
-          as: 'messages',
-          order: [['created_at', 'ASC']]
-        }]
+        include: [
+          {
+            model: ChatMessage,
+            as: 'messages',
+            order: [['created_at', 'ASC']]
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'surname', 'email', 'avatar'],
+            required: false
+          },
+          {
+            model: Guest,
+            as: 'guest',
+            attributes: ['id', 'session_id', 'name', 'email', 'avatar'],
+            required: false
+          }
+        ]
       });
     } catch (error) {
       console.error("Error obteniendo conversación por session_id:", error);
@@ -184,6 +214,20 @@ class ChatService {
             [Op.ne]: 'closed'
           }
         },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'surname', 'email', 'avatar'],
+            required: false
+          },
+          {
+            model: Guest,
+            as: 'guest',
+            attributes: ['id', 'session_id', 'name', 'email', 'avatar'],
+            required: false
+          }
+        ],
         order: [['updated_at', 'DESC']]
       });
     } catch (error) {
@@ -239,8 +283,21 @@ class ChatService {
 
       const results = await ChatConversation.findAll({
         where,
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'surname', 'email', 'avatar'],
+            required: false
+          },
+          {
+            model: Guest,
+            as: 'guest',
+            attributes: ['id', 'session_id', 'name', 'email', 'avatar'],
+            required: false
+          }
+        ],
         order: [['updated_at', 'DESC']],
-        raw: true,
         logging: loggingFn
       });
 

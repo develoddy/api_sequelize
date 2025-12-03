@@ -107,9 +107,12 @@ const chatController = {
         });
       }
       
+      // Formatear conversación para incluir user_name y guest_name
+      const formattedConversation = chatController.formatConversation(conversation);
+      
       return res.status(200).json({
         success: true,
-        conversation
+        conversation: formattedConversation
       });
     } catch (error) {
       console.error("Error en getConversation:", error);
@@ -137,19 +140,22 @@ const chatController = {
         });
       }
       
-      // Obtener la conversación con sus mensajes por session_id
+      // Obtener la conversación por session_id
       const conversation = await chatService.getConversationBySessionId(session_id);
       
       if (!conversation) {
         return res.status(404).json({
           success: false,
-          message: 'Conversación no encontrada'
+          message: 'Conversación no encontrada para este session_id'
         });
       }
       
+      // Formatear conversación para incluir user_name y guest_name
+      const formattedConversation = chatController.formatConversation(conversation);
+      
       return res.status(200).json({
         success: true,
-        conversation
+        conversation: formattedConversation
       });
     } catch (error) {
       console.error("Error en getConversationBySession:", error);
@@ -161,6 +167,37 @@ const chatController = {
     }
   },
   
+  /**
+   * Formatea una conversación para incluir datos de usuario/guest
+   * @param {Object} conversation - Conversación con includes
+   * @returns {Object} - Conversación formateada
+   */
+  formatConversation(conversation) {
+    const conv = conversation.toJSON ? conversation.toJSON() : conversation;
+    
+    // Agregar user_name y guest_name basados en las relaciones
+    let user_name = null;
+    let guest_name = null;
+    
+    if (conv.user) {
+      // Construir nombre completo del usuario
+      user_name = conv.user.name;
+      if (conv.user.surname) {
+        user_name += ' ' + conv.user.surname;
+      }
+    }
+    
+    if (conv.guest && conv.guest.name) {
+      guest_name = conv.guest.name;
+    }
+    
+    return {
+      ...conv,
+      user_name,
+      guest_name
+    };
+  },
+
   /**
    * Obtiene todas las conversaciones activas
    * @param {Request} req - Petición HTTP
@@ -180,9 +217,14 @@ const chatController = {
         conversations = await chatService.getActiveConversations();
       }
       
+      // Formatear conversaciones para incluir user_name y guest_name
+      const formattedConversations = conversations.map(conv => 
+        chatController.formatConversation(conv)
+      );
+      
       return res.status(200).json({
         success: true,
-        conversations
+        conversations: formattedConversations
       });
     } catch (error) {
       console.error("Error en getActiveConversations:", error);

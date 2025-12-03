@@ -52,7 +52,11 @@ export const ChatConversation = sequelize.define('ChatConversation', {
   tableName: 'chat_conversations',
   timestamps: true,       // ✅ activa createdAt y updatedAt
   underscored: true       // ✅ columnas serán created_at y updated_at
-
 });
+
+// ✅ Asociaciones con User y Guest
+// Nota: Las importaciones deben hacerse después de que los modelos estén definidos
+// para evitar referencias circulares. Se configuran en un archivo de asociaciones separado
+// o al final después de todas las definiciones de modelos.
 
 //module.exports = ChatConversation;
