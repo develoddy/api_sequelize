@@ -1,3 +1,29 @@
+/**
+ * ⚠️ DEPRECATED: Este modelo está obsoleto y ya no debe usarse.
+ * 
+ * Motivo:
+ * - La tabla Shipments es redundante con los campos de tracking en Sales
+ * - Printful webhooks actualizan directamente la tabla Sales:
+ *   * Sales.trackingNumber
+ *   * Sales.trackingUrl
+ *   * Sales.carrier
+ *   * Sales.shippedAt
+ *   * Sales.minDeliveryDate
+ *   * Sales.maxDeliveryDate
+ * 
+ * Flujo de datos actual:
+ * 1. Printful envía webhook 'package_shipped'
+ * 2. Webhook actualiza campos de tracking en Sales table
+ * 3. Admin-Sales module muestra esta información
+ * 4. Admin-Chat CustomerContext muestra tracking via Sales relationship
+ * 
+ * Reemplazo: Use los campos de tracking en el modelo Sale
+ * 
+ * Esta tabla se mantiene por compatibilidad pero NO debe usarse en nuevo código.
+ * 
+ * @deprecated Use Sale model tracking fields instead. This table is no longer maintained.
+ */
+
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
 import { Sale } from './Sale.js';
