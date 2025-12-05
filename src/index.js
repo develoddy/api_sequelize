@@ -121,6 +121,10 @@
 // ⚠️ IMPORTANTE: Cargar variables de entorno ANTES que cualquier otro módulo
 import './config/env.js';
 
+// 🚨 Inicializar Sentry INMEDIATAMENTE después de las variables de entorno
+import { initSentry } from './config/sentry.js';
+initSentry();
+
 // ================================================================
 // 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
 // ================================================================

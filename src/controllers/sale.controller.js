@@ -311,7 +311,14 @@ export const registerGuest = async (req, res) => {
         const saleData = req.body.sale;
         // Si ya viene stripeSessionId, evitar duplicados: devolver venta existente
         if (saleData.stripeSessionId) {
-            const existing = await Sale.findOne({ where: { stripeSessionId: saleData.stripeSessionId } });
+            const existing = await Sale.findOne({ 
+                where: { stripeSessionId: saleData.stripeSessionId },
+                include: [
+                    { model: SaleAddress },
+                    { model: User },
+                    { model: Guest }
+                ]
+            });
             if (existing) {
                 const saleDetails = await getSaleDetails(existing.id);
                 return res.status(200).json({
@@ -368,9 +375,18 @@ export const registerGuest = async (req, res) => {
 
         const saleDetails = await getSaleDetails(sale.id);
 
+        // 🔥 FIX: Recargar sale con SaleAddresses para incluirlas en la respuesta (necesario para PayPal guest)
+        const saleWithAddresses = await Sale.findByPk(sale.id, {
+            include: [
+                { model: SaleAddress },
+                { model: User },
+                { model: Guest }
+            ]
+        });
+
         return res.status(200).json({
             message: "Muy bien! La orden se generó correctamente (invitado)",
-            sale: sale,
+            sale: saleWithAddresses || sale,
             saleDetails: saleDetails,
         });
     } catch (error) {
@@ -517,9 +533,18 @@ export const register = async (req, res) => {
 
         console.log('[Sale Controller] Registro completado con éxito. Sale ID:', sale.id);
 
+        // 🔥 FIX: Recargar sale con SaleAddresses para incluirlas en la respuesta (necesario para PayPal)
+        const saleWithAddresses = await Sale.findByPk(sale.id, {
+            include: [
+                { model: SaleAddress },
+                { model: User },
+                { model: Guest }
+            ]
+        });
+
         res.status(200).json({
             message: "Muy bien! La orden se generó correctamente",
-            sale: sale,
+            sale: saleWithAddresses || sale,
             saleDetails: saleDetails,
             deliveryEstimate: {
                 min: sale.minDeliveryDate,

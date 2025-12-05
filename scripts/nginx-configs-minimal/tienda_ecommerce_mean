@@ -1,0 +1,41 @@
+# SSL A+ Minimal - Tienda
+
+server {
+   root /var/www/tienda_ecommerce_mean/ecommerce;
+   index index.html index.htm index.nginx-debian.html;
+
+   server_name tienda.lujandev.com;
+
+   location / {
+      try_files $uri $uri/ /index.html;
+   }
+   
+   # Cache para assets estáticos
+   location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+       expires 1y;
+       add_header Cache-Control "public, immutable";
+   }
+
+   # SSL Configuration original de Certbot (MANTENER)
+   listen 443 ssl http2; # Solo añadimos http2
+   ssl_certificate /etc/letsencrypt/live/tienda.lujandev.com/fullchain.pem; # managed by Certbot
+   ssl_certificate_key /etc/letsencrypt/live/tienda.lujandev.com/privkey.pem; # managed by Certbot
+   include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+   ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+   # Solo headers esenciales para SSL A+
+   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+   add_header X-Frame-Options DENY always;
+   add_header X-Content-Type-Options nosniff always;
+   add_header X-XSS-Protection "1; mode=block" always;
+}
+
+server {
+    if ($host = tienda.lujandev.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+   listen 80;
+   server_name tienda.lujandev.com;
+   return 404; # managed by Certbot
+}

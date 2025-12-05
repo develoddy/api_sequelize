@@ -27,6 +27,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// 🚨 Sentry tracing middleware (debe ir ANTES de las rutas)
+import { sentryTracingMiddleware } from './config/sentry.js';
+app.use(sentryTracingMiddleware());
+
 // -------------------- __dirname para ES Modules --------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,6 +94,22 @@ app.get('/health', (req, res) => {
   });
 });
 
+// 🧪 Sentry test endpoint (solo en desarrollo)
+app.get('/sentry-test', (req, res) => {
+  if (process.env.NODE_ENV !== 'production') {
+    import('./config/sentry.js').then(({ testSentryBackend }) => {
+      testSentryBackend();
+      res.json({ 
+        message: 'Sentry backend test executed', 
+        timestamp: new Date().toISOString(),
+        check: 'See Sentry dashboard for results'
+      });
+    });
+  } else {
+    res.status(404).json({ error: 'Endpoint not available in production' });
+  }
+});
+
 // Dashboard HTML
 app.get('/dashboard.html', (req, res) => {
   const dashboardPath = path.join(__dirname, 'public', 'dashboard.html');
@@ -138,5 +158,9 @@ app.use('/assets', express.static(path.join(__dirname, 'src/assets')));
 app.get('/email-resetpassword', (req, res) => {
   res.sendFile(path.join(__dirname, 'mails/email_resetpassword.html'));
 });
+
+// 🚨 Sentry error handler (debe ir AL FINAL, después de todas las rutas)
+import { sentryErrorHandler } from './config/sentry.js';
+app.use(sentryErrorHandler());
 
 export default app

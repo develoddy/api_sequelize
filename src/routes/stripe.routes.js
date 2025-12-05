@@ -18,4 +18,14 @@ router.get("/session/:sessionId", auth.optionalAuth, getCheckoutSession);
 // Nota: Stripe NO envía auth, por eso no usamos auth middleware
 router.post("/webhook", stripeWebhook);
 
+// Test endpoint para el frontend
+router.get("/test", (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        service: 'Stripe', 
+        timestamp: new Date().toISOString(),
+        message: 'Stripe service is operational' 
+    });
+});
+
 export default router;

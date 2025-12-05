@@ -86,6 +86,16 @@ import {
 
 const router = Router();
 
+// Test endpoint para el frontend
+router.get("/test", (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        service: 'Printful', 
+        timestamp: new Date().toISOString(),
+        message: 'Printful service is operational' 
+    });
+});
+
 // Product routes
 router.get("/list", auth.verifyEcommerce, list);
 router.get("/show/:id", auth.verifyEcommerce, show);

@@ -123,6 +123,13 @@ export const list = async (req, res) => {
                 campaign_products: ProductList,
             });
 
+        } else {
+            // Si no hay usuario autenticado, devolver wishlist vacía
+            res.status(200).json({
+                wishlists: [],
+                FlashSale: null,
+                campaign_products: [],
+            });
         }
     } catch (error) {
         console.log(error);
