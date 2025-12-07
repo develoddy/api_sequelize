@@ -79,8 +79,8 @@ if command -v mysql &> /dev/null; then
     echo ""
     echo "2️⃣ Probando autenticación MySQL..."
     
-    # Construir comando con espacios correctos
-    mysql_cmd="mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD"
+    # Construir comando con espacios correctos y SSL
+    mysql_cmd="mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD --ssl-mode=REQUIRED"
     
     # Ejecutar con captura de errores
     if echo "SELECT 1 AS test;" | $mysql_cmd "$DB_NAME" 2>/tmp/mysql_error.log; then

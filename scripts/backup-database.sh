@@ -165,7 +165,7 @@ create_directories() {
 test_database_connection() {
     log_message "INFO" "🔌 Probando conexión a la base de datos..."
     
-    local mysql_cmd="$MYSQL_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
+    local mysql_cmd="$MYSQL_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER --ssl-mode=REQUIRED"
     if [[ -n "$DB_PASSWORD" ]]; then
         mysql_cmd="$mysql_cmd -p$DB_PASSWORD"
     fi
@@ -204,7 +204,7 @@ create_backup() {
     log_message "INFO" "📊 Tamaño actual de la base de datos: ${db_size} MB"
     
     # Construir comando mysqldump
-    local dump_cmd="$MYSQLDUMP_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
+    local dump_cmd="$MYSQLDUMP_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER --ssl-mode=REQUIRED"
     if [[ -n "$DB_PASSWORD" ]]; then
         dump_cmd="$dump_cmd -p$DB_PASSWORD"
     fi
