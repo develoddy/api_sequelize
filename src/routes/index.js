@@ -33,6 +33,7 @@ import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from './postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
+import backupsRoutes from './backups.routes.js';
 
 const app = express();
 
@@ -69,5 +70,6 @@ app.use("/newsletter", newsletterRoutes);
 app.use("/postal-codes", postalCodeRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
+app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 
 export default app;
