@@ -360,9 +360,11 @@ export class BackupsController {
                 user: req.user?.email || 'unknown' 
             });
 
-            // Ejecutar script de backup
-            const { stdout, stderr } = await execAsync(`bash "${scriptPath}"`, {
-                timeout: 300000 // 5 minutos de timeout
+            // Ejecutar script de backup con variables de entorno correctas
+            const nodeEnv = process.env.NODE_ENV || 'development';
+            const { stdout, stderr } = await execAsync(`NODE_ENV=${nodeEnv} bash "${scriptPath}"`, {
+                timeout: 300000, // 5 minutos de timeout
+                env: { ...process.env, NODE_ENV: nodeEnv }
             });
 
             if (stderr && !stderr.includes('Warning')) {
@@ -439,9 +441,10 @@ export class BackupsController {
                 line.trim() !== ''
             );
 
-            // Crear nueva entrada de cron
+            // Crear nueva entrada de cron con variables de entorno
             const cronSchedule = '0 2 * * *'; // Diario a las 2:00 AM
-            const cronEntry = `${cronSchedule} cd "${process.cwd()}" && /bin/bash "${backupScriptPath}" >> "${cronLogFile}" 2>&1`;
+            const nodeEnv = process.env.NODE_ENV || 'production';
+            const cronEntry = `${cronSchedule} cd "${process.cwd()}" && NODE_ENV=${nodeEnv} /bin/bash "${backupScriptPath}" >> "${cronLogFile}" 2>&1`;
             
             // Agregar la nueva entrada
             cleanedLines.push(cronEntry);

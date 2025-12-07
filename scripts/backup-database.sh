@@ -11,17 +11,60 @@
 
 # ============================== CONFIGURACIÓN ==============================
 
-# Configuración de base de datos (usando variables de entorno o valores por defecto)
+# Función para detectar y cargar archivo de entorno
+detect_and_load_env() {
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local api_dir="$(dirname "$script_dir")"
+    local env_file=""
+    
+    # Detectar archivo de entorno basado en NODE_ENV y disponibilidad
+    if [[ "$NODE_ENV" == "production" && -f "$api_dir/.env.production" ]]; then
+        env_file="$api_dir/.env.production"
+        echo "🌐 Entorno detectado: PRODUCCIÓN"
+    elif [[ "$NODE_ENV" == "development" && -f "$api_dir/.env.development" ]]; then
+        env_file="$api_dir/.env.development"
+        echo "🔧 Entorno detectado: DESARROLLO"
+    elif [[ -f "$api_dir/.env" ]]; then
+        env_file="$api_dir/.env"
+        echo "📋 Entorno detectado: POR DEFECTO"
+    else
+        echo "❌ ERROR: No se encontró ningún archivo de entorno (.env.production, .env.development, .env)"
+        return 1
+    fi
+    
+    echo "📄 Cargando variables desde: $env_file"
+    
+    # Cargar variables de entorno
+    set -a  # Activar auto-export de variables
+    source "$env_file"
+    set +a  # Desactivar auto-export
+    
+    echo "✅ Variables de entorno cargadas correctamente"
+    return 0
+}
+
+# Cargar variables de entorno al inicio
+if ! detect_and_load_env; then
+    echo "❌ Error crítico: No se pudieron cargar las variables de entorno"
+    exit 1
+fi
+
+# Configuración de base de datos (usando variables de entorno cargadas o valores por defecto)
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-ecommercedb}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 
-# Directorios
-BACKUP_DIR="/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/backups/mysql"
-LOG_DIR="/Volumes/lujandev/dev/projects/ECOMMERCE/ECOMMERCE-MEAN/api/backups/logs"
+# Directorios (detectar automáticamente la ubicación del proyecto)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_DIR="$(dirname "$SCRIPT_DIR")"
+BACKUP_DIR="$API_DIR/backups/mysql"
+LOG_DIR="$API_DIR/backups/logs"
+
+echo "📂 Directorio de la API: $API_DIR"
+echo "💾 Directorio de backups: $BACKUP_DIR"
+echo "📋 Directorio de logs: $LOG_DIR"
 
 # Configuración de archivos
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
@@ -316,8 +359,11 @@ main() {
     
     log_message "INFO" "🚀 ===== INICIANDO BACKUP DE MYSQL ====="
     log_message "INFO" "📅 Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+    log_message "INFO" "🌍 NODE_ENV: ${NODE_ENV:-'no definido'}"
     log_message "INFO" "🗄️  Base de datos: $DB_NAME"
     log_message "INFO" "🖥️  Servidor: $DB_HOST:$DB_PORT"
+    log_message "INFO" "👤 Usuario: $DB_USER"
+    log_message "INFO" "🔑 Password: $(if [[ -n "$DB_PASSWORD" ]]; then echo "***definido***"; else echo "NO DEFINIDO"; fi)"
     
     # Paso 1: Verificar dependencias
     if ! check_dependencies; then
