@@ -196,8 +196,8 @@ async function main() {
         // -------------------------------------------
         if (isDev) {
             console.log("🔧 DEV: autenticando DB (sin alterar tablas automáticamente)");
-            await sequelize.sync({ force: true });
-            //await sequelize.authenticate(); 
+            //##await sequelize.sync({ force: true });
+            await sequelize.authenticate(); 
             console.log("✅ DEV: DB conectada");
             console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
         } else {
