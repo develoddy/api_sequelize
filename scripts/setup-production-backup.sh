@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================
-# Script de Configuración de Backups para Producción
+# Script de Configuración de Backups para Producción v2.0
 # =================================================================
 # Este script configura automáticamente los backups de MySQL
 # tanto para desarrollo local como para producción.
@@ -10,10 +10,11 @@
 #   bash setup-production-backup.sh
 #
 # Características:
-#   - Detecta automáticamente el entorno (desarrollo/producción)
+#   - Detecta automáticamente el archivo de entorno (.env.production, .env.development, .env)
 #   - Configura variables de entorno apropiadas
 #   - Instala dependencias necesarias
 #   - Configura cron jobs con horarios optimizados
+#   - Previene duplicados en cron automáticamente
 #   - Crea estructura de directorios y logs
 # =================================================================
 
@@ -32,7 +33,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUPS_DIR="$PROJECT_DIR/backups"
 MYSQL_BACKUPS_DIR="$BACKUPS_DIR/mysql"
 LOGS_DIR="$BACKUPS_DIR/logs"
-ENV_FILE="$PROJECT_DIR/.env"
+ENV_FILE=""
 
 # Funciones de utilidad
 log_info() {
@@ -98,12 +99,36 @@ check_system_dependencies() {
     return 0
 }
 
+# Detectar y seleccionar archivo de entorno
+detect_env_file() {
+    log_info "Detectando archivo de entorno..."
+    
+    # Orden de prioridad para archivos de entorno
+    local env_files=(
+        "$PROJECT_DIR/.env.production"
+        "$PROJECT_DIR/.env.development" 
+        "$PROJECT_DIR/.env"
+    )
+    
+    for file in "${env_files[@]}"; do
+        if [[ -f "$file" ]]; then
+            ENV_FILE="$file"
+            log_success "Archivo de entorno detectado: $(basename "$file")"
+            return 0
+        fi
+    done
+    
+    log_error "No se encontró ningún archivo de entorno"
+    log_error "Se buscaron: .env.production, .env.development, .env"
+    return 1
+}
+
 # Leer configuración de la base de datos
 read_database_config() {
     log_info "Leyendo configuración de la base de datos..."
     
     if [[ ! -f "$ENV_FILE" ]]; then
-        log_error "Archivo .env no encontrado en: $ENV_FILE"
+        log_error "Archivo de entorno no encontrado en: $ENV_FILE"
         return 1
     fi
     
@@ -114,11 +139,14 @@ read_database_config() {
     if [[ -z "$DB_HOST" ]] || [[ -z "$DB_NAME" ]] || [[ -z "$DB_USER" ]]; then
         log_error "Variables de base de datos no configuradas correctamente"
         log_error "Requeridas: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD"
+        log_error "Archivo usado: $ENV_FILE"
         return 1
     fi
     
     log_success "Configuración de base de datos leída correctamente"
     log_info "Base de datos: $DB_NAME en $DB_HOST"
+    log_info "Usuario: $DB_USER"
+    log_info "Archivo: $(basename "$ENV_FILE")"
     return 0
 }
 
@@ -168,14 +196,29 @@ set -euo pipefail  # Modo estricto
 # Configuración
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-ENV_FILE="$PROJECT_DIR/.env"
 BACKUPS_DIR="$PROJECT_DIR/backups/mysql"
 LOGS_DIR="$PROJECT_DIR/backups/logs"
 LOG_FILE="$LOGS_DIR/cron-backup.log"
 
-# Cargar variables de entorno
-if [[ -f "$ENV_FILE" ]]; then
-    source "$ENV_FILE"
+# Detectar y cargar variables de entorno
+ENV_FILE=""
+ENV_FILES=(
+    "$PROJECT_DIR/.env.production"
+    "$PROJECT_DIR/.env.development" 
+    "$PROJECT_DIR/.env"
+)
+
+for file in "${ENV_FILES[@]}"; do
+    if [[ -f "$file" ]]; then
+        ENV_FILE="$file"
+        source "$ENV_FILE"
+        break
+    fi
+done
+
+if [[ -z "$ENV_FILE" ]]; then
+    log_message "ERROR" "No se encontró archivo de entorno (.env.production, .env.development, .env)"
+    exit 1
 fi
 
 # Función de logging con timestamp
@@ -292,47 +335,84 @@ EOF
     log_success "Script de backup creado: $backup_script"
 }
 
+# Limpiar duplicados en el cron
+cleanup_cron_duplicates() {
+    log_info "Verificando y limpiando duplicados en cron..."
+    
+    local backup_pattern="backup-database.sh"
+    local temp_cron=$(mktemp)
+    
+    # Obtener cron actual
+    if ! crontab -l 2>/dev/null > "$temp_cron"; then
+        log_info "No hay cron jobs existentes"
+        rm -f "$temp_cron"
+        return 0
+    fi
+    
+    # Contar entradas de backup existentes
+    local duplicate_count=$(grep -c "$backup_pattern" "$temp_cron" 2>/dev/null || echo "0")
+    
+    if [[ $duplicate_count -gt 1 ]]; then
+        log_warning "Se encontraron $duplicate_count entradas duplicadas de backup"
+        
+        # Crear nuevo cron sin las entradas de backup
+        local clean_cron=$(mktemp)
+        grep -v "$backup_pattern" "$temp_cron" > "$clean_cron"
+        
+        # Instalar el cron limpio
+        crontab "$clean_cron"
+        
+        log_success "Se eliminaron $((duplicate_count)) entradas duplicadas"
+        
+        rm -f "$clean_cron"
+    elif [[ $duplicate_count -eq 1 ]]; then
+        log_info "Se encontró 1 entrada de backup existente (será reemplazada)"
+        
+        # Eliminar la entrada existente
+        grep -v "$backup_pattern" "$temp_cron" | crontab -
+    else
+        log_info "No se encontraron entradas de backup en cron"
+    fi
+    
+    rm -f "$temp_cron"
+}
+
 # Configurar cron job según el entorno
 configure_cron_job() {
     local env_type="$1"
     log_info "Configurando cron job para entorno: $env_type"
     
     local backup_script="$SCRIPT_DIR/backup-database.sh"
-    local cron_schedule=""
+    local cron_schedule="0 2 * * *"  # Siempre a las 2:00 AM
     
-    # Definir horarios según el entorno
-    if [[ "$env_type" == "production" ]]; then
-        # Producción: 2:00 AM todos los días
-        cron_schedule="0 2 * * *"
-        log_info "Horario de producción: Diario a las 2:00 AM"
-    else
-        # Desarrollo: 2:00 AM todos los días (mismo horario para consistencia)
-        cron_schedule="0 2 * * *"
-        log_info "Horario de desarrollo: Diario a las 2:00 AM"
-    fi
+    log_info "Horario configurado: Diario a las 2:00 AM"
+    
+    # Limpiar duplicados primero
+    cleanup_cron_duplicates
     
     # Crear entrada de cron con variables de entorno
     local cron_entry="$cron_schedule cd \"$PROJECT_DIR\" && /bin/bash \"$backup_script\" >> \"$LOGS_DIR/cron-backup.log\" 2>&1"
-    
-    # Verificar si ya existe una entrada similar
-    if crontab -l 2>/dev/null | grep -q "backup-database.sh"; then
-        log_warning "Eliminando entradas de cron existentes..."
-        (crontab -l 2>/dev/null | grep -v "backup-database.sh") | crontab -
-    fi
     
     # Agregar nueva entrada
     (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
     
     log_success "Cron job configurado exitosamente"
-    log_info "Programa: $cron_schedule"
+    log_info "Programa: $cron_schedule (2:00 AM diario)"
     log_info "Script: $backup_script"
+    log_info "Logs: $LOGS_DIR/cron-backup.log"
 }
 
 # Función principal
 main() {
     echo ""
-    log_info "=== CONFIGURADOR DE BACKUPS PARA PRODUCCIÓN ==="
+    log_info "=== CONFIGURADOR DE BACKUPS PARA PRODUCCIÓN v2.0 ==="
     echo ""
+    
+    # Detectar archivo de entorno
+    if ! detect_env_file; then
+        log_error "No se pudo detectar archivo de entorno"
+        exit 1
+    fi
     
     # Detectar entorno
     local environment=$(detect_environment)
@@ -367,20 +447,28 @@ main() {
     echo ""
     log_success "=== CONFIGURACIÓN COMPLETADA ==="
     log_success "✅ Backups automáticos configurados correctamente"
+    log_info "🗂️  Archivo de entorno: $(basename "$ENV_FILE")"
+    log_info "🗄️  Base de datos: $DB_NAME en $DB_HOST"
     log_info "📁 Directorio de backups: $MYSQL_BACKUPS_DIR"
     log_info "📋 Archivo de logs: $LOGS_DIR/cron-backup.log"
     log_info "⏰ Horario: Diario a las 2:00 AM"
     log_info "🗑️  Retención: 7 días automática"
+    log_info "🧹 Duplicados en cron: Prevenidos automáticamente"
     
     echo ""
-    log_info "Para verificar el cron job:"
+    log_info "Comandos útiles:"
+    echo ""
+    log_info "📊 Verificar cron job:"
     echo "  crontab -l | grep backup-database"
     echo ""
-    log_info "Para ver logs en tiempo real:"
+    log_info "📋 Ver logs en tiempo real:"
     echo "  tail -f $LOGS_DIR/cron-backup.log"
     echo ""
-    log_info "Para ejecutar backup manual:"
+    log_info "🚀 Ejecutar backup manual:"
     echo "  bash $SCRIPT_DIR/backup-database.sh"
+    echo ""
+    log_info "📂 Ver backups creados:"
+    echo "  ls -la $MYSQL_BACKUPS_DIR/"
     echo ""
 }
 
