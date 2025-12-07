@@ -44,9 +44,15 @@ detect_and_load_env() {
 }
 
 # Cargar variables de entorno al inicio
-if ! detect_and_load_env; then
-    echo "❌ Error crítico: No se pudieron cargar las variables de entorno"
-    exit 1
+# Si las variables ya están definidas (desde Node.js), usarlas directamente
+if [[ -z "$DB_HOST" || -z "$DB_NAME" || -z "$DB_USER" ]]; then
+    echo "🔄 Variables de entorno no encontradas, cargando desde archivo..."
+    if ! detect_and_load_env; then
+        echo "❌ Error crítico: No se pudieron cargar las variables de entorno"
+        exit 1
+    fi
+else
+    echo "✅ Variables de entorno ya cargadas desde proceso padre"
 fi
 
 # Configuración de base de datos (usando variables de entorno cargadas o valores por defecto)
@@ -55,6 +61,14 @@ DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-ecommercedb}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
+
+# Debug de variables (sin mostrar password completo)
+echo "🔍 Configuración de BD:"
+echo "   HOST: $DB_HOST"
+echo "   PORT: $DB_PORT"
+echo "   DB: $DB_NAME"
+echo "   USER: $DB_USER"
+echo "   PASSWORD: $(if [[ -n "$DB_PASSWORD" ]]; then echo "***definido*** (${#DB_PASSWORD} chars)"; else echo "NO DEFINIDO"; fi)"
 
 # Directorios (detectar automáticamente la ubicación del proyecto)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -165,9 +179,14 @@ create_directories() {
 test_database_connection() {
     log_message "INFO" "🔌 Probando conexión a la base de datos..."
     
+    # Construir comando MySQL sin o con contraseña
     local mysql_cmd="$MYSQL_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
-    if [[ -n "$DB_PASSWORD" ]]; then
+    
+    if [[ -n "$DB_PASSWORD" && "$DB_PASSWORD" != "" ]]; then
         mysql_cmd="$mysql_cmd -p$DB_PASSWORD"
+        log_message "INFO" "🔐 Usando autenticación con contraseña"
+    else
+        log_message "INFO" "🔓 Usando autenticación sin contraseña"
     fi
     
     # Test de conexión
@@ -179,13 +198,14 @@ test_database_connection() {
         log_message "ERROR" "   Host: $DB_HOST:$DB_PORT"
         log_message "ERROR" "   Database: $DB_NAME"
         log_message "ERROR" "   User: $DB_USER"
+        log_message "ERROR" "   Password provided: $(if [[ -n "$DB_PASSWORD" ]]; then echo "YES"; else echo "NO"; fi)"
         return 1
     fi
 }
 
 get_database_size() {
     local mysql_cmd="$MYSQL_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
-    if [[ -n "$DB_PASSWORD" ]]; then
+    if [[ -n "$DB_PASSWORD" && "$DB_PASSWORD" != "" ]]; then
         mysql_cmd="$mysql_cmd -p$DB_PASSWORD"
     fi
     
@@ -205,12 +225,36 @@ create_backup() {
     
     # Construir comando mysqldump
     local dump_cmd="$MYSQLDUMP_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
-    if [[ -n "$DB_PASSWORD" ]]; then
+    local mysql_test_cmd="$MYSQL_CMD -h$DB_HOST -P$DB_PORT -u$DB_USER"
+    
+    if [[ -n "$DB_PASSWORD" && "$DB_PASSWORD" != "" ]]; then
         dump_cmd="$dump_cmd -p$DB_PASSWORD"
+        mysql_test_cmd="$mysql_test_cmd -p$DB_PASSWORD"
+        log_message "INFO" "🔐 Mysqldump usando autenticación con contraseña"
+    else
+        log_message "INFO" "🔓 Mysqldump usando autenticación sin contraseña"
     fi
     
     # Opciones adicionales para backup completo
-    dump_cmd="$dump_cmd --single-transaction --routines --triggers --events --add-drop-database --create-options"
+    # Verificar si event scheduler está disponible antes de agregar --events
+    local events_option=""
+    if echo "SHOW VARIABLES LIKE 'event_scheduler';" | $mysql_test_cmd $DB_NAME 2>/dev/null | grep -q "ON\|YES"; then
+        events_option="--events"
+        log_message "INFO" "✅ Event scheduler disponible - incluyendo eventos en backup"
+    else
+        log_message "WARN" "⚠️  Event scheduler deshabilitado - omitiendo eventos"
+    fi
+    
+    # En desarrollo, evitar opciones que pueden causar problemas con versiones mixtas de MySQL/MariaDB
+    if [[ "$NODE_ENV" == "development" ]]; then
+        # Configuración simplificada para desarrollo local
+        dump_cmd="$dump_cmd --single-transaction --add-drop-database --create-options"
+        log_message "INFO" "🔧 Modo desarrollo: usando opciones simplificadas de mysqldump"
+    else
+        # Configuración completa para producción
+        dump_cmd="$dump_cmd --single-transaction --routines --triggers $events_option --add-drop-database --create-options"
+        log_message "INFO" "🏭 Modo producción: usando opciones completas de mysqldump"
+    fi
     
     # Ruta completa del archivo de backup
     local backup_path="$BACKUP_DIR/$BACKUP_FILE"
