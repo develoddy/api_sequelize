@@ -10,8 +10,12 @@ import {
     getSubscriberById,
     previewLaunchEmail,
     exportSubscribers,
-    resendVerification
+    resendVerification,
+    getPrelaunchConfig,
+    updatePrelaunchConfig,
+    getPrelaunchStatus
 } from '../controllers/prelaunch.controller.js';
+import auth from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -32,5 +36,16 @@ router.post('/admin/campaigns/launch', sendLaunchEmailsCampaign); // Enviar camp
 router.post('/admin/campaigns/preview', previewLaunchEmail); // Preview del email
 router.get('/admin/export', exportSubscribers); // Exportar CSV
 router.post('/admin/resend-verification', resendVerification); // Reenviar verificación
+
+// ============================================================================
+//                    RUTAS DE CONFIGURACIÓN PRE-LAUNCH MODE
+// ============================================================================
+
+// Ruta pública para obtener estado (para frontend ecommerce)
+router.get('/status', getPrelaunchStatus);
+
+// Rutas administrativas para configuración
+router.get('/config', auth.verifyAdmin, getPrelaunchConfig);
+router.put('/config', auth.verifyAdmin, updatePrelaunchConfig);
 
 export default router;

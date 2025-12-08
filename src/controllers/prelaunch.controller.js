@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
+import { PrelaunchConfig } from '../models/PrelaunchConfig.js';
 import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
@@ -836,4 +837,111 @@ export const resendVerification = async (req, res) => {
             message: 'Error al reenviar verificación' 
         });
     }
+}
+
+/**
+ * ============================================================================
+ *                    CONFIGURACIÓN DE PRE-LAUNCH MODE
+ * ============================================================================
+ */
+
+/**
+ * Obtener configuración actual del pre-launch mode
+ */
+export const getPrelaunchConfig = async (req, res) => {
+    try {
+        const config = await PrelaunchConfig.getInstance();
+        
+        res.status(200).json({
+            status: 200,
+            message: 'Configuración obtenida correctamente',
+            data: {
+                enabled: config.enabled,
+                updated_at: config.updated_at,
+                updated_by: config.updated_by
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting prelaunch config:', error);
+        logger.error('Error obteniendo configuración de pre-launch', { error: error.message });
+        
+        res.status(500).json({
+            status: 500,
+            message: 'Error al obtener la configuración'
+        });
+    }
 };
+
+/**
+ * Actualizar configuración del pre-launch mode
+ */
+export const updatePrelaunchConfig = async (req, res) => {
+    try {
+        const { enabled } = req.body;
+        const adminId = req.user?.id || null; // Obtener ID del admin autenticado
+        
+        // Validación
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({
+                status: 400,
+                message: 'El campo "enabled" debe ser true o false'
+            });
+        }
+
+        // Actualizar configuración
+        const config = await PrelaunchConfig.updateConfig(enabled, adminId);
+        
+        logger.info('Configuración de pre-launch actualizada', {
+            enabled,
+            admin_id: adminId,
+            previous_state: !enabled
+        });
+
+        res.status(200).json({
+            status: 200,
+            message: `Modo pre-launch ${enabled ? 'activado' : 'desactivado'} correctamente`,
+            data: {
+                enabled: config.enabled,
+                updated_at: config.updated_at,
+                updated_by: config.updated_by
+            }
+        });
+
+    } catch (error) {
+        console.error('Error updating prelaunch config:', error);
+        logger.error('Error actualizando configuración de pre-launch', { 
+            error: error.message,
+            admin_id: req.user?.id 
+        });
+        
+        res.status(500).json({
+            status: 500,
+            message: 'Error al actualizar la configuración'
+        });
+    }
+};
+
+/**
+ * Obtener estado del pre-launch mode (endpoint público para frontend)
+ */
+export const getPrelaunchStatus = async (req, res) => {
+    try {
+        const enabled = await PrelaunchConfig.isEnabled();
+        
+        res.status(200).json({
+            status: 200,
+            enabled
+        });
+
+    } catch (error) {
+        console.error('Error getting prelaunch status:', error);
+        
+        // En caso de error, devolver false por seguridad
+        res.status(200).json({
+            status: 200,
+            enabled: false,
+            error: 'Error al verificar estado'
+        });
+    }
+};;
