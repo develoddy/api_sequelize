@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
 import { PrelaunchConfig } from '../models/PrelaunchConfig.js';
+import { Cupone } from '../models/Cupone.js';
 import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
@@ -587,23 +588,39 @@ export const sendLaunchEmailsCampaign = async (req, res) => {
     try {
         const launchData = req.body;
 
-        // Validaciones básicas
-        const requiredFields = ['coupon_discount', 'coupon_expiry_days'];
-        for (const field of requiredFields) {
-            if (!launchData[field]) {
-                return res.status(400).json({
-                    status: 400,
-                    message: `Campo requerido: ${field}`
-                });
-            }
+        // Validación: debe tener selected_coupon_id
+        if (!launchData.selected_coupon_id) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Campo requerido: selected_coupon_id'
+            });
         }
 
-        // Datos por defecto
+        // Buscar el cupón seleccionado en la base de datos
+        const selectedCoupon = await Cupone.findByPk(launchData.selected_coupon_id);
+        
+        if (!selectedCoupon) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Cupón no encontrado'
+            });
+        }
+
+        // Verificar que el cupón esté activo
+        if (selectedCoupon.state !== 1) {
+            return res.status(400).json({
+                status: 400,
+                message: 'El cupón seleccionado no está activo'
+            });
+        }
+
+        // Preparar datos del email usando el cupón seleccionado
         const emailData = {
-            coupon_discount: launchData.coupon_discount,
-            coupon_expiry_days: launchData.coupon_expiry_days,
+            coupon_code: selectedCoupon.code,
+            coupon_discount: selectedCoupon.type_discount === 1 ? `${selectedCoupon.discount}%` : `€${selectedCoupon.discount}`,
             launch_date: launchData.launch_date || new Date().toLocaleDateString('es-ES'),
-            featured_products: launchData.featured_products || []
+            featured_products: launchData.featured_products || [],
+            selected_coupon: selectedCoupon // Pasar el objeto completo del cupón
         };
 
         logger.debug('Starting launch email campaign with data:', emailData);

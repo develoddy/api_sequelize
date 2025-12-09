@@ -170,15 +170,14 @@ export async function sendLaunchEmails(launchData = {}) {
                                 return resolve();
                             }
 
-                            // Generar cupón único para cada usuario
-                            const couponCode = generateUniqueCountdown(subscriber.email, subscriber.id);
+                            // Usar el cupón seleccionado (mismo para todos los usuarios)
+                            const couponCode = launchData.coupon_code || 'LAUNCH2025';
 
                             // Datos para el template
                             const templateData = {
                                 email: subscriber.email,
                                 coupon_code: couponCode,
                                 coupon_discount: launchData.coupon_discount || '15%',
-                                coupon_expiry_days: launchData.coupon_expiry_days || '7',
                                 store_url: process.env.URL_FRONTEND,
                                 unsubscribe_url: `${process.env.URL_FRONTEND}/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${subscriber.verification_token}`,
                                 brand_name: 'LujanDev Store',
@@ -211,7 +210,7 @@ export async function sendLaunchEmails(launchData = {}) {
                                         await subscriber.update({
                                             notified_launch: true,
                                             coupon_sent: true,
-                                            // Podrías agregar un campo coupon_code si quieres almacenarlo
+                                            // Cupón enviado: ${couponCode} (mismo para todos los usuarios)
                                         });
                                     } catch (updateError) {
                                         console.error('Error updating subscriber after email:', updateError);
@@ -260,6 +259,8 @@ export async function sendLaunchEmails(launchData = {}) {
 
 /**
  * Generar cupón único basado en email y ID
+ * NOTA: Esta función ya no se usa en el nuevo sistema integrado de cupones.
+ * Se mantiene por compatibilidad con versiones anteriores.
  */
 function generateUniqueCountdown(email, subscriberId) {
     const prefix = 'LAUNCH';
