@@ -17,7 +17,7 @@ export const createTestSale = async (req, res) => {
       n_transaction: `TEST_AUTO_SYNC_${Date.now()}`,
       total: 45.95,
       currency_payment: 'EUR',
-      curreny_total: 'EUR',
+      currency_total: 'EUR',
       price_dolar: 0,
       syncStatus: 'pending',
       trackingToken // 🔒 Token de seguridad para tracking

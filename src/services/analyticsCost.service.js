@@ -229,7 +229,7 @@ export async function calculateSaleCosts(saleId) {
       totalCost,
       profit,
       margin: parseFloat(margin.toFixed(2)),
-      currency: sale.curreny_total || 'EUR',
+      currency: sale.currency_total || 'EUR',
       itemCount: sale.sale_details ? sale.sale_details.length : 0
     };
 
