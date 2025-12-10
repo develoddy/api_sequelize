@@ -196,14 +196,14 @@ async function main() {
         // -------------------------------------------
         if (isDev) {
             console.log("🔧 DEV: autenticando DB (sin alterar tablas automáticamente)");
-            await sequelize.sync({ force: true });
-            
-            //await sequelize.authenticate(); 
+            //await sequelize.sync({ force: true });
+            await sequelize.authenticate(); 
             console.log("✅ DEV: DB conectada");
             console.log("💡 Para aplicar cambios en desarrollo, usa migraciones locales con sequelize-cli");
         } else {
             console.warn("🔥 PROD: autenticando la base de datos. NO sync automático");
-            await sequelize.authenticate();
+            await sequelize.sync({ force: true });
+            //await sequelize.authenticate();
             console.warn("✅ PROD: DB conectada. Ejecuta migraciones con 'npx sequelize-cli db:migrate'");
         }
 
