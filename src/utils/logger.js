@@ -143,6 +143,14 @@ export const sanitize = {
     },
 
     /**
+     * Sanitiza un string general limitando su longitud
+     */
+    string: (str, maxLength = 100) => {
+        if (!str || typeof str !== 'string') return '';
+        return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+    },
+
+    /**
      * Remueve campos sensibles de un objeto
      */
     object: (obj, sensitiveFields = ['password', 'token', 'apiKey', 'creditCard', 'cvv']) => {

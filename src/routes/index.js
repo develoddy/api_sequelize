@@ -34,6 +34,7 @@ import postalCodeRoutes from './postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import backupsRoutes from './backups.routes.js';
+import databaseManagementRoutes from './database-management.routes.js';
 
 const app = express();
 
@@ -71,5 +72,6 @@ app.use("/postal-codes", postalCodeRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
 app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
+app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
 
 export default app;
