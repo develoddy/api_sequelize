@@ -28,9 +28,9 @@ export class BackupsController {
             // Leer archivos del directorio
             const files = fs.readdirSync(backupsDir);
             
-            // Filtrar solo archivos .sql.gz y obtener información
+            // Filtrar solo archivos .sql.gz y excluir archivos basura de macOS
             const backups = files
-                .filter(file => file.endsWith('.sql.gz'))
+                .filter(file => file.endsWith('.sql.gz') && !file.startsWith('._'))
                 .map(file => {
                     const filePath = path.join(backupsDir, file);
                     const stats = fs.statSync(filePath);
@@ -349,7 +349,7 @@ export class BackupsController {
             let lastBackup = null;
             if (dirExists) {
                 const files = fs.readdirSync(backupsDir)
-                    .filter(file => file.endsWith('.sql.gz'))
+                    .filter(file => file.endsWith('.sql.gz') && !file.startsWith('._'))
                     .map(file => {
                         const filePath = path.join(backupsDir, file);
                         const stats = fs.statSync(filePath);

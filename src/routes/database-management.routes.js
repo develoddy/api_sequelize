@@ -3,8 +3,14 @@ import auth from '../middlewares/auth.js';
 import {
     resetDatabase,
     runMigrations,
+    runSingleMigration,
     rollbackMigration,
-    getDatabaseStatus
+    rollbackSingleMigration,
+    getDatabaseStatus,
+    getMigrationsStatus,
+    getSeedersStatus,
+    runSeeders,
+    runSingleSeeder
 } from '../controllers/database-management.controller.js';
 
 const router = Router();
@@ -108,6 +114,18 @@ router.post('/reset', auth.verifySuperAdmin, resetDatabase);
 router.post('/migrate', auth.verifySuperAdmin, runMigrations);
 
 /**
+ * POST /database-management/migrate/single
+ * Ejecutar migración específica
+ * 
+ * Body requerido:
+ * {
+ *   "migrationName": "20241212120000-migration-name.cjs",
+ *   "confirmMigration": true
+ * }
+ */
+router.post('/migrate/single', auth.verifySuperAdmin, runSingleMigration);
+
+/**
  * POST /database-management/rollback
  * Rollback de la última migración
  * 
@@ -117,6 +135,53 @@ router.post('/migrate', auth.verifySuperAdmin, runMigrations);
  * }
  */
 router.post('/rollback', auth.verifySuperAdmin, rollbackMigration);
+
+/**
+ * POST /database-management/rollback/single
+ * Rollback de migración específica
+ * 
+ * Body requerido:
+ * {
+ *   "migrationName": "20241212120000-migration-name.cjs",
+ *   "confirmRollback": true
+ * }
+ */
+router.post('/rollback/single', auth.verifySuperAdmin, rollbackSingleMigration);
+
+/**
+ * GET /database-management/migrations/status
+ * Obtener estado de migraciones (pendientes y ejecutadas)
+ */
+router.get('/migrations/status', auth.verifySuperAdmin, getMigrationsStatus);
+
+/**
+ * GET /database-management/seeders/status
+ * Obtener seeders disponibles
+ */
+router.get('/seeders/status', auth.verifySuperAdmin, getSeedersStatus);
+
+/**
+ * POST /database-management/seeders/run
+ * Ejecutar todos los seeders
+ * 
+ * Body requerido:
+ * {
+ *   "confirmSeeders": true
+ * }
+ */
+router.post('/seeders/run', auth.verifySuperAdmin, runSeeders);
+
+/**
+ * POST /database-management/seeders/single
+ * Ejecutar seeder específico
+ * 
+ * Body requerido:
+ * {
+ *   "seederName": "20241212120000-seeder-name.cjs",
+ *   "confirmSeeder": true
+ * }
+ */
+router.post('/seeders/single', auth.verifySuperAdmin, runSingleSeeder);
 
 // ====================================
 // 🔗 INTEGRACIÓN CON BACKUPS
