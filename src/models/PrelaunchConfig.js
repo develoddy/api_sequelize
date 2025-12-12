@@ -13,6 +13,11 @@ export const PrelaunchConfig = sequelize.define('PrelaunchConfig', {
         allowNull: false,
         comment: 'Si está habilitado el modo pre-lanzamiento'
     },
+    launch_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Fecha y hora programada para el lanzamiento oficial'
+    },
     updated_by: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -50,14 +55,21 @@ PrelaunchConfig.getInstance = async function() {
 };
 
 // Método estático para actualizar la configuración
-PrelaunchConfig.updateConfig = async function(enabled, updatedBy = null) {
+PrelaunchConfig.updateConfig = async function(enabled, updatedBy = null, launchDate = null) {
     const config = await PrelaunchConfig.getInstance();
     
-    return await config.update({
+    const updateData = {
         enabled: enabled,
         updated_by: updatedBy,
         updated_at: new Date()
-    });
+    };
+    
+    // Solo actualizar launch_date si se proporciona
+    if (launchDate !== null) {
+        updateData.launch_date = launchDate;
+    }
+    
+    return await config.update(updateData);
 };
 
 // Método estático para obtener solo el estado actual

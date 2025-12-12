@@ -874,6 +874,7 @@ export const getPrelaunchConfig = async (req, res) => {
             message: 'Configuración obtenida correctamente',
             data: {
                 enabled: config.enabled,
+                launch_date: config.launch_date,
                 updated_at: config.updated_at,
                 updated_by: config.updated_by
             }
@@ -895,10 +896,10 @@ export const getPrelaunchConfig = async (req, res) => {
  */
 export const updatePrelaunchConfig = async (req, res) => {
     try {
-        const { enabled } = req.body;
+        const { enabled, launch_date } = req.body;
         const adminId = req.user?.id || null; // Obtener ID del admin autenticado
         
-        // Validación
+        // Validación del campo enabled
         if (typeof enabled !== 'boolean') {
             return res.status(400).json({
                 status: 400,
@@ -906,8 +907,20 @@ export const updatePrelaunchConfig = async (req, res) => {
             });
         }
 
+        // Validación del campo launch_date (opcional)
+        let parsedLaunchDate = null;
+        if (launch_date !== undefined && launch_date !== null) {
+            parsedLaunchDate = new Date(launch_date);
+            if (isNaN(parsedLaunchDate.getTime())) {
+                return res.status(400).json({
+                    status: 400,
+                    message: 'El formato de la fecha de lanzamiento no es válido'
+                });
+            }
+        }
+
         // Actualizar configuración
-        const config = await PrelaunchConfig.updateConfig(enabled, adminId);
+        const config = await PrelaunchConfig.updateConfig(enabled, adminId, parsedLaunchDate);
         
         logger.info('Configuración de pre-launch actualizada', {
             enabled,
@@ -920,6 +933,7 @@ export const updatePrelaunchConfig = async (req, res) => {
             message: `Modo pre-launch ${enabled ? 'activado' : 'desactivado'} correctamente`,
             data: {
                 enabled: config.enabled,
+                launch_date: config.launch_date,
                 updated_at: config.updated_at,
                 updated_by: config.updated_by
             }
@@ -944,11 +958,12 @@ export const updatePrelaunchConfig = async (req, res) => {
  */
 export const getPrelaunchStatus = async (req, res) => {
     try {
-        const enabled = await PrelaunchConfig.isEnabled();
+        const config = await PrelaunchConfig.getInstance();
         
         res.status(200).json({
             status: 200,
-            enabled
+            enabled: config.enabled,
+            launch_date: config.launch_date
         });
 
     } catch (error) {
@@ -958,6 +973,7 @@ export const getPrelaunchStatus = async (req, res) => {
         res.status(200).json({
             status: 200,
             enabled: false,
+            launch_date: null,
             error: 'Error al verificar estado'
         });
     }
