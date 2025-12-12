@@ -31,7 +31,7 @@ const readHTMLFile = (path) => {
 const { EMAIL_USER, EMAIL_PASS, JWT_SECRET } = process.env;
 
 // Función para enviar el correo de restablecimiento de contraseña
-async function sendEmailResetPassword(email, token) {
+async function sendEmailResetPassword(email, token, isAdmin = false) {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
@@ -56,10 +56,14 @@ async function sendEmailResetPassword(email, token) {
         throw new Error('SMTP configuration error');
     }
 
-    const link = `${process.env.URL_FRONTEND}/es/es/auth/updatepassword/${token}/${email}`;
+    // Determinar URL y template según si es admin o ecommerce
+    const baseUrl = isAdmin ? process.env.URL_ADMIN || 'http://localhost:4200' : process.env.URL_FRONTEND;
+    const resetPath = isAdmin ? '/auth/reset-password' : '/es/es/auth/updatepassword';
+    const link = `${baseUrl}${resetPath}/${token}/${email}`;
 
-    // Leer el template HTML
-    const htmlTemplate = await readHTMLFile(`${process.cwd()}/src/mails/email_resetpassword.html`);
+    // Seleccionar template según el tipo de usuario
+    const templateFile = isAdmin ? 'email_resetpassword_admin.html' : 'email_resetpassword.html';
+    const htmlTemplate = await readHTMLFile(`${process.cwd()}/src/mails/${templateFile}`);
 
     // Renderizar el HTML con el enlace de restablecimiento
     const renderedHTML = ejs.render(htmlTemplate, { 
@@ -68,10 +72,19 @@ async function sendEmailResetPassword(email, token) {
         email: email
     });
 
+    // Configurar subject y sender según el tipo de usuario
+    const subject = isAdmin ? 
+        '🔐 Restablecimiento de Contraseña - Panel Admin' : 
+        'Restablece tu contraseña - Lujandev';
+    
+    const senderName = isAdmin ? 
+        'Lujandev Admin Panel' : 
+        'Lujandev Support';
+
     const mailOptions = {
-        from: `"Lujandev Support" <${EMAIL_USER}>`,
+        from: `"${senderName}" <${EMAIL_USER}>`,
         to: email,
-        subject: 'Restablece tu contraseña - Lujandev',
+        subject: subject,
         html: renderedHTML
     };
 
@@ -93,6 +106,9 @@ export const requestPasswordReset = async (req, res) => {
             return res.status(400).send({ message: 'Email es requerido' });
         }
 
+        // Detectar si es una solicitud de admin basándose en la URL
+        const isAdminRequest = req.originalUrl.includes('admin');
+
         // Aquí debes buscar el usuario por su correo electrónico
         const user = await User.findOne({
             where: {
@@ -105,6 +121,10 @@ export const requestPasswordReset = async (req, res) => {
             return res.status(404).send({ message: 'Usuario no encontrado' });
         }
 
+        // Para admin, verificar que el usuario tenga permisos de admin
+        if (isAdminRequest && user.rol !== 'admin') {
+            return res.status(403).send({ message: 'Acceso no autorizado. Solo administradores pueden usar este endpoint.' });
+        }
 
         // Comprobar si JWT_SECRET tiene un valor
         if (!JWT_SECRET) {
@@ -118,8 +138,8 @@ export const requestPasswordReset = async (req, res) => {
 
         // Enviar el correo electrónico con el enlace de restablecimiento
         try {
-            const emailResult = await sendEmailResetPassword(email, token);
-            logger.debug('[Reset Password] Request processed for email:', sanitize.email(email));
+            const emailResult = await sendEmailResetPassword(email, token, isAdminRequest);
+            logger.debug(`[Reset Password] Request processed for ${isAdminRequest ? 'admin' : 'user'} email:`, sanitize.email(email));
             
             res.status(200).send({ 
                 message: 'Correo de restablecimiento enviado exitosamente',

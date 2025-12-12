@@ -158,6 +158,9 @@ app.use('/assets', express.static(path.join(__dirname, 'src/assets')));
 app.get('/email-resetpassword', (req, res) => {
   res.sendFile(path.join(__dirname, 'mails/email_resetpassword.html'));
 });
+app.get('/email-resetpassword-admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'mails/email_resetpassword_admin.html'));
+});
 
 // 🚨 Sentry error handler (debe ir AL FINAL, después de todas las rutas)
 import { sentryErrorHandler } from './config/sentry.js';

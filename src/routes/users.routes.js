@@ -29,6 +29,9 @@ router.post( '/detail_user_admin', auth.verifyAdmin, detail_user );
 // Ruta para solicitar un restablecimiento de contraseña
 router.post('/request-reset-password', requestPasswordReset);
 
+// Ruta específica para solicitar restablecimiento de contraseña de admin
+router.post('/request-reset-password-admin', requestPasswordReset);
+
 // Ruta para restablecer la contraseña
 router.post('/reset-password', resetPassword);
 
