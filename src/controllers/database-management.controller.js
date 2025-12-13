@@ -15,6 +15,46 @@ export class DatabaseManagementController {
     }
 
     /**
+     * 🔐 Validación granular de permisos para operaciones específicas
+     * @param {string} operation - Tipo de operación: 'migrations', 'seeders', 'rollback', 'reset'
+     * @returns {object} - { allowed: boolean, message: string }
+     */
+    checkOperationPermission(operation) {
+        const isDev = process.env.NODE_ENV !== 'production';
+        
+        // En desarrollo, todo está permitido
+        if (isDev) {
+            return { allowed: true, message: 'Desarrollo - Todos los permisos' };
+        }
+
+        // En producción, verificar permisos granulares
+        const permissions = {
+            migrations: process.env.ALLOW_DB_MIGRATIONS === 'true' || process.env.ALLOW_DB_MANAGEMENT === 'true',
+            seeders: process.env.ALLOW_DB_SEEDERS === 'true' || process.env.ALLOW_DB_MANAGEMENT === 'true',  
+            rollback: process.env.ALLOW_DB_ROLLBACK === 'true' || process.env.ALLOW_DB_MANAGEMENT === 'true',
+            reset: process.env.ALLOW_DB_RESET === 'true' || process.env.ALLOW_PROD_DB_RESET === 'true'
+        };
+
+        const isAllowed = permissions[operation] || false;
+        
+        if (!isAllowed) {
+            const envVar = {
+                migrations: 'ALLOW_DB_MIGRATIONS',
+                seeders: 'ALLOW_DB_SEEDERS',
+                rollback: 'ALLOW_DB_ROLLBACK', 
+                reset: 'ALLOW_DB_RESET o ALLOW_PROD_DB_RESET'
+            }[operation];
+
+            return { 
+                allowed: false, 
+                message: `Operación '${operation}' no permitida en producción. Configurar ${envVar}=true` 
+            };
+        }
+
+        return { allowed: true, message: `Operación '${operation}' permitida` };
+    }
+
+    /**
      * 🚨 OPERACIÓN DESTRUCTIVA: Reset completo de la base de datos
      * Incluye backup automático antes del reset
      */
@@ -48,26 +88,17 @@ export class DatabaseManagementController {
                 });
             }
 
-            // 3. Verificar variable de entorno de seguridad
-            if (process.env.ALLOW_DB_MANAGEMENT !== 'true') {
-                logger.error('Intento de reset de DB sin permiso de entorno', {
+            // 3. Validar permisos granulares para reset
+            const permission = this.checkOperationPermission('reset');
+            if (!permission.allowed) {
+                logger.error('Intento de reset de DB sin permisos granulares', {
                     user: req.user?.email,
-                    ip: req.ip
+                    ip: req.ip,
+                    message: permission.message
                 });
                 return res.status(403).json({
                     success: false,
-                    message: 'Operación no permitida. Variable ALLOW_DB_MANAGEMENT no habilitada.'
-                });
-            }
-
-            // 4. Solo permitir en desarrollo o con flag especial
-            const isDev = process.env.NODE_ENV !== 'production';
-            const allowInProd = process.env.ALLOW_PROD_DB_RESET === 'true';
-            
-            if (!isDev && !allowInProd) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Operación no permitida en producción sin flag especial'
+                    message: permission.message
                 });
             }
 
@@ -768,6 +799,15 @@ export class DatabaseManagementController {
      */
     async runMigrations(req, res) {
         try {
+            // Validar permisos granulares para migraciones
+            const permission = this.checkOperationPermission('migrations');
+            if (!permission.allowed) {
+                return res.status(403).json({
+                    success: false,
+                    message: permission.message
+                });
+            }
+
             const { confirmMigrations } = req.body;
 
             if (!confirmMigrations) {
@@ -1000,6 +1040,15 @@ export class DatabaseManagementController {
      */
     async runSeeders(req, res) {
         try {
+            // Validar permisos granulares para seeders
+            const permission = this.checkOperationPermission('seeders');
+            if (!permission.allowed) {
+                return res.status(403).json({
+                    success: false,
+                    message: permission.message
+                });
+            }
+
             const { confirmSeeders } = req.body;
 
             if (!confirmSeeders) {
