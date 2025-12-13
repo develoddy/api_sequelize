@@ -15,6 +15,24 @@ export class DatabaseManagementController {
     }
 
     /**
+     * 🔐 Verificar si el reset está permitido (lógica completa)
+     * Considera tanto ALLOW_DB_MANAGEMENT como ALLOW_PROD_DB_RESET en producción
+     */
+    checkResetPermissions() {
+        const dbManagementAllowed = process.env.ALLOW_DB_MANAGEMENT === 'true';
+        const isProduction = process.env.NODE_ENV === 'production';
+        const prodResetAllowed = process.env.ALLOW_PROD_DB_RESET === 'true';
+
+        // En desarrollo, solo requiere ALLOW_DB_MANAGEMENT
+        if (!isProduction) {
+            return dbManagementAllowed;
+        }
+
+        // En producción, requiere AMBAS variables
+        return dbManagementAllowed && prodResetAllowed;
+    }
+
+    /**
      * 🚨 OPERACIÓN DESTRUCTIVA: Reset completo de la base de datos
      * Incluye backup automático antes del reset
      */
@@ -905,7 +923,8 @@ export class DatabaseManagementController {
                 },
                 migrations: migrationStatus,
                 permissions: {
-                    canReset: process.env.ALLOW_DB_MANAGEMENT === 'true',
+                    canReset: this.checkResetPermissions(),
+                    canManage: process.env.ALLOW_DB_MANAGEMENT === 'true',
                     environment: process.env.NODE_ENV,
                     prodResetAllowed: process.env.ALLOW_PROD_DB_RESET === 'true'
                 },
