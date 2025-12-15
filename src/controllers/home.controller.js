@@ -23,6 +23,9 @@ import { AddressClient } from "../models/AddressClient.js";
 import resources from "../resources/index.js";
 import bcrypt from 'bcryptjs';
 
+// PRINTFUL SERVICES
+import { getPrintfulSizeGuideService } from '../services/proveedor/printful/printfulService.js';
+
 
 export const list = async (req, res) => {
     try {
@@ -411,6 +414,35 @@ export const show_landing_product = async (req, res) => {
             }
         }
 
+        // 📏 Obtener guías de tallas de Printful si el producto existe
+        let sizeGuides = null;
+        if (product && product.idProduct) {
+            try {
+                console.log(`🔍 Obteniendo guías de tallas para producto: ${product.title} (Printful ID: ${product.idProduct})`);
+                sizeGuides = await getPrintfulSizeGuideService(product.idProduct);
+                
+                if (sizeGuides) {
+                    console.log(`✅ Guías de tallas obtenidas para ${product.title}:`, {
+                        available_sizes: sizeGuides.available_sizes,
+                        tables_count: sizeGuides.size_tables?.length || 0
+                    });
+                } else {
+                    console.log(`ℹ️ No hay guías de tallas disponibles para ${product.title}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error obteniendo guías de tallas para ${product.title}:`, error.message);
+                // No afecta el flujo principal si falla
+                sizeGuides = null;
+            }
+        } else {
+            console.log(`🚫 Producto sin idProduct válido:`, {
+                hasProduct: !!product,
+                productId: product?.id,
+                printfulId: product?.idProduct,
+                productTitle: product?.title
+            });
+        }
+
         res.status(200).json({
             product: resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST),
             related_products: objectRelateProducts,
@@ -419,6 +451,7 @@ export const show_landing_product = async (req, res) => {
             REVIEWS: reviews,
             AVG_REVIEW: avg_review,
             COUNT_REVIEW: count_review,
+            SIZE_GUIDES: sizeGuides, // ✨ Nueva data de guías de tallas
         });
     } catch (error) {
         res.status(500).send({

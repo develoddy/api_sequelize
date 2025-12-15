@@ -19,6 +19,73 @@ export const getPrintfulShippingRatesService = async (payload) => {
     }
 };
 
+// Cache simple para size guides (24 horas)
+const sizeGuideCache = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+
+/**
+ * SIZE GUIDES: Obtiene las guías de tallas de un producto específico de Printful (con cache)
+ * @param {number} productId - ID del producto en Printful
+ * @param {string} unit - Unidad de medida (inches,cm o ambas separadas por coma)
+ * @returns {Object} Size guide data con available_sizes y size_tables
+ */
+export const getPrintfulSizeGuideService = async (productId, unit = 'inches,cm') => {
+    const cacheKey = `${productId}-${unit}`;
+    
+    // Verificar cache
+    const cached = sizeGuideCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        console.log(`📋 Guía de tallas desde cache para producto ${productId}`);
+        return cached.data;
+    }
+
+    try {
+        console.log(`🔍 Obteniendo guía de tallas para producto Printful ID: ${productId}`);
+        
+        const response = await printfulApi.get(`/products/${productId}/sizes?unit=${unit}`);
+        
+        if (!response.data || !response.data.result) {
+            console.warn(`⚠️ No se encontraron guías de tallas para producto ${productId}`);
+            // Cachear también los resultados null por un tiempo más corto
+            sizeGuideCache.set(cacheKey, {
+                data: null,
+                timestamp: Date.now()
+            });
+            return null;
+        }
+
+        const sizeGuide = response.data.result;
+        
+        // Guardar en cache
+        sizeGuideCache.set(cacheKey, {
+            data: sizeGuide,
+            timestamp: Date.now()
+        });
+        
+        console.log(`✅ Guía de tallas obtenida y cacheada: ${sizeGuide.available_sizes?.length || 0} tallas, ${sizeGuide.size_tables?.length || 0} tablas`);
+        
+        return sizeGuide;
+        
+    } catch (error) {
+        // Si es error 404, el producto no tiene guías de tallas
+        if (error.response?.status === 404) {
+            console.log(`ℹ️ Producto ${productId} no tiene guías de tallas disponibles`);
+            // Cachear el resultado null para evitar llamadas repetidas
+            sizeGuideCache.set(cacheKey, {
+                data: null,
+                timestamp: Date.now()
+            });
+            return null;
+        }
+        
+        console.error(`❌ Error obteniendo guías de tallas para producto ${productId}:`, error.message);
+        
+        // En caso de error, devolver null en lugar de lanzar excepción
+        // para que no rompa el flujo principal del producto
+        return null;
+    }
+};
+
 /** 
  * STORE: SE OBTIENE TODOS LOS PRODUCTOS DE LA TIENDA LUJANDEV (con paginación robusta)
  * - Retry logic: 3 intentos por página
