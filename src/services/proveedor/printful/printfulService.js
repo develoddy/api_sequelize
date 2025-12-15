@@ -29,23 +29,44 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
  * @param {string} unit - Unidad de medida (inches,cm o ambas separadas por coma)
  * @returns {Object} Size guide data con available_sizes y size_tables
  */
-export const getPrintfulSizeGuideService = async (productId, unit = 'inches,cm') => {
-    const cacheKey = `${productId}-${unit}`;
+export const getPrintfulSizeGuideService = async (syncProductId, unit = 'inches,cm') => {
+    const cacheKey = `${syncProductId}-${unit}`;
     
     // Verificar cache
     const cached = sizeGuideCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-        console.log(`📋 Guía de tallas desde cache para producto ${productId}`);
+        console.log(`📋 Guía de tallas desde cache para producto ${syncProductId}`);
         return cached.data;
     }
 
     try {
-        console.log(`🔍 Obteniendo guía de tallas para producto Printful ID: ${productId}`);
+        console.log(`🔍 Consultando producto sync ${syncProductId} en tienda Printful...`);
         
-        const response = await printfulApi.get(`/products/${productId}/sizes?unit=${unit}`);
+        // Obtener el producto desde la tienda
+        const syncProductResponse = await printfulApi.get(`/store/products/${syncProductId}`);
+        
+        if (!syncProductResponse.data?.result?.sync_variants || syncProductResponse.data.result.sync_variants.length === 0) {
+            console.warn(`⚠️ No se encontraron variantes para el producto ${syncProductId}`);
+            return null;
+        }
+
+        // Obtener el product_id del catálogo desde la primera variante
+        const firstVariant = syncProductResponse.data.result.sync_variants[0];
+        const catalogProductId = firstVariant.product?.product_id;
+        
+        if (!catalogProductId) {
+            console.warn(`⚠️ No se pudo obtener el product_id del catálogo para ${syncProductId}`);
+            return null;
+        }
+        
+        console.log(`✅ Product ID del catálogo obtenido: ${catalogProductId}`);
+        
+        // Ahora obtener las guías de tallas usando el product_id del catálogo
+        console.log(`📏 Obteniendo size guides para product_id: ${catalogProductId}`);
+        const response = await printfulApi.get(`/products/${catalogProductId}/sizes?unit=${unit}`);
         
         if (!response.data || !response.data.result) {
-            console.warn(`⚠️ No se encontraron guías de tallas para producto ${productId}`);
+            console.warn(`⚠️ No se encontraron guías de tallas para producto ${catalogProductId}`);
             // Cachear también los resultados null por un tiempo más corto
             sizeGuideCache.set(cacheKey, {
                 data: null,
@@ -67,9 +88,15 @@ export const getPrintfulSizeGuideService = async (productId, unit = 'inches,cm')
         return sizeGuide;
         
     } catch (error) {
-        // Si es error 404, el producto no tiene guías de tallas
+        // Log detallado del error
+        console.error(`❌ Error obteniendo guías de tallas para sync_product ${syncProductId}:`);
+        console.error(`   Status: ${error.response?.status}`);
+        console.error(`   Message: ${error.message}`);
+        
+        // Si es error 404, el producto no existe en la tienda
         if (error.response?.status === 404) {
-            console.log(`ℹ️ Producto ${productId} no tiene guías de tallas disponibles`);
+            console.log(`ℹ️ Producto sync ${syncProductId} no encontrado en la tienda (404)`);
+            console.log(`   Verifica que el producto exista en tu tienda de Printful`);
             // Cachear el resultado null para evitar llamadas repetidas
             sizeGuideCache.set(cacheKey, {
                 data: null,
@@ -77,8 +104,6 @@ export const getPrintfulSizeGuideService = async (productId, unit = 'inches,cm')
             });
             return null;
         }
-        
-        console.error(`❌ Error obteniendo guías de tallas para producto ${productId}:`, error.message);
         
         // En caso de error, devolver null en lugar de lanzar excepción
         // para que no rompa el flujo principal del producto

@@ -44,6 +44,7 @@ export default {
             type_inventario: product.type_inventario,
             state: product.state,
             logo_position: product.logo_position,
+            idProduct: product.idProduct, // 📏 ¡PRINTFUL ID AÑADIDO!
             variedades: variedades,
             imagen_two: IMAGEN_TWO,
             galerias: GALERIAS,

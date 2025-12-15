@@ -17,6 +17,7 @@ import { SaleDetail } from '../models/SaleDetail.js';
 import { Sale } from '../models/Sale.js';
 import { SaleAddress } from "../models/SaleAddress.js";
 import { AddressClient } from "../models/AddressClient.js";
+import { ProductVariants } from "../models/ProductVariants.js";
 // Shipment not needed - tracking data is directly in Sale model
 
 // RESOURCES
@@ -418,29 +419,10 @@ export const show_landing_product = async (req, res) => {
         let sizeGuides = null;
         if (product && product.idProduct) {
             try {
-                console.log(`🔍 Obteniendo guías de tallas para producto: ${product.title} (Printful ID: ${product.idProduct})`);
                 sizeGuides = await getPrintfulSizeGuideService(product.idProduct);
-                
-                if (sizeGuides) {
-                    console.log(`✅ Guías de tallas obtenidas para ${product.title}:`, {
-                        available_sizes: sizeGuides.available_sizes,
-                        tables_count: sizeGuides.size_tables?.length || 0
-                    });
-                } else {
-                    console.log(`ℹ️ No hay guías de tallas disponibles para ${product.title}`);
-                }
             } catch (error) {
-                console.error(`❌ Error obteniendo guías de tallas para ${product.title}:`, error.message);
-                // No afecta el flujo principal si falla
                 sizeGuides = null;
             }
-        } else {
-            console.log(`🚫 Producto sin idProduct válido:`, {
-                hasProduct: !!product,
-                productId: product?.id,
-                printfulId: product?.idProduct,
-                productTitle: product?.title
-            });
         }
 
         res.status(200).json({
