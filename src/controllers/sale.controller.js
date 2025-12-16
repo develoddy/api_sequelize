@@ -1227,15 +1227,6 @@ const createSaleDetail = async (cart, saleId) => {
         variedadId: cart.variedadId || null
     };
 
-    console.log('[PayPal] 📦 Creating SaleDetail:', {
-        saleId,
-        productId: resolvedProductId,
-        type_campaign,
-        discount,
-        price_unitario: finalPrice,
-        total: totalVal
-    });
-
     const created = await SaleDetail.create(saleDetailData);
     return created;
 };
@@ -1246,34 +1237,41 @@ const removeCartItem = async (cart) => {
     if (cart.guest_id !== undefined && cart.guest_id !== null) {
         // Es CartCache (invitado)
         await CartCache.destroy({ where: { id: cart.id } });
-        console.log('[removeCartItem] CartCache eliminado:', cart.id);
+       
     } else {
         // Es Cart (usuario autenticado)
         await Cart.destroy({ where: { id: cart.id } });
-        console.log('[removeCartItem] Cart eliminado:', cart.id);
+       
     }
 };
 
 // Crear datos de la orden para Printful
-const createPrintfulOrderData = (saleAddress, items, costs) => ({
-    recipient: {
-        name: saleAddress.name,
-        address1: saleAddress.address,
-        city: saleAddress.ciudad,
-        state_code: 'CA', // Ajustar según tus necesidades
-        country_code: 'ES', // Ajustar según tus necesidades
-        zip: '91311', // Ajustar según tus necesidades
-        phone: saleAddress.telefono,
-        email: saleAddress.email,
-    },
-    items: items,
-    retail_costs: {
-        subtotal: costs.subtotal,
-        discount: '0.00', // ✅ FIX: Siempre '0.00' como Stripe (descuentos ya aplicados en retail_price)
-        shipping: costs.shipping,
-        tax: costs.tax
-    },
-});
+// Crear datos de la orden para Printful
+const createPrintfulOrderData = (saleAddress, items, costs) => {
+    // Feature flag para auto-confirm de órdenes de Printful
+    const AUTO_CONFIRM = process.env.PRINTFUL_AUTO_CONFIRM === 'true';
+    
+    return {
+        recipient: {
+            name: saleAddress.name,
+            address1: saleAddress.address,
+            city: saleAddress.ciudad,
+            state_code: 'CA', // Ajustar según tus necesidades
+            country_code: 'ES', // Ajustar según tus necesidades
+            zip: '91311', // Ajustar según tus necesidades
+            phone: saleAddress.telefono,
+            email: saleAddress.email,
+        },
+        items: items,
+        retail_costs: {
+            subtotal: costs.subtotal,
+            discount: '0.00', // ✅ FIX: Siempre '0.00' como Stripe (descuentos ya aplicados en retail_price)
+            shipping: costs.shipping,
+            tax: costs.tax
+        },
+        confirm: AUTO_CONFIRM
+    };
+};
 
 // 👉 Ajusta la orden para enviar a Printful
 // - Siempre limpiar los items con variant_id, quantity, name, retail_price y files.
@@ -1283,14 +1281,6 @@ const createPrintfulOrderData = (saleAddress, items, costs) => ({
 
 const prepareCreatePrintfulOrder = async (orderData, res) => {
 
-    // 🔹 LOG DE DEBUG: ver qué llega en orderData
-    // console.log("===== DEBUG orderData recibido =====");
-    // console.log("external_id:", orderData.external_id);
-    // console.log("shipping:", orderData.shipping);
-    // console.log("recipient:", JSON.stringify(orderData.recipient, null, 2));
-    // console.log("items:", JSON.stringify(orderData.items, null, 2));
-    // console.log("retail_costs:", JSON.stringify(orderData.retail_costs, null, 2));
-    // console.log("===================================");
 
     const cleanItems = orderData.items.map(item => {
         const cleanItem = {
@@ -1370,24 +1360,16 @@ const prepareCreatePrintfulOrder = async (orderData, res) => {
         return cleanItem;
     });
 
-    // LOG DE DEBUG antes de crear cleanOrder
-    // console.log("===== DEBUG cleanItems antes de crear cleanOrder =====");
-    // console.log(JSON.stringify(cleanItems, null, 2));
-    // console.log("=====================================================");
-
+    
     const cleanOrder = {
         recipient: orderData.recipient,
         items: cleanItems,
         retail_costs: orderData.retail_costs,
         external_id: orderData.external_id || `order_${Date.now()}`,
         shipping: orderData.shipping || "STANDARD",
-        //confirm: true // Lo más importante descomentar para que sea pedido real
+        confirm: orderData.confirm !== undefined ? orderData.confirm : false // ✅ Usar valor de createPrintfulOrderData (respeta feature flag)
     };
 
-    //console.log("===== DEBUG: Orden limpia que se enviará a Printful =====");
-    //console.log(JSON.stringify(cleanOrder, null, 2));
-    //console.log("========================================================");
-    //return { error: false, data: cleanOrder };
 
     let data = await createPrintfulOrder(cleanOrder);
 
