@@ -367,6 +367,52 @@ export const registerGuest = async (req, res) => {
             });
         }
 
+        // ✅ Guardar el estado inicial de Printful (igual que en register)
+        console.log('[Printful Guest] Resultado recibido:', result);
+
+        try {
+            console.log('[Printful Guest] Estructura de respuesta completa:', JSON.stringify(result, null, 2));
+
+            if (result && result.data) {
+                const printfulResponse = result;
+                const printfulOrderId = printfulResponse.data.orderId ?? null;
+                const printfulStatus = (printfulResponse.data.raw && printfulResponse.data.raw.status) ? printfulResponse.data.raw.status : 'unknown';
+                const printfulUpdatedAt = new Date();
+
+                console.log('[Printful Guest] Datos de orden recibidos:', { orderId: printfulOrderId, status: printfulStatus });
+
+                await sale.update({
+                    printfulOrderId,
+                    printfulStatus,
+                    printfulUpdatedAt
+                });
+
+                console.log('[Printful Guest] Estado inicial guardado en BD:', {
+                    printfulOrderId,
+                    printfulStatus,
+                });
+            } else {
+                console.warn('[Printful Guest] No se recibió data válida de la orden.');
+            }
+        } catch (pfSaveErr) {
+            console.error('[Printful Guest] Error guardando estado en BD:', pfSaveErr && (pfSaveErr.message || pfSaveErr));
+        }
+
+        // Obtener fechas de entrega desde Printful
+        let minDeliveryDate = result.data.minDeliveryDate ? new Date(result.data.minDeliveryDate) : null;
+        
+        if (!minDeliveryDate || isNaN(minDeliveryDate.getTime())) {
+            minDeliveryDate = new Date();
+        }
+
+        const maxDeliveryDate = new Date(minDeliveryDate);
+        maxDeliveryDate.setDate(maxDeliveryDate.getDate() + 7);
+
+        await sale.update({
+            minDeliveryDate: minDeliveryDate.toISOString().split('T')[0],
+            maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
+        });
+
         try {
             await sendEmail(sale.id);
         } catch (emailErr) {
@@ -384,10 +430,21 @@ export const registerGuest = async (req, res) => {
             ]
         });
 
+        // Usar saleWithAddresses que tiene los datos actualizados
+        const finalSale = saleWithAddresses || sale;
+
         return res.status(200).json({
             message: "Muy bien! La orden se generó correctamente (invitado)",
-            sale: saleWithAddresses || sale,
+            sale: finalSale,
             saleDetails: saleDetails,
+            deliveryEstimate: {
+                min: finalSale.minDeliveryDate,
+                max: finalSale.maxDeliveryDate
+            },
+            printful: {
+                id: finalSale.printfulOrderId,
+                status: finalSale.printfulStatus
+            }
         });
     } catch (error) {
         console.log("------> DEBBUG : Error en registerGuest:", error);
@@ -542,24 +599,24 @@ export const register = async (req, res) => {
             ]
         });
 
+        // Usar saleWithAddresses que tiene los datos actualizados
+        const finalSale = saleWithAddresses || sale;
+
         res.status(200).json({
             message: "Muy bien! La orden se generó correctamente",
-            sale: saleWithAddresses || sale,
+            sale: finalSale,
             saleDetails: saleDetails,
             deliveryEstimate: {
-                min: sale.minDeliveryDate,
-                max: sale.maxDeliveryDate
+                min: finalSale.minDeliveryDate,
+                max: finalSale.maxDeliveryDate
             },
             printful: {
-                id: sale.printfulOrderId,
-                status: sale.printfulStatus
+                id: finalSale.printfulOrderId,
+                status: finalSale.printfulStatus
             }
         });
 
     } catch (error) {
-        console.log("------> DEBBUG : Error en register:", error.message);
-        console.error("Stack:", error.stack);
-        
         res.status(500).send({
             message: "Debug: SaleController register OCURRIÓ UN PROBLEMA",
         });
@@ -1183,9 +1240,18 @@ const createSaleDetail = async (cart, saleId) => {
     return created;
 };
 
-// Eliminar ítem del carrito
+// Eliminar ítem del carrito (soporta Cart y CartCache)
 const removeCartItem = async (cart) => {
-    await Cart.destroy({ where: { id: cart.id } });
+    // Detectar si es Cart (tiene userId) o CartCache (tiene guest_id)
+    if (cart.guest_id !== undefined && cart.guest_id !== null) {
+        // Es CartCache (invitado)
+        await CartCache.destroy({ where: { id: cart.id } });
+        console.log('[removeCartItem] CartCache eliminado:', cart.id);
+    } else {
+        // Es Cart (usuario autenticado)
+        await Cart.destroy({ where: { id: cart.id } });
+        console.log('[removeCartItem] Cart eliminado:', cart.id);
+    }
 };
 
 // Crear datos de la orden para Printful
