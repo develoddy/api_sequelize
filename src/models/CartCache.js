@@ -12,6 +12,7 @@ export const CartCache = sequelize.define('cartsCache', {
     cantidad: { type: DataTypes.INTEGER, allowNull: false },
     code_cupon: { type: DataTypes.STRING, allowNull: true },
     code_discount: { type: DataTypes.STRING, allowNull: true },
+    type_campaign: { type: DataTypes.INTEGER, allowNull: true }, // 1=Campaign Discount, 2=Flash Sale, 3=Cupón
     price_unitario: { type: DataTypes.STRING, allowNull: false },
     subtotal: { type: DataTypes.STRING, allowNull: false },
     total: { type: DataTypes.STRING, allowNull: false }

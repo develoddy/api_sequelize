@@ -48,10 +48,22 @@ export const list = async (req, res) => {
                 ]
             });
 
-            // Mapeando los resultados para transformarlos según sea necesario
-            let CARTS = carts.map(cart => {
-                return resources.Cart.cart_list(cart);
-            });
+            // Mapeando los resultados y calculando type_campaign si no existe
+            let CARTS = await Promise.all(carts.map(async (cart) => {
+                let cartObj = cart.toJSON();
+                
+                // Si el carrito no tiene type_campaign, calcularlo
+                if (!cartObj.type_campaign && cartObj.code_discount) {
+                    const discount = await Discount.findByPk(cartObj.code_discount);
+                    if (discount) {
+                        cartObj.type_campaign = discount.type_campaign;
+                        // Actualizar en BD para futuras consultas
+                        await cart.update({ type_campaign: discount.type_campaign });
+                    }
+                }
+                
+                return resources.Cart.cart_list(cartObj);
+            }));
 
 
             // Enviando la respuesta
@@ -149,13 +161,15 @@ export const register = async (req, res) => {
         let type_campaign = null;
         if (data.code_cupon) {
             type_campaign = 3; // Cupón
+        } else if (data.type_campaign) {
+            // ✅ Usar type_campaign enviado explícitamente desde frontend
+            type_campaign = data.type_campaign;
         } else if (data.code_discount) {
-            // Consultar tipo de campaña desde discounts
+            // Consultar tipo de campaña desde discounts como fallback
             const discount = await Discount.findByPk(data.code_discount);
             type_campaign = discount ? discount.type_campaign : null;
-        } else if (data.discount && data.discount > 0) {
-            type_campaign = 1; // Campaign Discount sin código
         }
+        // ❌ Eliminamos el fallback incorrecto que asumía type_campaign = 1
 
         // Insertar en la tabla Cart
         let newCart = await Cart.create({
@@ -181,8 +195,18 @@ export const register = async (req, res) => {
             ]
         });
 
+        // Verificar y calcular type_campaign si no existe (para consistencia con list)
+        let cartObj = newCartWithAssociations.toJSON();
+        if (!cartObj.type_campaign && cartObj.code_discount) {
+            const discount = await Discount.findByPk(cartObj.code_discount);
+            if (discount) {
+                cartObj.type_campaign = discount.type_campaign;
+                await newCartWithAssociations.update({ type_campaign: discount.type_campaign });
+            }
+        }
+
         res.status(200).json({
-            cart: resources.Cart.cart_list(newCartWithAssociations.toJSON()),
+            cart: resources.Cart.cart_list(cartObj),
             message_text: "La cesta de compra ha sido registrado satisfactoriamente",
         });
     } catch (error) {
@@ -304,8 +328,18 @@ export const update = async (req, res) => {
             ]
         });
 
+        // Verificar y calcular type_campaign si no existe
+        let cartObj = newCart.toJSON();
+        if (!cartObj.type_campaign && cartObj.code_discount) {
+            const discount = await Discount.findByPk(cartObj.code_discount);
+            if (discount) {
+                cartObj.type_campaign = discount.type_campaign;
+                await newCart.update({ type_campaign: discount.type_campaign });
+            }
+        }
+
         res.status(200).json({
-            cart: resources.Cart.cart_list(newCart),
+            cart: resources.Cart.cart_list(cartObj),
             message_text: "La cesta se actualizó con éxito!",
         });
     } catch (error) {

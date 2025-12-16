@@ -117,12 +117,29 @@ export const list = async (req, res) => {
         });
 
 
+        // Obtener ventas flash ANTES del loop de productos
+        let FlashSales = await Discount.findAll({
+            where: {
+                type_campaign: 2,
+                start_date_num: { [Op.lte]: TIME_NOW },
+                end_date_num: { [Op.gte]: TIME_NOW },
+            },
+            include: [
+                { 
+                    model: DiscountProduct,
+                    include: [{
+                        model: Product,
+                        include: [Galeria]
+                    }] 
+                },
+                { model: DiscountCategorie }
+            ]
+        });
+
         let ObjectOurProducts = [];
         let HoodiesProducts = [];
         let MugsProducts = [];
         let CapsProducts = [];
-
-
 
         for (const product of OurProducts) {
             let variedades = await Variedad.findAll({ where: { productId: product.id } });
@@ -130,14 +147,35 @@ export const list = async (req, res) => {
             let AVG_REVIEW = REVIEWS.length > 0 ? Math.ceil(REVIEWS.reduce((sum, item) => sum + item.cantidad, 0) / REVIEWS.length) : 0;
             let COUNT_REVIEW = REVIEWS.length;
             let DISCOUNT_EXIST = null;
-            if (CampaingDiscount) {
+            
+            // PRIORIDAD 1: Verificar Flash Sales (type_campaign: 2) - tienen prioridad
+            if (FlashSales && FlashSales.length > 0) {
+                for (const flashSale of FlashSales) {
+                    if (flashSale.type_segment === 1) { // Por producto
+                        let products_a = flashSale.discounts_products.map(item => item.productId);
+                        if (products_a.includes(product.id)) {
+                            DISCOUNT_EXIST = flashSale;
+                            break; // Flash Sale encontrado, no seguir buscando
+                        }
+                    } else { // Por categoría
+                        let categories_a = flashSale.discounts_categories.map(item => item.categoryId);
+                        if (categories_a.includes(product.categoryId)) {
+                            DISCOUNT_EXIST = flashSale;
+                            break; // Flash Sale encontrado, no seguir buscando
+                        }
+                    }
+                }
+            }
+            
+            // PRIORIDAD 2: Si no hay Flash Sale, verificar Campaign Discount (type_campaign: 1)
+            if (!DISCOUNT_EXIST && CampaingDiscount) {
                 if (CampaingDiscount.type_segment === 1) { // Por producto
-                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId); // Corregir aquí
+                    let products_a = CampaingDiscount.discounts_products.map(item => item.productId);
                     if (products_a.includes(product.id)) {
                         DISCOUNT_EXIST = CampaingDiscount;
                     }
                 } else { // Por categoría
-                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId); // Corregir aquí
+                    let categories_a = CampaingDiscount.discounts_categories.map(item => item.categoryId);
                     if (categories_a.includes(product.categoryId)) {
                         DISCOUNT_EXIST = CampaingDiscount;
                     }
@@ -158,25 +196,7 @@ export const list = async (req, res) => {
             if (CATEGORY_MAP.gorras.includes(categoryName)) CapsProducts.push(productObject);
         }
 
-        // Obtener ventas flash
-        //let FlashSale = await Discount.findOne({
-        let FlashSales = await Discount.findAll({
-            where: {
-                type_campaign: 2,
-                start_date_num: { [Op.lte]: TIME_NOW },
-                end_date_num: { [Op.gte]: TIME_NOW },
-            },
-            include: [{ 
-                model: DiscountProduct,
-                include: [{
-                    model: Product,
-                    include: [Galeria]
-                }] 
-            },
-            ]
-        });
-
-
+        // Construir lista de productos Flash Sale para campaign_products
         let ProductList = [];
         if (FlashSales) {
             for (const flash of FlashSales) {
@@ -189,7 +209,7 @@ export const list = async (req, res) => {
             }
             
         } else {
-            FlashSale = null;
+            FlashSales = null;
             ProductList = [];
         }
 
@@ -561,7 +581,6 @@ export const profile_client = async (req, res) => {
             message: "Ocurrió un problema",
             error: error
         });
-        console.log(" [Internal error] ---->", error);
     }
 }
 
@@ -827,7 +846,7 @@ export const filters_products = async (req, res) => {
             filter.price_usd = { [Op.between]: [price_min, price_max] };
         }
 
-        console.log("------> logo_position_selected : ", logo_position_selected);
+       
         
         if (logo_position_selected && logo_position_selected !== '') {
             filter.logo_position = logo_position_selected;

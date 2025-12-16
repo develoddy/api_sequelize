@@ -982,7 +982,8 @@ export class DatabaseManagementController {
             const { stdout, stderr } = await execAsync(command, {
                 env: process.env,
                 cwd: process.cwd(),
-                timeout: 120000 // 2 minutos
+                timeout: 120000, // 2 minutos
+                maxBuffer: 10 * 1024 * 1024 // 10MB buffer para salida grande
             });
 
             logger.info('Seeder específico ejecutado', {
@@ -1042,7 +1043,8 @@ export class DatabaseManagementController {
             const { stdout, stderr } = await execAsync(command, {
                 env: process.env,
                 cwd: process.cwd(),
-                timeout: 120000 // 2 minutos
+                timeout: 120000, // 2 minutos
+                maxBuffer: 10 * 1024 * 1024 // 10MB buffer para salida grande
             });
 
             logger.info('Seeders ejecutados', {

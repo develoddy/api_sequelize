@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../database/database.js';
 // MODELS
 import { Categorie } from "../models/Categorie.js";
+import { Discount } from "../models/Discount.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
 import { File } from "../models/File.js";
@@ -104,6 +105,17 @@ export const register = async (req, res) => {
             }
         }
 
+        // Determinar type_campaign (igual que en carts.controller.js)
+        let type_campaign = null;
+        if (data.code_cupon) {
+            type_campaign = 3; // Cupón
+        } else if (data.type_campaign) {
+            type_campaign = data.type_campaign;
+        } else if (data.code_discount) {
+            const discount = await Discount.findByPk(data.code_discount);
+            type_campaign = discount ? discount.type_campaign : null;
+        }
+
         // Insertar en la tabla Cart
         let newCart = await CartCache.create({
             guest_id: data.user,
@@ -115,6 +127,7 @@ export const register = async (req, res) => {
             cantidad: data.cantidad,
             code_cupon: data.code_cupon,
             code_discount: data.code_discount,
+            type_campaign: type_campaign,
             price_unitario: data.price_unitario,
             subtotal: data.subtotal,
             total: data.total
@@ -128,8 +141,18 @@ export const register = async (req, res) => {
             ]
         });
 
+        // Verificar y calcular type_campaign si no existe
+        let cartObj = newCartWithAssociations.toJSON();
+        if (!cartObj.type_campaign && cartObj.code_discount) {
+            const discount = await Discount.findByPk(cartObj.code_discount);
+            if (discount) {
+                cartObj.type_campaign = discount.type_campaign;
+                await newCartWithAssociations.update({ type_campaign: discount.type_campaign });
+            }
+        }
+
         res.status(200).json({
-            cart: resources.Cart.cart_list(newCartWithAssociations.toJSON()),
+            cart: resources.Cart.cart_list(cartObj),
             message_text: "La cesta de compra ha sido registrado satisfactoriamente",
         });
     } catch (error) {
@@ -158,10 +181,22 @@ export const list = async (req, res) => {
                 ]
             });
 
-            // Mapeando los resultados para transformarlos según sea necesario
-            let CARTS = carts.map(cart => {
-                return resources.Cart.cart_list(cart);
-            });
+            // Mapeando los resultados y calculando type_campaign si no existe
+            let CARTS = await Promise.all(carts.map(async (cart) => {
+                let cartObj = cart.toJSON();
+                
+                // Si el carrito no tiene type_campaign, calcularlo
+                if (!cartObj.type_campaign && cartObj.code_discount) {
+                    const discount = await Discount.findByPk(cartObj.code_discount);
+                    if (discount) {
+                        cartObj.type_campaign = discount.type_campaign;
+                        // Actualizar en BD para futuras consultas
+                        await cart.update({ type_campaign: discount.type_campaign });
+                    }
+                }
+                
+                return resources.Cart.cart_list(cartObj);
+            }));
 
             // Enviando la respuesta.
             res.status(200).json({
