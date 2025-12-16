@@ -4,6 +4,7 @@ import { Sale } from "../models/Sale.js";
 import { SaleDetail } from "../models/SaleDetail.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
+import { File } from "../models/File.js";
 
 const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN;
 const PRINTFUL_API_URL = 'https://api.printful.com';
@@ -57,7 +58,7 @@ export const getTrackingStatus = async (req, res) => {
           model: SaleDetail,
           include: [
             { model: Product },
-            { model: Variedad }
+            { model: Variedad, include: { model: File } }
           ]
         }
       ]
@@ -194,9 +195,21 @@ function formatLocalItems(saleDetails) {
     quantity: detail.cantidad,
     name: detail.product?.title || 'Producto',
     retail_price: detail.precioUnitario?.toString() || '0',
-    files: [],
+    // ✅ Incluir archivos de la variedad (mockups con diseño aplicado)
+    files: detail.variedad?.files || [],
     options: [],
-    sku: detail.product?.sku || null
+    sku: detail.product?.sku || null,
+    // ✅ Incluir datos del producto real para consistencia
+    product: detail.product ? {
+      id: detail.product.id,
+      name: detail.product.title,
+      image: detail.product.portada || detail.product.imagen,
+      portada: detail.product.portada,
+      imagen: detail.product.imagen,
+      sku: detail.product.sku
+    } : null,
+    // ✅ Incluir variedad completa con archivos
+    variedade: detail.variedad || null
   }));
 }
 
