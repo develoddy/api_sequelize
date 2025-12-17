@@ -5,6 +5,12 @@ import { Categorie } from '../models/Categorie.js';
 import { create } from 'xmlbuilder2';
 import googleSearchConsoleService from '../services/googleSearchConsole.service.js';
 import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * 🌐 GENERAR Y SERVIR SITEMAP.XML (Endpoint Público)
@@ -149,6 +155,18 @@ export const generateSitemap = async (req, res) => {
 
         const xmlContent = doc.end({ prettyPrint: true });
 
+        // 📁 Guardar archivo físico en el servidor del frontend (producción)
+        if (process.env.NODE_ENV === 'production') {
+            try {
+                const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/sitemap.xml';
+                fs.writeFileSync(frontendPath, xmlContent, 'utf8');
+                console.log(`💾 [SEO] Sitemap físico guardado en: ${frontendPath}`);
+            } catch (writeError) {
+                console.error('⚠️ [SEO] No se pudo guardar sitemap físico:', writeError.message);
+                // Continuar sirviendo el XML aunque falle el guardado
+            }
+        }
+
         // Actualizar última generación
         await config.update({ lastSitemapGeneration: new Date() });
 
@@ -216,6 +234,18 @@ export const generateRobotsTxt = async (req, res) => {
             // Añadir sitemap al final
             if (rules.sitemap) {
                 robotsTxt += `Sitemap: ${rules.sitemap}\n`;
+            }
+        }
+
+        // 📁 Guardar archivo físico en el servidor del frontend (producción)
+        if (process.env.NODE_ENV === 'production') {
+            try {
+                const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/robots.txt';
+                fs.writeFileSync(frontendPath, robotsTxt, 'utf8');
+                console.log(`💾 [SEO] Robots.txt físico guardado en: ${frontendPath}`);
+            } catch (writeError) {
+                console.error('⚠️ [SEO] No se pudo guardar robots.txt físico:', writeError.message);
+                // Continuar sirviendo el archivo aunque falle el guardado
             }
         }
 
@@ -604,6 +634,27 @@ export const syncProductsToSitemap = async (req, res) => {
 
         console.log(`✅ [SEO] Categorías sincronizadas: ${catAdded} añadidas, ${catUpdated} actualizadas`);
 
+        // 📁 Regenerar archivos físicos después de sincronizar (producción)
+        if (process.env.NODE_ENV === 'production') {
+            try {
+                console.log('🔄 [SEO] Regenerando archivos físicos sitemap.xml y robots.txt...');
+                
+                // Generar sitemap
+                const sitemapResult = await generateStaticSitemap();
+                if (sitemapResult.success) {
+                    console.log(`💾 [SEO] ${sitemapResult.message}`);
+                }
+                
+                // Generar robots.txt
+                const robotsResult = await generateStaticRobots();
+                if (robotsResult.success) {
+                    console.log(`💾 [SEO] ${robotsResult.message}`);
+                }
+            } catch (staticError) {
+                console.error('⚠️ [SEO] Error generando archivos estáticos:', staticError.message);
+            }
+        }
+
         res.json({
             success: true,
             message: 'Productos y categorías sincronizados correctamente',
@@ -690,7 +741,200 @@ export const notifyGoogle = async (req, res) => {
 };
 
 /**
- * 📊 OBTENER ESTADÍSTICAS DEL SITEMAP (Admin)
+ * �️ HELPER: Generar archivo físico sitemap.xml (no exportado, uso interno)
+ */
+const generateStaticSitemap = async () => {
+    try {
+        const config = await SeoConfig.findOne();
+        if (!config) {
+            return { success: false, message: 'Configuración SEO no encontrada' };
+        }
+
+        const baseUrl = config.sitemapBaseUrl;
+        const urls = [];
+
+        // URLs personalizadas
+        const customUrls = await SitemapUrl.findAll({
+            where: { 
+                enabled: true,
+                type: { [Op.in]: ['static', 'custom'] }
+            },
+            order: [['priority', 'DESC'], ['lastmod', 'DESC']]
+        });
+
+        for (const url of customUrls) {
+            urls.push({
+                loc: url.loc,
+                lastmod: url.lastmod ? url.lastmod.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                changefreq: url.changefreq,
+                priority: url.priority
+            });
+        }
+
+        // Productos
+        if (config.sitemapIncludeProducts) {
+            const products = await Product.findAll({
+                where: { 
+                    state: 2,
+                    slug: { [Op.ne]: null } 
+                },
+                attributes: ['id', 'slug', 'updatedAt']
+            });
+
+            const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+            for (const product of products) {
+                const productUrl = await SitemapUrl.findOne({
+                    where: { 
+                        type: 'product',
+                        enabled: true,
+                        metadata: { productId: product.id }
+                    }
+                });
+
+                if (productUrl) {
+                    urls.push({
+                        loc: `${cleanBaseUrl}/es/es/shop/product/${product.slug}`,
+                        lastmod: product.updatedAt.toISOString().split('T')[0],
+                        changefreq: config.sitemapProductChangefreq || 'weekly',
+                        priority: config.sitemapProductPriority || 0.8
+                    });
+                }
+            }
+        }
+
+        // Categorías
+        if (config.sitemapIncludeCateogories) {
+            const categories = await Categorie.findAll({
+                where: { 
+                    state: 1,
+                    title: { [Op.ne]: null }
+                },
+                attributes: ['id', 'title', 'updatedAt']
+            });
+
+            const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+            for (const category of categories) {
+                const categorySlug = category.title
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-');
+
+                const categoryUrl = await SitemapUrl.findOne({
+                    where: {
+                        type: 'category',
+                        enabled: true,
+                        metadata: { categoryId: category.id }
+                    }
+                });
+
+                if (categoryUrl) {
+                    urls.push({
+                        loc: `${cleanBaseUrl}/es/es/shop/category/${categorySlug}`,
+                        lastmod: category.updatedAt.toISOString().split('T')[0],
+                        changefreq: config.sitemapCategoryChangefreq || 'weekly',
+                        priority: config.sitemapCategoryPriority || 0.7
+                    });
+                }
+            }
+        }
+
+        // Crear XML
+        const doc = create({ version: '1.0', encoding: 'UTF-8' })
+            .ele('urlset', {
+                xmlns: 'http://www.sitemaps.org/schemas/sitemap/0.9',
+                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+                'xsi:schemaLocation': 'http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd'
+            });
+
+        urls.forEach(url => {
+            const urlElement = doc.ele('url');
+            urlElement.ele('loc').txt(url.loc);
+            if (url.lastmod) urlElement.ele('lastmod').txt(url.lastmod);
+            urlElement.ele('changefreq').txt(url.changefreq);
+            urlElement.ele('priority').txt(url.priority.toString());
+        });
+
+        const xmlContent = doc.end({ prettyPrint: true });
+
+        // Guardar archivo físico
+        const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/sitemap.xml';
+        fs.writeFileSync(frontendPath, xmlContent, 'utf8');
+
+        return { 
+            success: true, 
+            message: `Sitemap físico guardado con ${urls.length} URLs en: ${frontendPath}` 
+        };
+
+    } catch (error) {
+        console.error('Error generando sitemap estático:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+/**
+ * 🛠️ HELPER: Generar archivo físico robots.txt (no exportado, uso interno)
+ */
+const generateStaticRobots = async () => {
+    try {
+        const config = await SeoConfig.findOne();
+        if (!config) {
+            return { success: false, message: 'Configuración SEO no encontrada' };
+        }
+
+        let robotsTxt = '';
+
+        if (config.robotsTxtContent) {
+            robotsTxt = config.robotsTxtContent;
+        } else if (config.robotsRules) {
+            const rules = typeof config.robotsRules === 'string' 
+                ? JSON.parse(config.robotsRules) 
+                : config.robotsRules;
+
+            if (rules.userAgents && Array.isArray(rules.userAgents)) {
+                rules.userAgents.forEach(ua => {
+                    robotsTxt += `User-agent: ${ua.agent}\n`;
+                    
+                    if (ua.allow && Array.isArray(ua.allow)) {
+                        ua.allow.forEach(path => {
+                            robotsTxt += `Allow: ${path}\n`;
+                        });
+                    }
+                    
+                    if (ua.disallow && Array.isArray(ua.disallow)) {
+                        ua.disallow.forEach(path => {
+                            robotsTxt += `Disallow: ${path}\n`;
+                        });
+                    }
+                    
+                    robotsTxt += '\n';
+                });
+            }
+
+            if (rules.sitemap) {
+                robotsTxt += `Sitemap: ${rules.sitemap}\n`;
+            }
+        }
+
+        // Guardar archivo físico
+        const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/robots.txt';
+        fs.writeFileSync(frontendPath, robotsTxt, 'utf8');
+
+        return { 
+            success: true, 
+            message: `Robots.txt físico guardado en: ${frontendPath}` 
+        };
+
+    } catch (error) {
+        console.error('Error generando robots.txt estático:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+/**
+ * �📊 OBTENER ESTADÍSTICAS DEL SITEMAP (Admin)
  */
 export const getSitemapStats = async (req, res) => {
     try {
