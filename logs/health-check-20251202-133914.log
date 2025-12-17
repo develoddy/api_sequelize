@@ -1,7 +1,0 @@
-[2025-12-02 13:39:14] [INFO] === Iniciando health check v2.0.0 ===
-[2025-12-02 13:39:14] [INFO] Modo: NORMAL
-[2025-12-02 13:39:14] [WARN] Sistema Operativo: macOS - métricas de servidor no disponibles (umbral: )
-[2025-12-02 13:39:14] [WARN] PM2: No disponible (ejecutar en servidor) (umbral: )
-[2025-12-02 13:39:15] [WARN] Health Data: jq no disponible - no se puede parsear JSON (umbral: )
-[2025-12-02 13:39:15] [ERROR] Angular App: <app-root> NO encontrado
-[2025-12-02 13:39:16] [INFO] Health check finalizado - Passed: 15, Warnings: 3, Failed: 1

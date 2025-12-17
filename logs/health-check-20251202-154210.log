@@ -1,6 +1,0 @@
-[2025-12-02 15:42:10] [INFO] === Iniciando health check v3.0.0 ===
-[2025-12-02 15:42:10] [INFO] Modo: NORMAL
-[2025-12-02 15:42:10] [WARN] Sistema Operativo: macOS - métricas de servidor no disponibles (umbral: )
-[2025-12-02 15:42:10] [WARN] PM2: No disponible (ejecutar en servidor) (umbral: )
-[2025-12-02 15:42:13] [INFO] Resultados exportados a metrics/health-20251202-154213.json y metrics/latest.json
-[2025-12-02 15:42:13] [INFO] Health check finalizado - Passed: 21, Warnings: 2, Failed: 0
