@@ -558,7 +558,7 @@ const createCategory = async (category, transaction) => {
   return await Categorie.create({
     title: category.title,
     imagen: portada_name,
-    state: 2, // 2 = ACTIVE (visible en sitemap y tienda)
+    state: 1, // 1 = ACTIVE for categories (different from products)
   }, { transaction });
 };
 

@@ -86,7 +86,7 @@ export const generateSitemap = async (req, res) => {
         if (config.sitemapIncludeCategories) {
             const categories = await Categorie.findAll({
                 where: { 
-                    state: 2, // state = 2 means ACTIVE
+                    state: 1, // state = 1 means ACTIVE for categories (different from products)
                     title: { [Op.ne]: null }
                 },
                 attributes: ['id', 'title', 'updatedAt']
@@ -558,7 +558,7 @@ export const syncProductsToSitemap = async (req, res) => {
         
         const categories = await Categorie.findAll({
             where: { 
-                state: 2, // state = 2 means ACTIVE
+                state: 1, // state = 1 means ACTIVE for categories (different from products)
                 title: { [Op.ne]: null }
             },
             attributes: ['id', 'title', 'updatedAt']
