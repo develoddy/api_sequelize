@@ -35,6 +35,7 @@ import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
+import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 
 const app = express();
 
@@ -73,5 +74,6 @@ app.use("/analytics", analyticsRoutes);
 app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
 app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
+app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
 
 export default app;
