@@ -803,7 +803,7 @@ const generateStaticSitemap = async () => {
         }
 
         // Categorías
-        if (config.sitemapIncludeCateogories) {
+        if (config.sitemapIncludeCategories) {
             const categories = await Categorie.findAll({
                 where: { 
                     state: 1,
