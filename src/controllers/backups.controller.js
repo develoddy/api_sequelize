@@ -223,18 +223,20 @@ export class BackupsController {
                 logger.info('Usando MySQL del sistema');
             }
             
-            // Construir comando MySQL para restauración
-            let mysqlCommand = `${mysqlPath} --protocol=TCP -h ${dbConfig.host} -P ${dbConfig.port} -u ${dbConfig.user}`;
+            // Construir comando MySQL para restauración (sin password en línea de comandos)
+            let mysqlCommand = `${mysqlPath} --protocol=TCP -h ${dbConfig.host} -P ${dbConfig.port} -u ${dbConfig.user} ${dbConfig.database}`;
+            
+            // Preparar variables de entorno (MYSQL_PWD es más seguro que -p en línea de comandos)
+            const mysqlEnv = { ...process.env };
             
             // Solo agregar contraseña si existe y no está vacía
             if (dbConfig.password && dbConfig.password.trim() !== '') {
-                mysqlCommand += ` -p${dbConfig.password}`;
-                logger.info('Usando autenticación con contraseña para restauración');
+                // Usar MYSQL_PWD en lugar de -p para evitar problemas con caracteres especiales
+                mysqlEnv.MYSQL_PWD = dbConfig.password;
+                logger.info('Usando autenticación con contraseña para restauración (MYSQL_PWD)');
             } else {
                 logger.info('Usando autenticación sin contraseña para restauración');
             }
-            
-            mysqlCommand += ` ${dbConfig.database}`;
             
             logger.info('Ejecutando comando de restauración', { 
                 host: dbConfig.host,
@@ -252,7 +254,8 @@ export class BackupsController {
                 // Paso 1: Descomprimir archivo
                 logger.info('Descomprimiendo archivo de backup...');
                 await execAsync(`gunzip -c "${filePath}" > "${tempSqlFile}"`, {
-                    timeout: 60000
+                    timeout: 60000,
+                    env: mysqlEnv
                 });
 
                 // Paso 2: Verificar que el archivo temporal se creó
@@ -264,7 +267,7 @@ export class BackupsController {
                 logger.info('Ejecutando restauración desde archivo temporal...');
                 const { stdout, stderr } = await execAsync(`${mysqlCommand} < "${tempSqlFile}"`, {
                     timeout: 300000, // 5 minutos de timeout
-                    env: { ...process.env }
+                    env: mysqlEnv // Usar env con MYSQL_PWD
                 });
 
                 // Verificar errores de la restauración
