@@ -3,9 +3,33 @@ import nodemailer from 'nodemailer';
 import ejs from 'ejs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Sale } from '../models/Sale.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Función helper para obtener country/locale desde la venta
+ * @param {number} saleId - ID de la venta
+ * @returns {Object} - {country: string, locale: string}
+ */
+const getCountryLocale = async (saleId) => {
+    try {
+        if (!saleId) return { country: 'es', locale: 'es' };
+        
+        const sale = await Sale.findByPk(saleId, {
+            attributes: ['country', 'locale']
+        });
+        
+        return {
+            country: sale?.country || 'es',
+            locale: sale?.locale || 'es'
+        };
+    } catch (error) {
+        console.warn('⚠️ Error obteniendo country/locale para saleId:', saleId, error.message);
+        return { country: 'es', locale: 'es' };
+    }
+};
 
 /**
  * 📧 EMAIL NOTIFICATION SERVICE
@@ -90,6 +114,9 @@ export async function sendOrderShippedEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
 
+        // Obtener country/locale desde la venta
+        const { country, locale } = await getCountryLocale(orderData.order.saleId);
+        
         // Preparar datos para el template
         const templateData = {
             customer: {
@@ -97,6 +124,8 @@ export async function sendOrderShippedEmail(orderData) {
                 email: orderData.customer.email
             },
             order: {
+                id: orderData.order.id, // 🔑 ID para tracking
+                trackingToken: orderData.order.trackingToken, // 🔒 Token para tracking
                 printfulOrderId: orderData.order.printfulOrderId,
                 n_transaction: orderData.order.n_transaction,
                 created: orderData.order.created,
@@ -113,6 +142,8 @@ export async function sendOrderShippedEmail(orderData) {
             },
             products: orderData.products || [],
             address: orderData.address || {},
+            country: country,
+            locale: locale,
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND
@@ -151,11 +182,16 @@ export async function sendOrderPrintingEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
 
+        // Obtener country/locale desde la venta
+        const { country, locale } = await getCountryLocale(orderData.order.saleId);
+        
         const templateData = {
             customer: orderData.customer,
             order: orderData.order,
             products: orderData.products,
             address: orderData.address,
+            country: country,
+            locale: locale,
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND
@@ -184,11 +220,17 @@ export async function sendOrderDeliveredEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
 
+        // Obtener country/locale desde la venta
+        const { country, locale } = await getCountryLocale(orderData.order.saleId);
+        
         const templateData = {
             customer: orderData.customer,
             order: orderData.order,
             delivery: orderData.delivery,
             products: orderData.products,
+            address: orderData.address, // 🏠 Agregar address para el template
+            country: country,
+            locale: locale,
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND

@@ -279,7 +279,13 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Dirección:</span>
-                    <span class="info-value"><%= delivery.address %></span>
+                    <span class="info-value">
+                        <% if (address && address.address) { %>
+                            <%= address.address %>, <%= address.ciudad %>
+                        <% } else { %>
+                            Dirección no disponible
+                        <% } %>
+                    </span>
                 </div>
             </div>
 
@@ -305,7 +311,7 @@
                 <h3>⭐ ¿Qué te pareció tu compra?</h3>
                 <p>Tu opinión es muy importante para nosotros. Ayuda a otros clientes compartiendo tu experiencia.</p>
                 <div class="stars">⭐⭐⭐⭐⭐</div>
-                <a href="<%= process.env.URL_FRONTEND %>/review/<%= order.printfulOrderId %>" class="cta-button" target="_blank">
+                <a href="<%= process.env.URL_FRONTEND %>/review/<%= order.printfulOrderId %>" style="color: white;" class="cta-button" target="_blank">
                     Dejar una Reseña
                 </a>
             </div>

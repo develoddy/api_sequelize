@@ -271,7 +271,11 @@
                 <div class="info-row">
                     <span class="info-label">Dirección de Entrega:</span>
                     <span class="info-value">
-                        <%= address.address %>, <%= address.ciudad %>
+                        <% if (address && address.address) { %>
+                            <%= address.address %>, <%= address.ciudad %>
+                        <% } else { %>
+                            No disponible
+                        <% } %>
                     </span>
                 </div>
             </div>
@@ -330,8 +334,8 @@
                     Te enviaremos otro email cuando tu pedido sea entregado. 📬
                 </p>
                 <div style="text-align: center; margin-top: 20px;">
-                    <a href="<%= process.env.URL_FRONTEND %>/es/es/account/mypurchases" style="display: inline-block; background-color: #2d3436; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600;">
-                        Ver Mis Pedidos
+                    <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" style="display: inline-block; background-color: #2d3436; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600;">
+                        📦 Rastrear mi Pedido
                     </a>
                 </div>
             </div>

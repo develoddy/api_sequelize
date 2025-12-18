@@ -186,7 +186,7 @@
                 <p style="font-size: 14px; color: #636e72; margin-bottom: 20px;">
                     Consulta el estado de tu envío en tiempo real haciendo clic en el botón de abajo
                 </p>
-                <a href="<%= process.env.URL_FRONTEND %>/es/es/tracking/<%= order.id %>/<%= order.trackingToken %>" 
+                <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" 
                    style="display: inline-block; 
                           background: #000000; 
                           color: #ffffff; 
@@ -201,7 +201,7 @@
                 <p style="font-size: 12px; color: #868e96; margin-top: 15px;">
                     Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
                     <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; word-break: break-all;">
-                        <%= process.env.URL_FRONTEND %>/es/es/tracking/<%= order.id %>/<%= order.trackingToken %>
+                        <%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>
                     </code>
                 </p>
             </div>
@@ -304,8 +304,8 @@
             <!-- CTA -->
             <div style="text-align: center; margin: 30px 0;">
                 <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">Puedes revisar el estado de tu pedido en cualquier momento</p>
-                <a href="<%= process.env.URL_FRONTEND %>/es/es/account/mypurchases" class="cta-button">
-                    Ver Mi Pedido
+                <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" class="cta-button">
+                    📦 Ver Estado de mi Pedido
                 </a>
             </div>
 

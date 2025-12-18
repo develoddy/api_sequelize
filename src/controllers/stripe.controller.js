@@ -44,7 +44,11 @@ const formatPrice = (price) => {
  */
 export const createCheckoutSession = async (req, res) => {
   try {
-    const { cart, userId, guestId, address } = req.body;
+    const { cart, userId, guestId, address, country, locale } = req.body;
+    
+    // Extraer country/locale del request (con fallback)
+    const requestCountry = country || req.headers['x-country'] || 'es';
+    const requestLocale = locale || req.headers['x-locale'] || 'es';
 
     // Normalize userId/guestId to simple scalar strings for Stripe metadata
     const normalizeIdForMetadata = (id) => {
@@ -114,7 +118,7 @@ export const createCheckoutSession = async (req, res) => {
       code_discount: cart[0].code_discount,
       discount: cart[0].discount,
       type_discount: cart[0].type_discount,
-      finalPrice: cart[0].finalPrice,  // 🔍 DEBUG: Check if finalPrice arrives
+      finalPrice: cart[0].finalPrice,
       originalPrice: cart[0].originalPrice,
       hasDiscount: cart[0].hasDiscount,
       price_unitario: cart[0].price_unitario
@@ -126,7 +130,7 @@ export const createCheckoutSession = async (req, res) => {
       variedadId: item.variedad?.id ?? item.variedadId ?? null,
       cantidad: item.cantidad ?? item.quantity ?? 1,
       price_unitario: item.price_unitario ?? item.variedad?.retail_price ?? item.product?.price_usd ?? item.price ?? 0,
-      finalPrice: item.finalPrice ?? null,  // 🔧 PRESERVE finalPrice from frontend
+      finalPrice: item.finalPrice ?? null,
       originalPrice: item.originalPrice ?? null,  // 🔧 PRESERVE originalPrice from frontend
       hasDiscount: item.hasDiscount ?? false,  // 🔧 PRESERVE hasDiscount from frontend
       discount: item.discount ?? 0,
@@ -158,14 +162,16 @@ export const createCheckoutSession = async (req, res) => {
       payment_method_types: ["card"],
       mode        : "payment",
       line_items  : lineItems,
-      // Usar placeholder para que Stripe reemplace con el ID de sesión al redirigir
-      success_url : `${process.env.URL_FRONTEND}/es/es/account/checkout/successfull?initialized=true&from=step4&fromStripe=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url  : `${process.env.URL_FRONTEND}/es/es/account/checkout/payment?initialized=true&from=step3`,
+      // URLs dinámicas usando country/locale del request
+      success_url : `${process.env.URL_FRONTEND}/${requestCountry}/${requestLocale}/account/checkout/successfull?initialized=true&from=step4&fromStripe=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url  : `${process.env.URL_FRONTEND}/${requestCountry}/${requestLocale}/account/checkout/payment?initialized=true&from=step3`,
       metadata    : {
         // always send strings in metadata; choose normalized values
         userId  : metadataUserId || "",
         guestId : metadataGuestId || "",
         email   : address?.email || "",
+        country : requestCountry, // 🌍 País de contexto
+        locale  : requestLocale,  // 🌍 Idioma de contexto
         // Prefer lightweight cartId reference to the stored CheckoutCache when possible
         ...(checkoutCache ? { cartId: String(checkoutCache.id) } : { cart: JSON.stringify(sanitizedCart) })
       },
@@ -235,6 +241,10 @@ export const stripeWebhook = async (req, res) => {
     // 🔒 Generar token único para tracking público
     const trackingToken = crypto.randomBytes(16).toString('hex'); // 32 caracteres
 
+    // Extraer country/locale desde metadata de Stripe o usar default
+    const country = session.metadata.country || 'es';
+    const locale = session.metadata.locale || 'es';
+
     // Crear venta con ID amigable
     const sale = await Sale.create({
       userId,
@@ -245,6 +255,8 @@ export const stripeWebhook = async (req, res) => {
       stripeSessionId: session.id,
       total: (session.amount_total ?? 0) / 100,
       trackingToken, // 🔒 Token de seguridad para tracking
+      country, // 🌍 País de contexto
+      locale,  // 🌍 Idioma de contexto
     });
 
     // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}

@@ -36,6 +36,7 @@ import trackingRoutes from './tracking.routes.js';
 import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
+import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 
 const app = express();
 
@@ -75,5 +76,6 @@ app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
 app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
 app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
+app.use("/email-testing", emailTestingRoutes); // 🧪 Email Testing (NO afecta Printful)
 
 export default app;

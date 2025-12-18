@@ -214,7 +214,9 @@ async function send_email(sale_id) {
             const rest_html = ejs.render(html, {
                 order: enrichedOrder,
                 address_sale: addressSale,
-                order_detail: enrichedOrderDetails
+                order_detail: enrichedOrderDetails,
+                country: order.country || 'es',
+                locale: order.locale || 'es'
             });
 
             const template = Handlebars.compile(rest_html);
@@ -335,6 +337,13 @@ export const registerGuest = async (req, res) => {
         if (!saleData || !saleAddressData) {
             return res.status(400).json({ message: "Faltan datos para procesar la venta" });
         }
+
+        // Extraer country/locale del request (desde headers, body o URL)
+        const country = req.body.country || req.headers['x-country'] || 'es';
+        const locale = req.body.locale || req.headers['x-locale'] || 'es';
+        
+        saleData.country = country;
+        saleData.locale = locale;
 
         // Asignar userId null si es invitado
         saleData.user = null;
@@ -475,6 +484,13 @@ export const register = async (req, res) => {
         }
 
         const saleAddressData = req.body.sale_address;
+
+        // Extraer country/locale del request (desde headers, body o URL)
+        const country = req.body.country || req.headers['x-country'] || 'es';
+        const locale = req.body.locale || req.headers['x-locale'] || 'es';
+        
+        saleData.country = country;
+        saleData.locale = locale;
 
         // Crear una venta y asociar la dirección
         const sale = await createSale(saleData);

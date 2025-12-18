@@ -270,7 +270,11 @@
                 <div class="info-row">
                     <span class="info-label">Dirección de Envío:</span>
                     <span class="info-value">
-                        <%= address.ciudad %>, <%= address.region || '' %>
+                        <% if (address && address.address) { %>
+                            <%= address.address %>, <%= address.ciudad %>
+                        <% } else { %>
+                            No disponible
+                        <% } %>
                     </span>
                 </div>
             </div>
@@ -336,14 +340,30 @@
                 </p>
             </div>
 
-            <!-- CTA -->
-            <div style="text-align: center; margin: 30px 0;">
-                <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">
-                    Puedes revisar el estado de tu pedido en cualquier momento
+            <!-- CTA - Tracking de Pedido -->
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 2px dashed #dee2e6;">
+                <h3 style="color: #2d3436; margin: 0 0 15px; font-size: 20px;">🚚 Rastrea tu pedido</h3>
+                <p style="font-size: 14px; color: #636e72; margin-bottom: 20px;">
+                    Consulta el estado de tu envío en tiempo real haciendo clic en el botón de abajo
                 </p>
-                <a href="<%= process.env.URL_FRONTEND %>/es/es/account/mypurchases" class="cta-button">
-                    Ver Mis Pedidos
+                <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" 
+                   style="display: inline-block; 
+                          background: #000000; 
+                          color: #ffffff; 
+                          padding: 14px 32px; 
+                          text-decoration: none; 
+                          border-radius: 6px; 
+                          font-weight: 600;
+                          font-size: 16px;
+                          margin-bottom: 15px;">
+                    📦 Ver Estado de mi Pedido
                 </a>
+                <p style="font-size: 12px; color: #868e96; margin-top: 15px;">
+                    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+                    <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; word-break: break-all;">
+                        <%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>
+                    </code>
+                </p>
             </div>
 
             <!-- Help Section -->

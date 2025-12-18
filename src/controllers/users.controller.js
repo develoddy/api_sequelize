@@ -31,7 +31,7 @@ const readHTMLFile = (path) => {
 const { EMAIL_USER, EMAIL_PASS, JWT_SECRET } = process.env;
 
 // Función para enviar el correo de restablecimiento de contraseña
-async function sendEmailResetPassword(email, token, isAdmin = false) {
+async function sendEmailResetPassword(email, token, isAdmin = false, country = 'es', locale = 'es') {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT),
@@ -58,7 +58,7 @@ async function sendEmailResetPassword(email, token, isAdmin = false) {
 
     // Determinar URL y template según si es admin o ecommerce
     const baseUrl = isAdmin ? process.env.URL_ADMIN || 'http://localhost:4200' : process.env.URL_FRONTEND;
-    const resetPath = isAdmin ? '/auth/reset-password' : '/es/es/auth/updatepassword';
+    const resetPath = isAdmin ? '/auth/reset-password' : `/${country}/${locale}/auth/updatepassword`;
     const link = `${baseUrl}${resetPath}/${token}/${email}`;
 
     // Seleccionar template según el tipo de usuario
@@ -136,9 +136,13 @@ export const requestPasswordReset = async (req, res) => {
         const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
         
 
+        // Extraer country/locale desde headers o body (para usuarios no admin)
+        const country = isAdminRequest ? 'es' : (req.body.country || req.headers['x-country'] || 'es');
+        const locale = isAdminRequest ? 'es' : (req.body.locale || req.headers['x-locale'] || 'es');
+
         // Enviar el correo electrónico con el enlace de restablecimiento
         try {
-            const emailResult = await sendEmailResetPassword(email, token, isAdminRequest);
+            const emailResult = await sendEmailResetPassword(email, token, isAdminRequest, country, locale);
             logger.debug(`[Reset Password] Request processed for ${isAdminRequest ? 'admin' : 'user'} email:`, sanitize.email(email));
             
             res.status(200).send({ 
