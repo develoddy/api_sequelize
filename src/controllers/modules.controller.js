@@ -52,6 +52,136 @@ export const listModules = async (req, res) => {
 };
 
 /**
+ * POST /api/modules
+ * Crear un nuevo módulo
+ */
+export const createModule = async (req, res) => {
+  try {
+    const {
+      key,
+      name,
+      description,
+      type,
+      validation_days,
+      validation_target_sales,
+      icon,
+      color,
+      base_price,
+      config
+    } = req.body;
+
+    // Validar campos requeridos
+    if (!key || !name || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: key, name, type'
+      });
+    }
+
+    // Verificar que el key no exista
+    const existing = await Module.findOne({ where: { key } });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        error: 'A module with this key already exists'
+      });
+    }
+
+    // Crear módulo
+    const module = await Module.create({
+      key,
+      name,
+      description: description || '',
+      type,
+      is_active: false,
+      status: 'draft',
+      validation_days: validation_days || 14,
+      validation_target_sales: validation_target_sales || 1,
+      icon: icon || 'fa-cube',
+      color: color || 'primary',
+      base_price: base_price || null,
+      currency: 'EUR',
+      config: config || {},
+      total_sales: 0,
+      total_revenue: 0,
+      total_orders: 0
+    });
+
+    console.log(`✅ Module created: ${module.name} (${module.key})`);
+
+    res.status(201).json({
+      success: true,
+      module: module.toJSON(),
+      message: 'Module created successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error creating module:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * PUT /api/modules/:key
+ * Actualizar un módulo existente
+ */
+export const updateModule = async (req, res) => {
+  try {
+    const { key } = req.params;
+    const {
+      name,
+      description,
+      type,
+      validation_days,
+      validation_target_sales,
+      icon,
+      color,
+      base_price,
+      config
+    } = req.body;
+
+    const module = await Module.findOne({ where: { key } });
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        error: 'Module not found'
+      });
+    }
+
+    // Actualizar solo campos proporcionados
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (type !== undefined) updates.type = type;
+    if (validation_days !== undefined) updates.validation_days = validation_days;
+    if (validation_target_sales !== undefined) updates.validation_target_sales = validation_target_sales;
+    if (icon !== undefined) updates.icon = icon;
+    if (color !== undefined) updates.color = color;
+    if (base_price !== undefined) updates.base_price = base_price;
+    if (config !== undefined) updates.config = { ...module.config, ...config };
+
+    await module.update(updates);
+
+    console.log(`✅ Module updated: ${module.name} (${module.key})`);
+
+    res.json({
+      success: true,
+      module: module.toJSON(),
+      message: 'Module updated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error updating module:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+/**
  * GET /api/modules/:key
  * Obtener detalles de un módulo específico
  */
@@ -75,9 +205,9 @@ export const getModuleByKey = async (req, res) => {
     // Últimas ventas
     const recentSales = await Sale.findAll({
       where: { module_id: module.id },
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: 10,
-      attributes: ['id', 'nro_orden', 'total', 'status', 'created_at']
+      attributes: ['id', 'n_transaction', 'total', 'syncStatus', 'printfulStatus', 'createdAt']
     });
 
     res.json({

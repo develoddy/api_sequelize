@@ -15,8 +15,14 @@ router.get('/modules', auth.verifyAdmin, modulesController.listModules);
 // Resumen general
 router.get('/modules/stats/summary', auth.verifyAdmin, modulesController.getModulesSummary);
 
+// Crear nuevo módulo
+router.post('/modules', auth.verifyAdmin, modulesController.createModule);
+
 // Obtener módulo específico
 router.get('/modules/:key', auth.verifyAdmin, modulesController.getModuleByKey);
+
+// Actualizar módulo
+router.put('/modules/:key', auth.verifyAdmin, modulesController.updateModule);
 
 // Estado de validación
 router.get('/modules/:key/validation-status', auth.verifyAdmin, modulesController.getValidationStatus);
