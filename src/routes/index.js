@@ -37,6 +37,7 @@ import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
+import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
 
 const app = express();
 
@@ -77,5 +78,6 @@ app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
 app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
 app.use("/email-testing", emailTestingRoutes); // 🧪 Email Testing (NO afecta Printful)
+app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
 
 export default app;
