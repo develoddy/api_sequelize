@@ -77,6 +77,12 @@ export const Sale = sequelize.define('sales', {
     allowNull: true,
     defaultValue: 'es',
     comment: 'Idioma de contexto de la compra (es, fr, it, de)'
+  },
+  // 🆕 Module integration (for digital/service modules)
+  module_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID del módulo comprado (null para productos físicos de Printful)'
   }
 }, {
   timestamps: true,

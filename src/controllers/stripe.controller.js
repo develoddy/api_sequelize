@@ -44,7 +44,10 @@ const formatPrice = (price) => {
  */
 export const createCheckoutSession = async (req, res) => {
   try {
-    const { cart, userId, guestId, address, country, locale } = req.body;
+    const { cart, userId, guestId, address, country, locale, moduleId, moduleKey } = req.body;
+    
+    // 🆕 Detectar si es compra de módulo
+    const isModulePurchase = !!moduleId;
     
     // Extraer country/locale del request (con fallback)
     const requestCountry = country || req.headers['x-country'] || 'es';
@@ -66,12 +69,23 @@ export const createCheckoutSession = async (req, res) => {
 
     const metadataUserId = normalizeIdForMetadata(userId);
     const metadataGuestId = normalizeIdForMetadata(guestId);
-    console.log('[Stripe] Metadata to be attached - userId:', metadataUserId, 'guestId:', metadataGuestId);
+    console.log('[Stripe] Metadata to be attached - userId:', metadataUserId, 'guestId:', metadataGuestId, 'moduleId:', moduleId || 'none');
 
-    if ( !cart || cart.length === 0 ) {
-      return res.status(400).json({ 
-        message: "El carrito está vacío" 
-      });
+    // 🆕 Validación diferenciada según tipo de compra
+    if (isModulePurchase) {
+      // Compra de módulo: no requiere cart
+      if (!moduleId || !moduleKey) {
+        return res.status(400).json({ 
+          message: "Falta información del módulo (moduleId, moduleKey)" 
+        });
+      }
+    } else {
+      // Compra Printful: requiere cart
+      if ( !cart || cart.length === 0 ) {
+        return res.status(400).json({ 
+          message: "El carrito está vacío" 
+        });
+      }
     }
 
     // VALIDA QUE AL MENOS HAYA UN IDENTIFICADOR DE CLIENTE
@@ -81,51 +95,85 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    const lineItems = cart.map((item) => {
-      // Usar el precio final si viene procesado desde el frontend (incluye descuentos)
-      // Si no existe finalPrice, usar el precio original como fallback
-      const finalPrice = item.finalPrice || Number(
-        (item.variedad && item.variedad.retail_price != null)
-          ? item.variedad.retail_price
-          : (item.product && item.product.price_usd != null)
-            ? item.product.price_usd
-            : item.price_unitario
-      );
-
-      // Agregar información de descuento en la descripción si aplica
-      let productName = item.product.title;
-      if (item.hasDiscount && item.originalPrice && item.finalPrice) {
-        productName += ` (Rebajado de €${item.originalPrice.toFixed(2)} a €${item.finalPrice.toFixed(2)})`;
+    // 🆕 Crear line items según tipo de compra
+    let lineItems;
+    
+    if (isModulePurchase) {
+      // Compra de módulo: crear line item desde el módulo
+      const { Module } = await import('../models/Module.js');
+      const module = await Module.findByPk(moduleId);
+      
+      if (!module) {
+        return res.status(404).json({ message: "Módulo no encontrado" });
       }
-
-      return {
+      
+      if (!module.is_active || module.status !== 'live') {
+        return res.status(400).json({ message: "Módulo no disponible para compra" });
+      }
+      
+      lineItems = [{
         price_data: {
-          currency     : "eur",
-          product_data : {
-            name : productName,
+          currency: "eur",
+          product_data: {
+            name: module.name,
+            description: module.description || ''
           },
-          // finalPrice in euros, convert to cents
-          unit_amount  : Math.round(finalPrice * 100),
+          unit_amount: Math.round(module.base_price * 100), // Precio en centavos
         },
-        quantity: item.cantidad,
-      };
-    });
+        quantity: 1,
+      }];
+    } else {
+      // Compra Printful: usar cart actual
+      lineItems = cart.map((item) => {
+        // Usar el precio final si viene procesado desde el frontend (incluye descuentos)
+        // Si no existe finalPrice, usar el precio original como fallback
+        const finalPrice = item.finalPrice || Number(
+          (item.variedad && item.variedad.retail_price != null)
+            ? item.variedad.retail_price
+            : (item.product && item.product.price_usd != null)
+              ? item.product.price_usd
+              : item.price_unitario
+        );
+
+        // Agregar información de descuento en la descripción si aplica
+        let productName = item.product.title;
+        if (item.hasDiscount && item.originalPrice && item.finalPrice) {
+          productName += ` (Rebajado de €${item.originalPrice.toFixed(2)} a €${item.finalPrice.toFixed(2)})`;
+        }
+
+        return {
+          price_data: {
+            currency     : "eur",
+            product_data : {
+              name : productName,
+            },
+            // finalPrice in euros, convert to cents
+            unit_amount  : Math.round(finalPrice * 100),
+          },
+          quantity: item.cantidad,
+        };
+      });
+    }
 
 
-    // Debug: Log cart payload to see coupon structure and finalPrice
-    console.log('[Stripe] Cart payload preview (first item):', cart && cart[0] ? {
-      code_cupon: cart[0].code_cupon,
-      code_discount: cart[0].code_discount,
-      discount: cart[0].discount,
-      type_discount: cart[0].type_discount,
-      finalPrice: cart[0].finalPrice,
-      originalPrice: cart[0].originalPrice,
-      hasDiscount: cart[0].hasDiscount,
-      price_unitario: cart[0].price_unitario
-    } : 'no items');
+    // 🆕 Solo sanitizar cart si NO es compra de módulo
+    let sanitizedCart = [];
+    
+    if (!isModulePurchase) {
+      // Debug: Log cart payload to see coupon structure and finalPrice
+      console.log('[Stripe] Cart payload preview (first item):', cart && cart[0] ? {
+        code_cupon: cart[0].code_cupon,
+        code_discount: cart[0].code_discount,
+        discount: cart[0].discount,
+        type_discount: cart[0].type_discount,
+        finalPrice: cart[0].finalPrice,
+        originalPrice: cart[0].originalPrice,
+        hasDiscount: cart[0].hasDiscount,
+        price_unitario: cart[0].price_unitario
+      } : 'no items');
 
-    // Normalize/sanitize cart items to ensure productId and variedadId are present
-    const sanitizedCart = (Array.isArray(cart) ? cart : []).map((item) => ({
+      // Normalize/sanitize cart items to ensure productId and variedadId are present
+      sanitizedCart = (Array.isArray(cart) ? cart : []).map((item) => ({
       productId: item.product?.id ?? item.productId ?? null,
       variedadId: item.variedad?.id ?? item.variedadId ?? null,
       cantidad: item.cantidad ?? item.quantity ?? 1,
@@ -139,25 +187,29 @@ export const createCheckoutSession = async (req, res) => {
       code_discount: item.code_discount ?? null,  // ADD: preserve Flash Sale IDs
       type_campaign: item.type_campaign ?? null,   // <-- Propaga type_campaign
       title: item.product?.title ?? item.title ?? '',
-      // Preserve any additional fields that might be useful later
-      subtotal: item.subtotal ?? null,
-      total: item.total ?? null
-    }));
+        // Preserve any additional fields that might be useful later
+        subtotal: item.subtotal ?? null,
+        total: item.total ?? null
+      }));
+    }
 
-    // Persist full sanitized cart and (optionally) the shipping address in CheckoutCache
-    // Store as an object { items, address } so webhook can reproduce the frontend register flow
+    // Persist full sanitized cart/module data and address in CheckoutCache
     let checkoutCache = null;
     try {
-      const payloadToStore = { items: sanitizedCart, address: address || null };
+      const payloadToStore = isModulePurchase 
+        ? { moduleId, moduleKey, address: address || null } // 🆕 Módulo
+        : { items: sanitizedCart, address: address || null }; // Printful
+      
       checkoutCache = await CheckoutCache.create({
         userId: userId || null,
         guestId: guestId || null,
         cart: JSON.stringify(payloadToStore)
       });
-      console.log('[Stripe] CheckoutCache created id=', checkoutCache.id);
+      console.log('[Stripe] CheckoutCache created id=', checkoutCache.id, 'isModule:', isModulePurchase);
     } catch (cacheErr) {
       console.warn('[Stripe] Could not create CheckoutCache, falling back to metadata cart (may fail on large carts):', cacheErr);
     }
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode        : "payment",
@@ -170,6 +222,11 @@ export const createCheckoutSession = async (req, res) => {
         userId  : metadataUserId || "",
         guestId : metadataGuestId || "",
         email   : address?.email || "",
+        // 🆕 Añadir module info si es compra de módulo
+        ...(isModulePurchase && {
+          moduleId: String(moduleId),
+          moduleKey: String(moduleKey)
+        }),
         country : requestCountry, // 🌍 País de contexto
         locale  : requestLocale,  // 🌍 Idioma de contexto
         // Prefer lightweight cartId reference to the stored CheckoutCache when possible
@@ -236,6 +293,13 @@ export const stripeWebhook = async (req, res) => {
 
   const userId = Number(session.metadata.userId) || null;
   const guestId = Number(session.metadata.guestId) || null;
+  
+  // 🆕 Detectar si es compra de módulo
+  const moduleId = session.metadata.moduleId ? Number(session.metadata.moduleId) : null;
+  const moduleKey = session.metadata.moduleKey || null;
+  const isModulePurchase = !!moduleId;
+
+  console.log('[Stripe Webhook] Purchase type:', isModulePurchase ? `MODULE (${moduleKey})` : 'PRINTFUL');
 
   try {
     // 🔒 Generar token único para tracking público
@@ -263,6 +327,44 @@ export const stripeWebhook = async (req, res) => {
     const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
     await sale.update({ n_transaction: friendlyTransactionId });
     
+    // 🆕 Si es compra de módulo, crear venta simple y retornar
+    if (isModulePurchase) {
+      console.log('[Stripe Webhook] Processing MODULE purchase:', { moduleId, moduleKey });
+      
+      // Actualizar sale con module_id
+      await sale.update({ module_id: moduleId });
+      
+      // Crear SaleDetail simple para el módulo
+      const { Module } = await import('../models/Module.js');
+      const module = await Module.findByPk(moduleId);
+      
+      if (module) {
+        await SaleDetail.create({
+          saleId: sale.id,
+          productId: null, // No hay producto físico
+          variedadId: null,
+          module_id: moduleId, // 🆕 Añadir module_id
+          cantidad: 1,
+          price_unitario: module.base_price,
+          subtotal: module.base_price,
+          total: module.base_price,
+          discount: 0,
+          type_discount: 1
+        });
+        
+        console.log('[Stripe Webhook] MODULE sale created successfully:', sale.id);
+        
+        // TODO: Enviar email con entrega digital/servicio
+        // await sendModuleDeliveryEmail(sale, module);
+        
+        return res.json({ received: true, saleId: sale.id, type: 'module' });
+      } else {
+        console.error('[Stripe Webhook] Module not found:', moduleId);
+        return res.status(404).json({ error: 'Module not found' });
+      }
+    }
+    
+    // 🔹 A partir de aquí: lógica Printful (no modificada)
 
     // Crear detalles del carrito
     let cartItems = [];

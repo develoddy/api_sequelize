@@ -14,7 +14,13 @@ export const SaleDetail = sequelize.define('sale_details', {
   type_campaign: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null }, // 1=Campaign Discount, 2=Flash Sale, 3=Cupón
   price_unitario: { type: DataTypes.FLOAT, allowNull: false },
   subtotal: { type: DataTypes.FLOAT, allowNull: false },
-  total: { type: DataTypes.FLOAT, allowNull: false }
+  total: { type: DataTypes.FLOAT, allowNull: false },
+  // 🆕 Module integration (for digital/service modules)
+  module_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID del módulo comprado (null para productos físicos de Printful)'
+  }
 }, {
   timestamps: true,
   tableName: 'sale_details'

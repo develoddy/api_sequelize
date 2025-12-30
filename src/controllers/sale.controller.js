@@ -310,7 +310,28 @@ async function send_email(sale_id) {
 // Register de sale para usuarios Invitados (Guest)
 export const registerGuest = async (req, res) => {
     try {
+        console.log('[Sale Controller GUEST] ==================== NEW SALE REQUEST (GUEST) ====================');
+        console.log('[Sale Controller GUEST] Iniciando registro de venta para invitado...');
+        console.log('[Sale Controller GUEST] 📦 Request body keys:', Object.keys(req.body));
+        console.log('[Sale Controller GUEST] 📦 req.body.sale:', JSON.stringify(req.body.sale, null, 2));
+        console.log('[Sale Controller GUEST] 📦 req.body.moduleId:', req.body.moduleId);
+        console.log('[Sale Controller GUEST] 📦 req.body.moduleKey:', req.body.moduleKey);
+        
         const saleData = req.body.sale;
+        
+        // 🆕 Detectar si es compra de módulo (desde req.body.moduleId O desde saleData.module_id)
+        const moduleId = req.body.moduleId ? Number(req.body.moduleId) : (saleData.module_id ? Number(saleData.module_id) : null);
+        const moduleKey = req.body.moduleKey || null;
+        const isModulePurchase = !!moduleId;
+        
+        console.log('[Sale Controller GUEST] 🔍 Detecting purchase type...', { 
+            bodyModuleId: req.body.moduleId, 
+            saleDataModuleId: saleData.module_id,
+            finalModuleId: moduleId,
+            isModulePurchase 
+        });
+        console.log('[Sale Controller GUEST] Purchase type:', isModulePurchase ? `🎯 MODULE (${moduleKey || moduleId})` : '📦 PRINTFUL');
+        
         // Si ya viene stripeSessionId, evitar duplicados: devolver venta existente
         if (saleData.stripeSessionId) {
             const existing = await Sale.findOne({ 
@@ -344,6 +365,11 @@ export const registerGuest = async (req, res) => {
         
         saleData.country = country;
         saleData.locale = locale;
+        
+        // 🆕 Si es módulo, añadir module_id
+        if (isModulePurchase) {
+            saleData.module_id = moduleId;
+        }
 
         // Asignar userId null si es invitado
         saleData.user = null;
@@ -352,6 +378,74 @@ export const registerGuest = async (req, res) => {
         const sale = await createSale(saleData);
     
         const saleAddress = await createSaleAddress(saleAddressData, sale.id);
+        
+        // 🆕 Si es compra de módulo, crear venta simple y retornar
+        if (isModulePurchase) {
+            console.log('[Sale Controller GUEST] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
+            
+            const { Module } = await import('../models/Module.js');
+            const module = await Module.findByPk(moduleId);
+            
+            if (!module) {
+                console.error('[Sale Controller GUEST] ❌ Module not found:', moduleId);
+                return res.status(404).json({
+                    code: 404,
+                    message: 'Módulo no encontrado'
+                });
+            }
+            
+            console.log('[Sale Controller GUEST] ✅ Module found:', { id: module.id, name: module.name, price: module.base_price });
+            
+            // Crear SaleDetail simple para el módulo
+            const saleDetail = await SaleDetail.create({
+                saleId: sale.id,
+                productId: null,
+                variedadId: null,
+                module_id: moduleId,
+                cantidad: 1,
+                price_unitario: module.base_price,
+                subtotal: module.base_price,
+                total: module.base_price,
+                discount: 0,
+                type_discount: 1
+            });
+            
+            console.log('[Sale Controller GUEST] ✅ SaleDetail created for module:', saleDetail.id);
+            
+            // Crear Receipt automáticamente
+            try {
+                await createSaleReceipt(sale, sale.method_payment, {}, saleAddress);
+                console.log('[Sale Controller GUEST] ✅ Receipt created for sale:', sale.id);
+            } catch (receiptErr) {
+                console.error('❌ [Receipt] Error creando recibo (guest module):', receiptErr);
+            }
+            
+            console.log('[Sale Controller GUEST] ✅ MODULE sale completed successfully:', {
+                saleId: sale.id,
+                moduleId: module.id,
+                moduleName: module.name,
+                total: sale.total
+            });
+            
+            // Recargar sale con SaleAddresses
+            const saleWithDetails = await Sale.findByPk(sale.id, {
+                include: [
+                    { model: SaleAddress },
+                    { model: User },
+                    { model: Guest }
+                ]
+            });
+            
+            return res.status(201).json({
+                message: 'Venta de módulo registrada exitosamente',
+                sale: saleWithDetails || sale,
+                saleDetails: await getSaleDetails(sale.id),
+                isModulePurchase: true
+            });
+        }
+        
+        // 🔹 A partir de aquí: lógica Printful (no modificada)
+        console.log('[Sale Controller GUEST] 📦 Continuando con flujo PRINTFUL (isModulePurchase=false)');
 
         // Crear Receipt automáticamente (solo PayPal)
         try {
@@ -467,8 +561,29 @@ export const registerGuest = async (req, res) => {
 // Register de sale para usuarios Autenticados
 export const register = async (req, res) => {
     try {
+        console.log('[Sale Controller] ==================== NEW SALE REQUEST ====================');
         console.log('[Sale Controller] Iniciando registro de venta...');
+        console.log('[Sale Controller] 📦 Request body keys:', Object.keys(req.body));
+        console.log('[Sale Controller] 📦 req.body.sale:', JSON.stringify(req.body.sale, null, 2));
+        console.log('[Sale Controller] 📦 req.body.moduleId:', req.body.moduleId);
+        console.log('[Sale Controller] 📦 req.body.moduleKey:', req.body.moduleKey);
+        
         const saleData = req.body.sale;
+        const saleAddressData = req.body.sale_address;
+        
+        // 🆕 Detectar si es compra de módulo (desde req.body.moduleId O desde saleData.module_id)
+        const moduleId = req.body.moduleId ? Number(req.body.moduleId) : (saleData.module_id ? Number(saleData.module_id) : null);
+        const moduleKey = req.body.moduleKey || null;
+        const isModulePurchase = !!moduleId;
+        
+        console.log('[Sale Controller] 🔍 Detecting purchase type...', { 
+            bodyModuleId: req.body.moduleId, 
+            saleDataModuleId: saleData.module_id,
+            finalModuleId: moduleId,
+            isModulePurchase 
+        });
+        console.log('[Sale Controller] Purchase type:', isModulePurchase ? `🎯 MODULE (${moduleKey || moduleId})` : '📦 PRINTFUL');
+        
         // Incluir stripeSessionId y evitar duplicados para usuarios autenticados
         if (saleData.stripeSessionId) {
             const existing = await Sale.findOne({ where: { stripeSessionId: saleData.stripeSessionId } });
@@ -483,14 +598,17 @@ export const register = async (req, res) => {
             }
         }
 
-        const saleAddressData = req.body.sale_address;
-
         // Extraer country/locale del request (desde headers, body o URL)
         const country = req.body.country || req.headers['x-country'] || 'es';
         const locale = req.body.locale || req.headers['x-locale'] || 'es';
         
         saleData.country = country;
         saleData.locale = locale;
+        
+        // 🆕 Si es módulo, añadir module_id
+        if (isModulePurchase) {
+            saleData.module_id = moduleId;
+        }
 
         // Crear una venta y asociar la dirección
         const sale = await createSale(saleData);
@@ -500,6 +618,73 @@ export const register = async (req, res) => {
         }
     
         const saleAddress = await createSaleAddress(saleAddressData, sale.id);
+        
+        // 🆕 Si es compra de módulo, crear venta simple y retornar
+        if (isModulePurchase) {
+            console.log('[Sale Controller] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
+            
+            const { Module } = await import('../models/Module.js');
+            const module = await Module.findByPk(moduleId);
+            
+            if (!module) {
+                console.error('[Sale Controller] ❌ Module not found:', moduleId);
+                return res.status(404).json({
+                    code: 404,
+                    message: 'Módulo no encontrado'
+                });
+            }
+            
+            console.log('[Sale Controller] ✅ Module found:', { id: module.id, name: module.name, price: module.base_price });
+            
+            // Crear SaleDetail simple para el módulo
+            const saleDetail = await SaleDetail.create({
+                saleId: sale.id,
+                productId: null, // No hay producto físico
+                variedadId: null,
+                module_id: moduleId, // 🆕 Guardar moduleId en SaleDetail también
+                cantidad: 1,
+                price_unitario: module.base_price,
+                subtotal: module.base_price,
+                total: module.base_price,
+                discount: 0,
+                type_discount: 1
+            });
+            
+            console.log('[Sale Controller] ✅ SaleDetail created for module:', saleDetail.id);
+            
+            // Crear recibo
+            await createSaleReceipt(sale.id);
+            console.log('[Sale Controller] ✅ Receipt created for sale:', sale.id);
+            
+            // TODO: Enviar email con entrega digital/servicio
+            // await sendModuleDeliveryEmail(sale, module);
+            
+            console.log('[Sale Controller] ✅ MODULE sale completed successfully:', {
+                saleId: sale.id,
+                moduleId: module.id,
+                moduleName: module.name,
+                total: sale.total
+            });
+            
+            // 🔥 Recargar sale con SaleAddresses para incluirlas en la respuesta
+            const saleWithDetails = await Sale.findByPk(sale.id, {
+                include: [
+                    { model: SaleAddress },
+                    { model: User },
+                    { model: Guest }
+                ]
+            });
+            
+            return res.status(201).json({
+                message: 'Venta de módulo registrada exitosamente',
+                sale: saleWithDetails || sale,
+                saleDetails: await getSaleDetails(sale.id),
+                isModulePurchase: true // 🆕 Flag para frontend
+            });
+        }
+        
+        // 🔹 A partir de aquí: lógica Printful (no modificada)
+        console.log('[Sale Controller] 📦 Continuando con flujo PRINTFUL (isModulePurchase=false)');
 
         // Obtener todos los carritos del usuario
         const carts = await getUserCarts(sale.userId);
@@ -1415,7 +1600,10 @@ const getSaleDetails = async (saleId) => {
     // Añadir la URL completa de la imagen a cada detalle de venta
     return saleDetails.map(detail => {
         detail = detail.toJSON();
-        detail.product.imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`;
+        // 🆕 Proteger acceso a product para módulos (product puede ser null)
+        if (detail.product && detail.product.portada) {
+            detail.product.imagen = `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`;
+        }
         return detail;
     });
 };
