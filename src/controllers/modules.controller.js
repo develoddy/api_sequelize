@@ -134,6 +134,7 @@ export const updateModule = async (req, res) => {
       name,
       description,
       type,
+      status,
       validation_days,
       validation_target_sales,
       icon,
@@ -156,6 +157,7 @@ export const updateModule = async (req, res) => {
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (type !== undefined) updates.type = type;
+    if (status !== undefined) updates.status = status;
     if (validation_days !== undefined) updates.validation_days = validation_days;
     if (validation_target_sales !== undefined) updates.validation_target_sales = validation_target_sales;
     if (icon !== undefined) updates.icon = icon;
@@ -488,6 +490,129 @@ async function getModuleStats(moduleId) {
   }
 }
 
+/**
+ * 🌐 PUBLIC ENDPOINTS (para frontend ecommerce)
+ */
+
+/**
+ * GET /api/modules/public
+ * Listar módulos activos (solo is_active=true y status=live)
+ */
+export const listPublicModules = async (req, res) => {
+  try {
+    const modules = await Module.findAll({
+      where: {
+        is_active: true,
+        status: 'live'
+      },
+      order: [['created_at', 'DESC']]
+    });
+
+    // Agregar stats básicas (sin información administrativa)
+    const modulesWithStats = await Promise.all(
+      modules.map(async (module) => {
+        const stats = await getModuleStats(module.id);
+        
+        return {
+          id: module.id,
+          key: module.key,
+          name: module.name,
+          description: module.description,
+          type: module.type,
+          icon: module.icon,
+          color: module.color,
+          price_base: module.base_price,
+          is_active: module.is_active,
+          status: module.status,
+          createdAt: module.created_at,
+          // Stats públicas (sin info sensible)
+          totalSales: parseInt(stats.totalOrders) || 0,
+          totalRevenue: parseFloat(stats.totalRevenue) || 0
+        };
+      })
+    );
+
+    res.json(modulesWithStats);
+  } catch (error) {
+    console.error('❌ Error listing public modules:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error loading modules'
+    });
+  }
+};
+
+/**
+ * GET /api/modules/public/:key
+ * Obtener módulo público por key (solo si está activo y live)
+ */
+export const getPublicModuleByKey = async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    const module = await Module.findOne({ 
+      where: { 
+        key,
+        is_active: true,
+        status: 'live'
+      } 
+    });
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        error: 'Module not found or not available'
+      });
+    }
+
+    // Stats del módulo
+    const stats = await getModuleStats(module.id);
+    
+    // Validación status (si está en testing)
+    let validationStatus = null;
+    if (module.status === 'testing' && module.launched_at) {
+      validationStatus = module.getValidationStatus();
+    }
+
+    // Ventas recientes (últimas 10, sin información sensible)
+    const recentSales = await Sale.findAll({
+      where: { module_id: module.id },
+      attributes: ['id', 'n_transaction', 'total', 'syncStatus', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    });
+
+    res.json({
+      module: {
+        id: module.id,
+        key: module.key,
+        name: module.name,
+        description: module.description,
+        type: module.type,
+        icon: module.icon,
+        color: module.color,
+        price_base: module.base_price,
+        is_active: module.is_active,
+        status: module.status,
+        createdAt: module.created_at
+      },
+      stats: {
+        totalSales: parseInt(stats.totalOrders) || 0,
+        totalRevenue: parseFloat(stats.totalRevenue) || 0,
+        progress: validationStatus?.progress || 0
+      },
+      validationStatus,
+      recentSales
+    });
+  } catch (error) {
+    console.error('❌ Error getting public module:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error loading module'
+    });
+  }
+};
+
 export default {
   listModules,
   getModuleByKey,
@@ -495,5 +620,8 @@ export default {
   getValidationStatus,
   archiveModule,
   markAsValidated,
-  getModulesSummary
+  getModulesSummary,
+  // Public endpoints
+  listPublicModules,
+  getPublicModuleByKey
 };

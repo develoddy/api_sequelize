@@ -9,6 +9,14 @@ import auth from '../middlewares/auth.js';
 
 const router = express.Router();
 
+// 🌐 Rutas públicas (para frontend ecommerce)
+// Listar módulos activos (solo status=live y is_active=true)
+router.get('/modules/public', modulesController.listPublicModules);
+
+// Obtener módulo público por key (solo si está activo y live)
+router.get('/modules/public/:key', modulesController.getPublicModuleByKey);
+
+// 🔒 Rutas protegidas (admin)
 // Listar todos los módulos
 router.get('/modules', auth.verifyAdmin, modulesController.listModules);
 
