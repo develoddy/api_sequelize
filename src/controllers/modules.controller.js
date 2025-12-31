@@ -613,6 +613,56 @@ export const getPublicModuleByKey = async (req, res) => {
   }
 };
 
+/**
+ * 🆕 GET /api/modules/:id
+ * Obtener módulo público por ID (para checkout)
+ */
+export const getPublicModuleById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log('🔍 [ModulesController] getPublicModuleById - ID:', id);
+
+    const module = await Module.findByPk(id);
+    
+    if (!module) {
+      console.log('❌ [ModulesController] Module not found with ID:', id);
+      return res.status(404).json({
+        success: false,
+        error: 'Module not found'
+      });
+    }
+    
+    console.log('✅ [ModulesController] Module found:', {
+      id: module.id,
+      name: module.name,
+      type: module.type,
+      base_price: module.base_price
+    });
+
+    // Respuesta simplificada para checkout
+    res.json({
+      module: {
+        id: module.id,
+        key: module.key,
+        name: module.name,
+        title: module.name, // Alias para compatibilidad
+        description: module.description,
+        type: module.type,
+        base_price: module.base_price,
+        price: module.base_price, // Alias para compatibilidad
+        is_active: module.is_active
+      }
+    });
+  } catch (error) {
+    console.error('❌ [ModulesController] Error getting module by ID:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error loading module'
+    });
+  }
+};
+
 export default {
   listModules,
   getModuleByKey,
@@ -623,5 +673,6 @@ export default {
   getModulesSummary,
   // Public endpoints
   listPublicModules,
-  getPublicModuleByKey
+  getPublicModuleByKey,
+  getPublicModuleById // 🆕
 };

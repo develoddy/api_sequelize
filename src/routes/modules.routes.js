@@ -16,6 +16,9 @@ router.get('/modules/public', modulesController.listPublicModules);
 // Obtener módulo público por key (solo si está activo y live)
 router.get('/modules/public/:key', modulesController.getPublicModuleByKey);
 
+// 🆕 Obtener módulo público por ID (para checkout)
+router.get('/modules/:id(\\d+)', modulesController.getPublicModuleById);
+
 // 🔒 Rutas protegidas (admin)
 // Listar todos los módulos
 router.get('/modules', auth.verifyAdmin, modulesController.listModules);

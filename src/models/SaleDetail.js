@@ -2,7 +2,8 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../database/database.js';
 import { Sale } from './Sale.js'; 
 import { Product } from './Product.js'; 
-import { Variedad } from './Variedad.js'; 
+import { Variedad } from './Variedad.js';
+import { Module } from './Module.js'; 
 
 export const SaleDetail = sequelize.define('sale_details', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -45,4 +46,6 @@ especifica que la relación se basa en el campo variedadId en la tabla SaleDetai
 SaleDetail.belongsTo(Sale, { foreignKey: 'saleId' });
 SaleDetail.belongsTo(Product, { foreignKey: 'productId' });
 SaleDetail.belongsTo(Variedad, { foreignKey: 'variedadId' });
+// 🆕 Asociación con Module para módulos digitales/servicios
+SaleDetail.belongsTo(Module, { foreignKey: 'module_id', as: 'module' });
 

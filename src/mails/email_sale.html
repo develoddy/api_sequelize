@@ -176,11 +176,12 @@
         <!-- Content -->
         <div class="content">
             <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #2d3436; font-size: 24px; margin: 0 0 10px;">¡Gracias <%= address_sale.name %>! 🎉</h2>
+                <h2 style="color: #2d3436; font-size: 24px; margin: 0 0 10px;">¡Gracias <%= address_sale ? address_sale.name : 'Cliente' %>! 🎉</h2>
                 <p style="font-size: 16px; color: #636e72;">Hemos recibido tu pedido y lo estamos preparando con mucho cariño.</p>
             </div>
 
-            <!-- 🚚 Tracking de Pedido -->
+            <% if (!isModulePurchase) { %>
+            <!-- 🚚 Tracking de Pedido (solo para productos físicos) -->
             <div style="background: #f8f9fa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 2px dashed #dee2e6;">
                 <h3 style="color: #2d3436; margin: 0 0 15px; font-size: 20px;">🚚 Rastrea tu pedido</h3>
                 <p style="font-size: 14px; color: #636e72; margin-bottom: 20px;">
@@ -205,17 +206,50 @@
                     </code>
                 </p>
             </div>
+            <% } else { %>
+            <!-- 📧 Información de entrega digital (para módulos) -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 25px; margin: 30px 0; color: white;">
+                <h3 style="color: white; margin: 0 0 15px; font-size: 20px; text-align: center;">🎯 ¡Módulo Digital Activado!</h3>
+                <p style="font-size: 14px; margin-bottom: 20px; text-align: center; opacity: 0.95;">
+                    Tu módulo ya está disponible. Aquí tienes las instrucciones de acceso:
+                </p>
+                
+                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin-top: 15px;">
+                    <h4 style="color: white; margin: 0 0 15px; font-size: 16px;">📥 Cómo acceder a tu módulo:</h4>
+                    <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                        <li style="margin-bottom: 10px;">Accede a tu cuenta en <strong><%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/account</strong></li>
+                        <li style="margin-bottom: 10px;">Ve a la sección <strong>"Mis Compras"</strong></li>
+                        <li style="margin-bottom: 10px;">Encuentra tu módulo <strong>"<%= order_detail[0].module?.name || 'Digital' %>"</strong></li>
+                        <li>Haz clic en <strong>"Acceder"</strong> para comenzar a usarlo</li>
+                    </ol>
+                </div>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/account/purchases" 
+                       style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                        🚀 Ver Mis Compras
+                    </a>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
+                    <p style="font-size: 13px; margin: 0; opacity: 0.9; text-align: center;">
+                        💡 <strong>Consejo:</strong> Guarda este email para futuras referencias. Si tienes problemas, contacta con soporte.
+                    </p>
+                </div>
+            </div>
+            <% } %>
 
-            <!-- Información de Envío -->
+            <% if (!isModulePurchase) { %>
+            <!-- Información de Envío (solo para productos físicos) -->
             <div class="info-section">
                 <h3 style="color: #2d3436; margin: 0 0 20px;">📦 Detalles de tu pedido</h3>
                 <div class="info-grid">
                     <div class="info-card" style="margin-bottom: 1rem;">
                         <h3>Dirección de envío:</h3>
-                        <p><strong><%= address_sale.name %></strong></p>
-                        <p><%= address_sale.address %></p>
-                        <p><%= address_sale.ciudad %>, <%= address_sale.region %></p>
-                        <p>Tel: +34 <%= address_sale.telefono %></p>
+                        <p><strong><%= address_sale ? address_sale.name : 'N/A' %></strong></p>
+                        <p><%= address_sale ? address_sale.address : 'N/A' %></p>
+                        <p><%= address_sale ? (address_sale.ciudad + ', ' + address_sale.region) : 'N/A' %></p>
+                        <p>Tel: +34 <%= address_sale ? address_sale.telefono : 'N/A' %></p>
                     </div>
                     <div class="info-card">
                         <h3 style="margin-bottom: 0;">Llegada estimada:</h3>
@@ -246,15 +280,20 @@
                     </div>
                 </div>
             </div>
+            <% } %>
 
             <!-- Productos -->
             <div style="margin: 40px 0;">
                 <h3 style="color: #2d3436; margin-bottom: 25px;">🛍️ Productos de tu pedido</h3>
                 <% for(var i=0; i < order_detail.length; i++) { %>
                 <div class="product-item">
+                    <% if (order_detail[i].product && order_detail[i].product.portada) { %>
                     <img src="<%= order_detail[i].product.portada %>" alt="<%= order_detail[i].product.title %>" class="product-image">
+                    <% } else { %>
+                    <img src="<%= process.env.URL_FRONTEND %>/assets/images/logo-checkout.png" alt="Producto Digital" class="product-image">
+                    <% } %>
                     <div class="product-details">
-                        <h4><%= order_detail[i].product.title %></h4>
+                        <h4><%= order_detail[i].product ? order_detail[i].product.title : 'Módulo Digital' %></h4>
                         <p><strong>Cantidad:</strong> <%= order_detail[i].cantidad %></p>
                         <% if(order_detail[i].variedad) { %>
                         <p><strong>Talla:</strong> <%= order_detail[i].variedad.valor %></p>
@@ -301,18 +340,32 @@
                 </div>
             </div>
 
-            <!-- CTA -->
+            <% if (!isModulePurchase) { %>
+            <!-- CTA Tracking (solo para productos físicos) -->
             <div style="text-align: center; margin: 30px 0;">
                 <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">Puedes revisar el estado de tu pedido en cualquier momento</p>
                 <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" class="cta-button">
                     📦 Ver Estado de mi Pedido
                 </a>
             </div>
+            <% } else { %>
+            <!-- CTA para módulos digitales -->
+            <div style="text-align: center; margin: 30px 0;">
+                <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">¿Tienes dudas sobre tu compra digital?</p>
+                <a href="mailto:<%= process.env.EMAIL_SUPPORT || 'soporte@lujandev.com' %>" class="cta-button" style="background: #667eea;">
+                    📧 Contactar Soporte
+                </a>
+            </div>
+            <% } %>
 
             <!-- Información adicional -->
             <div style="background-color: #f1f2f6; border-radius: 10px; padding: 25px; margin: 30px 0;">
                 <h3 style="color: #2d3436; margin: 0 0 15px;">📧 ¿Necesitas ayuda?</h3>
+                <% if (!isModulePurchase) { %>
                 <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Te enviaremos los detalles de seguimiento tan pronto como tu pedido sea enviado.</p>
+                <% } else { %>
+                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Recibirás las instrucciones de acceso a tu producto digital muy pronto.</p>
+                <% } %>
                 <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Si tienes alguna pregunta, no dudes en contactarnos.</p>
             </div>
         </div>

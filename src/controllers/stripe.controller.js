@@ -273,15 +273,18 @@ export const stripeWebhook = async (req, res) => {
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err);
+    console.error('❌ [Stripe Webhook] Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  console.log('🎯 [Stripe Webhook] Event type received:', event.type);
+
   if (event.type !== 'checkout.session.completed') {
-    console.log('[Stripe Webhook] Ignoring event type:', event.type);
+    console.log('⚠️ [Stripe Webhook] Ignoring event type:', event.type);
     return res.json({ received: true });
   }
 
+  console.log('✅ [Stripe Webhook] Processing checkout.session.completed event');
   const session = event.data.object;
 
   console.log('[Stripe Webhook] session object (summary):', {
@@ -330,9 +333,73 @@ export const stripeWebhook = async (req, res) => {
     // 🆕 Si es compra de módulo, crear venta simple y retornar
     if (isModulePurchase) {
       console.log('[Stripe Webhook] Processing MODULE purchase:', { moduleId, moduleKey });
+      console.log('[Stripe Webhook] session.metadata:', session.metadata);
       
       // Actualizar sale con module_id
       await sale.update({ module_id: moduleId });
+      
+      // 🆕 Crear SaleAddress para módulos (NECESARIO PARA EMAIL)
+      console.log('[Stripe Webhook] Creating SaleAddress for module...');
+      
+      // Intentar obtener address desde CheckoutCache primero
+      let moduleAddress = null;
+      const cartIdFromMetadata = session.metadata?.cartId;
+      
+      if (cartIdFromMetadata) {
+        try {
+          const cacheRow = await CheckoutCache.findByPk(Number(cartIdFromMetadata));
+          if (cacheRow && cacheRow.cart) {
+            const parsedCache = JSON.parse(cacheRow.cart || 'null');
+            if (parsedCache && parsedCache.address) {
+              moduleAddress = parsedCache.address;
+              console.log('[Stripe Webhook] Found address in CheckoutCache:', moduleAddress);
+            }
+          }
+        } catch (err) {
+          console.warn('[Stripe Webhook] Error reading address from CheckoutCache:', err.message);
+        }
+      }
+      
+      // Si no hay address en cache, crear una mínima con el email de metadata
+      const emailFromMetadata = session.metadata?.email || session.customer_email || null;
+      
+      if (!moduleAddress && emailFromMetadata) {
+        console.log('[Stripe Webhook] No address in cache, using email from metadata:', emailFromMetadata);
+        moduleAddress = {
+          name: 'Cliente',
+          email: emailFromMetadata,
+          pais: country || 'ES',
+          address: 'Producto Digital',
+          ciudad: '',
+          region: '',
+          telefono: '',
+          zipcode: ''
+        };
+      }
+      
+      if (moduleAddress && moduleAddress.email) {
+        const saleAddressPayload = {
+          saleId: sale.id,
+          name: moduleAddress.name || 'Cliente',
+          surname: moduleAddress.surname || '',
+          pais: moduleAddress.pais || country || 'ES',
+          address: moduleAddress.address || 'Producto Digital',
+          referencia: moduleAddress.referencia || '',
+          ciudad: moduleAddress.ciudad || '',
+          region: moduleAddress.region || '',
+          telefono: moduleAddress.telefono || '',
+          email: moduleAddress.email,
+          nota: moduleAddress.nota || 'Compra de módulo digital',
+          zipcode: moduleAddress.zipcode || ''
+        };
+        
+        await SaleAddress.create(saleAddressPayload);
+        console.log('✅ [Stripe Webhook] SaleAddress created with email:', moduleAddress.email);
+      } else {
+        console.error('❌ [Stripe Webhook] No email available to create SaleAddress!');
+        console.error('❌ [Stripe Webhook] session.metadata.email:', session.metadata?.email);
+        console.error('❌ [Stripe Webhook] session.customer_email:', session.customer_email);
+      }
       
       // Crear SaleDetail simple para el módulo
       const { Module } = await import('../models/Module.js');
@@ -354,8 +421,15 @@ export const stripeWebhook = async (req, res) => {
         
         console.log('[Stripe Webhook] MODULE sale created successfully:', sale.id);
         
-        // TODO: Enviar email con entrega digital/servicio
-        // await sendModuleDeliveryEmail(sale, module);
+        // 🆕 Enviar email de confirmación para módulos
+        try {
+          console.log('📧 [Stripe Webhook] Attempting to send email for module purchase...');
+          await sendEmail(sale.id);
+          console.log('✅ [Stripe Webhook] Confirmation email sent for module purchase');
+        } catch (emailErr) {
+          console.error('❌ [Stripe Webhook] Error sending confirmation email:', emailErr);
+          console.error('❌ [Stripe Webhook] Error stack:', emailErr.stack);
+        }
         
         return res.json({ received: true, saleId: sale.id, type: 'module' });
       } else {

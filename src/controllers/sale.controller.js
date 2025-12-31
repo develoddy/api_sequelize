@@ -15,6 +15,7 @@ import { Option } from "../models/Option.js";
 import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
 import { Cupone } from "../models/Cupone.js";
+import { Module } from "../models/Module.js"; // 🆕 Importar Module
 import fs from 'fs';
 import path from "path";
 import http from 'http';
@@ -42,6 +43,9 @@ function formatPrice(price) {
 
 
 async function send_email(sale_id) {
+    console.log('📧 ===== INICIO send_email =====');
+    console.log('📧 [send_email] Sale ID:', sale_id);
+    
     try {
         // Función para formatear precios a 2 decimales estándar
         const formatPrice = (price) => {
@@ -60,29 +64,68 @@ async function send_email(sale_id) {
             });
         };
 
+        console.log('📧 [send_email] Buscando venta...');
         const order = await Sale.findByPk(sale_id, {
             include: [
                 { model: User },
                 { model: Guest }
             ]
         });
+        
+        if (!order) {
+            console.error('❌ [send_email] No se encontró la venta con ID:', sale_id);
+            return;
+        }
+        
+        console.log('✅ [send_email] Venta encontrada:', {
+            id: order.id,
+            total: order.total,
+            module_id: order.module_id,
+            user_id: order.user_id,
+            guest_id: order.guest_id,
+            hasUser: !!order.user,
+            hasGuest: !!order.guest
+        });
 
+        console.log('📧 [send_email] Buscando detalles de venta...');
         const orderDetails = await SaleDetail.findAll({
             where: { saleId: order.id },
             include: [
                 { model: Product },
-                { model: Variedad }
+                { model: Variedad },
+                { model: Module, as: 'module' } // 🆕 Incluir módulo
             ]
         });
+        
+        console.log('✅ [send_email] Detalles encontrados:', {
+            count: orderDetails.length,
+            details: orderDetails.map(d => ({
+                product_id: d.product_id,
+                module_id: d.module_id,
+                hasProduct: !!d.product,
+                hasModule: !!d.module,
+                moduleName: d.module?.name
+            }))
+        });
 
+        console.log('📧 [send_email] Buscando dirección de venta...');
         const addressSale = await SaleAddress.findOne({
             where: { saleId: order.id }
+        });
+        
+        console.log('✅ [send_email] Dirección encontrada:', {
+            hasAddress: !!addressSale,
+            email: addressSale?.email,
+            name: addressSale?.name
         });
 
         
         if ( orderDetails ) {
             orderDetails.forEach(orderDetail => {
-                orderDetail.product.portada = `${process.env.URL_BACKEND}/api/products/uploads/product/${orderDetail.product.portada}`;
+                // 🆕 Proteger para módulos (product puede ser null)
+                if (orderDetail.product && orderDetail.product.portada) {
+                    orderDetail.product.portada = `${process.env.URL_BACKEND}/api/products/uploads/product/${orderDetail.product.portada}`;
+                }
             });
         }
 
@@ -118,13 +161,13 @@ async function send_email(sale_id) {
             // Enriquecer detalles con precio unitario y total considerando descuentos
             const enrichedOrderDetails = orderDetails.map(detail => {
                 const d = detail.toJSON();
-                d.product = d.product; // conservar producto
-                // Sequelize toJSON devuelve la variedad en d.variedade, renombramos a d.variedad
+                
+                // 🆕 Para módulos, no hay product ni variedad
+                d.product = d.product || null;
                 d.variedad = d.variedad ?? d.variedade ?? null;
                 
-                
-                // Precio original (sin descuento)
-                const originalPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario);
+                // Precio original (sin descuento) - para módulos usar price_unitario directamente
+                const originalPrice = parseFloat(d.variedad?.retail_price ?? d.price_unitario ?? 0);
                 d.originalPrice = originalPrice;
                 
                 // ✅ LÓGICA CORREGIDA: Calcular precio final usando la misma lógica del frontend
@@ -211,33 +254,52 @@ async function send_email(sale_id) {
             enrichedOrder.originalSubtotal = parseFloat(originalSubtotal.toFixed(2));
             enrichedOrder.totalDiscount = parseFloat(totalDiscount.toFixed(2));
             
+            // 🆕 Detectar si es compra de módulo
+            const isModulePurchase = !!(enrichedOrder.module_id || (enrichedOrderDetails.length > 0 && enrichedOrderDetails[0].module_id));
+            
             const rest_html = ejs.render(html, {
                 order: enrichedOrder,
                 address_sale: addressSale,
                 order_detail: enrichedOrderDetails,
                 country: order.country || 'es',
-                locale: order.locale || 'es'
+                locale: order.locale || 'es',
+                isModulePurchase: isModulePurchase // 🆕 Flag para template
             });
 
             const template = Handlebars.compile(rest_html);
             const htmlToSend = template({ op: true });
 
-            // COMPROBAR PORQUE ORDER ES NULL
-            // LA COMPRA NO FUNCIONA EN MODO GUEST
+            console.log('🔍 [Email] Determinando email de destino...');
+            console.log('🔍 [Email] order.user:', !!order.user);
+            console.log('🔍 [Email] order.guest:', !!order.guest);
+            console.log('🔍 [Email] addressSale:', !!addressSale);
+            console.log('🔍 [Email] addressSale?.email:', addressSale?.email);
 
-            // 👇 Determinar el email según si es user o guest
+            // 👇 Determinar el email según si es user, guest o address
             let emailDestino = null;
 
-            if (order.user) {
+            if (order.user && order.user.email) {
                 emailDestino = order.user.email;
-            } else if (order.guest) {
+                console.log('✅ [Email] Email from order.user:', emailDestino);
+            } else if (order.guest && order.guest.email) {
                 emailDestino = order.guest.email;
+                console.log('✅ [Email] Email from order.guest:', emailDestino);
+            } else if (addressSale && addressSale.email) {
+                // 🆕 Para invitados sin cuenta guest, usar email de address
+                emailDestino = addressSale.email;
+                console.log('✅ [Email] Email from sale_address (guest without account):', emailDestino);
             }
 
             if (!emailDestino) {
-                console.warn("No se encontró email del usuario ni del invitado.");
+                console.error('❌ [Email] No se encontró email del usuario, invitado ni en address_sale');
+                console.error('❌ [Email] order.user:', order.user);
+                console.error('❌ [Email] order.guest:', order.guest);
+                console.error('❌ [Email] addressSale:', addressSale);
+                console.warn("No se encontró email del usuario, invitado ni en address_sale.");
                 return;
             }
+            
+            console.log('✅ [Email] Email de destino determinado:', emailDestino);
 
             // 🔍 Validar que el email tenga un dominio válido antes de enviar
             const invalidDomains = [
@@ -253,27 +315,36 @@ async function send_email(sale_id) {
             
             const emailDomain = emailDestino.split('@')[1]?.toLowerCase();
             
+            console.log('🔍 [Email] Validando dominio:', emailDomain);
+            
             if (!emailDomain || invalidDomains.includes(emailDomain)) {
-                console.warn(`⚠️ Email con dominio inválido o de prueba: ${emailDestino}. Email de confirmación no será enviado.`);
+                console.warn(`⚠️ [Email] Email con dominio inválido o de prueba: ${emailDestino}. Email de confirmación no será enviado.`);
                 return;
             }
             
             // Validar formato básico de email
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(emailDestino)) {
-                console.warn(`⚠️ Formato de email inválido: ${emailDestino}. Email de confirmación no será enviado.`);
+                console.warn(`⚠️ [Email] Formato de email inválido: ${emailDestino}. Email de confirmación no será enviado.`);
                 return;
             }
+            
+            console.log('✅ [Email] Email validado correctamente:', emailDestino);
 
             let subject = '';
 
             if (orderDetails.length === 1) {
-              subject = `Pedido Nº ${order.id} - ${orderDetails[0].product.title}`;
+              // 🆕 Usar enrichedOrderDetails que ya tiene el módulo cargado
+              const itemName = enrichedOrderDetails[0].product?.title || enrichedOrderDetails[0].module?.name || 'producto';
+              subject = `Pedido Nº ${order.id} - ${itemName}`;
             } else if (orderDetails.length > 1) {
-              subject = `Pedido Nº ${order.id} - ${orderDetails[0].product.title} y ${orderDetails.length - 1} productos más`;
+              const itemName = enrichedOrderDetails[0].product?.title || enrichedOrderDetails[0].module?.name || 'producto';
+              subject = `Pedido Nº ${order.id} - ${itemName} y ${orderDetails.length - 1} productos más`;
             } else {
               subject = `Pedido Nº ${order.id} procesado correctamente`;
             }
+            
+            console.log('📧 [Email] Subject:', subject);
 
             const mailOptions = {
                 from: `"tienda.lujandev.com" <${process.env.EMAIL_USER}>`,
@@ -281,29 +352,44 @@ async function send_email(sale_id) {
                 subject: subject,
                 html: htmlToSend
             };
+            
+            console.log('📧 [Email] Mail options preparadas:', {
+                from: mailOptions.from,
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                htmlLength: htmlToSend.length
+            });
 
             // 📧 Intentar enviar email con manejo robusto de errores
+            console.log('📧 [Email] Intentando enviar email...');
             try {
                 transporter.sendMail(mailOptions, (error, info) => {
                     if (error) {
-                        console.error('❌ Error enviando email de confirmación:', error.message || error);
+                        console.error('❌ [Email] Error enviando email de confirmación:', error.message || error);
+                        console.error('❌ [Email] Error completo:', error);
                         // Si el error es de dominio rechazado (nullMX), registrarlo pero no lanzar excepción
                         if (error.message?.includes('nullMX') || error.message?.includes('Recipient address rejected')) {
-                            console.warn(`⚠️ Dominio de email rechazado: ${emailDestino}. El email no puede ser entregado.`);
+                            console.warn(`⚠️ [Email] Dominio de email rechazado: ${emailDestino}. El email no puede ser entregado.`);
                         }
                     } else {
-                        console.log('✅ Email de confirmación enviado:', info.response);
+                        console.log('✅ [Email] Email de confirmación enviado exitosamente!');
+                        console.log('✅ [Email] Info response:', info.response);
+                        console.log('✅ [Email] MessageId:', info.messageId);
                     }
                 });
             } catch (sendError) {
-                console.error('❌ Excepción al intentar enviar email:', sendError.message || sendError);
+                console.error('❌ [Email] Excepción al intentar enviar email:', sendError.message || sendError);
+                console.error('❌ [Email] Excepción completa:', sendError);
                 // No lanzar error para evitar bloquear el flujo de la venta
             }
         });
 
     } catch (error) {
-        console.error('❌ Error en send_email():', error.message || error);
+        console.error('❌ [send_email] Error general en send_email():', error.message || error);
+        console.error('❌ [send_email] Error stack:', error.stack);
         // No propagar el error para evitar bloquear operaciones críticas
+    } finally {
+        console.log('📧 ===== FIN send_email =====');
     }
 }
 
@@ -426,6 +512,21 @@ export const registerGuest = async (req, res) => {
                 moduleName: module.name,
                 total: sale.total
             });
+            
+            // 🆕 Enviar email de confirmación para módulos
+            console.log('📧 [Sale Controller GUEST] ===== ENVIANDO EMAIL DE CONFIRMACIÓN =====');
+            console.log('📧 [Sale Controller GUEST] Sale ID:', sale.id);
+            console.log('📧 [Sale Controller GUEST] Module ID:', moduleId);
+            console.log('📧 [Sale Controller GUEST] Sale email:', sale.email);
+            console.log('📧 [Sale Controller GUEST] Address email:', saleAddress?.email);
+            
+            try {
+                await sendEmail(sale.id);
+                console.log('✅ [Sale Controller GUEST] Confirmation email SENT successfully for module purchase');
+            } catch (emailErr) {
+                console.error('❌ [Sale Controller GUEST] Error sending confirmation email:', emailErr);
+                console.error('❌ [Sale Controller GUEST] Email error stack:', emailErr.stack);
+            }
             
             // Recargar sale con SaleAddresses
             const saleWithDetails = await Sale.findByPk(sale.id, {
@@ -656,8 +757,13 @@ export const register = async (req, res) => {
             await createSaleReceipt(sale.id);
             console.log('[Sale Controller] ✅ Receipt created for sale:', sale.id);
             
-            // TODO: Enviar email con entrega digital/servicio
-            // await sendModuleDeliveryEmail(sale, module);
+            // 🆕 Enviar email de confirmación para módulos
+            try {
+                await sendEmail(sale.id);
+                console.log('[Sale Controller] ✅ Confirmation email sent for module purchase');
+            } catch (emailErr) {
+                console.error('[Sale Controller] ❌ Error sending confirmation email:', emailErr);
+            }
             
             console.log('[Sale Controller] ✅ MODULE sale completed successfully:', {
                 saleId: sale.id,
