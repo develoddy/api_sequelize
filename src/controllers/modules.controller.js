@@ -67,7 +67,16 @@ export const createModule = async (req, res) => {
       icon,
       color,
       base_price,
-      config
+      config,
+      // 🆕 Campos de marketing
+      tagline,
+      screenshots,
+      download_url,
+      post_purchase_email,
+      detailed_description,
+      features,
+      tech_stack,
+      requirements
     } = req.body;
 
     // Validar campos requeridos
@@ -104,7 +113,16 @@ export const createModule = async (req, res) => {
       config: config || {},
       total_sales: 0,
       total_revenue: 0,
-      total_orders: 0
+      total_orders: 0,
+      // 🆕 Campos de marketing
+      tagline: tagline || null,
+      screenshots: screenshots || [],
+      download_url: download_url || null,
+      post_purchase_email: post_purchase_email || null,
+      detailed_description: detailed_description || null,
+      features: features || [],
+      tech_stack: tech_stack || [],
+      requirements: requirements || {}
     });
 
     console.log(`✅ Module created: ${module.name} (${module.key})`);
@@ -140,7 +158,16 @@ export const updateModule = async (req, res) => {
       icon,
       color,
       base_price,
-      config
+      config,
+      // 🆕 Campos de marketing
+      tagline,
+      screenshots,
+      download_url,
+      post_purchase_email,
+      detailed_description,
+      features,
+      tech_stack,
+      requirements
     } = req.body;
 
     const module = await Module.findOne({ where: { key } });
@@ -164,6 +191,15 @@ export const updateModule = async (req, res) => {
     if (color !== undefined) updates.color = color;
     if (base_price !== undefined) updates.base_price = base_price;
     if (config !== undefined) updates.config = { ...module.config, ...config };
+    // 🆕 Campos de marketing
+    if (tagline !== undefined) updates.tagline = tagline;
+    if (screenshots !== undefined) updates.screenshots = screenshots;
+    if (download_url !== undefined) updates.download_url = download_url;
+    if (post_purchase_email !== undefined) updates.post_purchase_email = post_purchase_email;
+    if (detailed_description !== undefined) updates.detailed_description = detailed_description;
+    if (features !== undefined) updates.features = features;
+    if (tech_stack !== undefined) updates.tech_stack = tech_stack;
+    if (requirements !== undefined) updates.requirements = requirements;
 
     await module.update(updates);
 
@@ -582,6 +618,19 @@ export const getPublicModuleByKey = async (req, res) => {
       limit: 10
     });
 
+    // 🔧 Helper para parsear JSON si viene como string
+    const parseJsonField = (field) => {
+      if (!field) return null;
+      if (typeof field === 'string') {
+        try {
+          return JSON.parse(field);
+        } catch {
+          return field;
+        }
+      }
+      return field;
+    };
+
     res.json({
       module: {
         id: module.id,
@@ -591,10 +640,19 @@ export const getPublicModuleByKey = async (req, res) => {
         type: module.type,
         icon: module.icon,
         color: module.color,
-        price_base: module.base_price,
+        base_price: module.base_price, // ✅ Cambiado a base_price para consistencia con frontend
         is_active: module.is_active,
         status: module.status,
-        createdAt: module.created_at
+        createdAt: module.created_at,
+        // 🆕 Campos de marketing para landing dinámica
+        tagline: module.tagline,
+        screenshots: parseJsonField(module.screenshots) || [],
+        download_url: module.download_url,
+        post_purchase_email: module.post_purchase_email,
+        detailed_description: module.detailed_description,
+        features: parseJsonField(module.features) || [],
+        tech_stack: parseJsonField(module.tech_stack) || [],
+        requirements: parseJsonField(module.requirements) || {}
       },
       stats: {
         totalSales: parseInt(stats.totalOrders) || 0,

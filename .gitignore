@@ -34,6 +34,12 @@ uploads/
 temp/
 tmp/
 
+# Public uploads (imágenes subidas por usuarios)
+# Mantener estructura pero no versionar archivos
+public/uploads/**/*
+!public/uploads/**/.gitkeep
+!public/uploads/modules/.gitkeep
+
 # ========== TEMPORALES DEL SISTEMA ==========
 .DS_Store
 ._*

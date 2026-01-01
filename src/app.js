@@ -150,7 +150,10 @@ app.get('/metrics/latest.json', (req, res) => {
 });
 
 // -------------------- Archivos estáticos --------------------
-app.use(express.static(path.join(__dirname,'public')));
+// Servir uploads desde /api/public (para screenshots de módulos, etc)
+app.use(express.static(path.join(__dirname, '..', 'public')));
+// Servir assets desde /api/src/public (index.html, dashboard.html, etc)
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/', router);
 
 // -------------------- Email template --------------------

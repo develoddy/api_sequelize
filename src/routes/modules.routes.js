@@ -1,5 +1,6 @@
 import express from 'express';
 import * as modulesController from '../controllers/modules.controller.js';
+import * as uploadController from '../controllers/modules.upload.controller.js';
 import auth from '../middlewares/auth.js';
 
 /**
@@ -28,6 +29,25 @@ router.get('/modules/stats/summary', auth.verifyAdmin, modulesController.getModu
 
 // Crear nuevo módulo
 router.post('/modules', auth.verifyAdmin, modulesController.createModule);
+
+// 📸 Upload de screenshots
+router.post('/modules/:moduleKey/screenshots', 
+  auth.verifyAdmin, 
+  uploadController.upload.array('screenshots', 10), 
+  uploadController.uploadModuleScreenshots
+);
+
+// Eliminar screenshot específico
+router.delete('/modules/:moduleKey/screenshots/:filename', 
+  auth.verifyAdmin, 
+  uploadController.deleteModuleScreenshot
+);
+
+// Limpiar todos los screenshots de un módulo
+router.delete('/modules/:moduleKey/screenshots', 
+  auth.verifyAdmin, 
+  uploadController.cleanModuleScreenshots
+);
 
 // Obtener módulo específico
 router.get('/modules/:key', auth.verifyAdmin, modulesController.getModuleByKey);

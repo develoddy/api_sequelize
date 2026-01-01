@@ -35,6 +35,16 @@ export const Module = sequelize.define('Module', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  tagline: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Frase corta de gancho para marketing'
+  },
+  detailed_description: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true,
+    comment: 'Descripción larga para la landing page (soporta HTML/Markdown)'
+  },
   type: {
     type: DataTypes.ENUM('physical', 'digital', 'service', 'integration'),
     defaultValue: 'physical',
@@ -149,6 +159,42 @@ export const Module = sequelize.define('Module', {
   last_sale_at: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  
+  // 🆕 Marketing y contenido visual
+  screenshots: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    comment: 'Array de URLs de screenshots/imágenes del producto'
+  },
+  download_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL del archivo descargable (ZIP con código, docs, etc.)'
+  },
+  post_purchase_email: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Template HTML del email que se envía post-compra'
+  },
+  features: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    comment: 'Lista de features/beneficios del producto'
+  },
+  tech_stack: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    comment: 'Tecnologías usadas (Node.js, Angular, etc.)'
+  },
+  requirements: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: {},
+    comment: 'Requerimientos técnicos para instalar/usar'
   }
 }, {
   tableName: 'modules',
