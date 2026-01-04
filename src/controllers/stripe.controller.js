@@ -46,6 +46,18 @@ export const createCheckoutSession = async (req, res) => {
   try {
     const { cart, userId, guestId, address, country, locale, moduleId, moduleKey } = req.body;
     
+    // 🐛 DEBUG: Log completo del request body
+    console.log('🔍 [Stripe] Request body recibido:', JSON.stringify({
+      hasCart: !!cart,
+      cartLength: cart?.length,
+      userId,
+      guestId,
+      moduleId,
+      moduleKey,
+      country,
+      locale
+    }, null, 2));
+    
     // 🆕 Detectar si es compra de módulo
     const isModulePurchase = !!moduleId;
     
@@ -107,8 +119,12 @@ export const createCheckoutSession = async (req, res) => {
         return res.status(404).json({ message: "Módulo no encontrado" });
       }
       
-      if (!module.is_active || module.status !== 'live') {
-        return res.status(400).json({ message: "Módulo no disponible para compra" });
+      // 🔧 Permitir compras en estado 'testing' y 'live', bloquear solo 'draft' y 'archived'
+      if (!module.is_active || (module.status !== 'live' && module.status !== 'testing')) {
+        return res.status(400).json({ 
+          message: "Módulo no disponible para compra",
+          details: `Estado actual: ${module.status}, Activo: ${module.is_active}`
+        });
       }
       
       lineItems = [{
