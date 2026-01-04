@@ -136,10 +136,20 @@ export class DatabaseManagementController {
             try {
                 logger.warn('🔥 Ejecutando sequelize.sync({ force: true })...');
                 
-                // Esta es la operación destructiva que borra todo
-                await sequelize.sync({ force: true });
+                // 🔧 Desactivar foreign key checks temporalmente (MySQL)
+                // Esto permite eliminar tablas sin importar el orden de las dependencias
+                await sequelize.query('SET FOREIGN_KEY_CHECKS = 0;');
+                logger.info('✅ Foreign key checks desactivadas');
                 
-                logger.warn('✅ Reset de base de datos completado');
+                try {
+                    // Esta es la operación destructiva que borra todo
+                    await sequelize.sync({ force: true });
+                    logger.warn('✅ Reset de base de datos completado');
+                } finally {
+                    // 🔧 Reactivar foreign key checks SIEMPRE (incluso si hay error)
+                    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1;');
+                    logger.info('✅ Foreign key checks reactivadas');
+                }
 
             } catch (syncError) {
                 logger.error('❌ Error durante el reset de base de datos', {
