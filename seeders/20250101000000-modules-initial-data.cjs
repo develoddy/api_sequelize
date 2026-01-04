@@ -15,7 +15,18 @@ module.exports = {
     const printfulLaunchDate = new Date('2024-12-01');
     const printfulValidatedDate = new Date('2024-12-15');
 
-    await queryInterface.bulkInsert('modules', [
+    // Verificar si ya existen módulos
+    const [existingModules] = await queryInterface.sequelize.query(
+      'SELECT `key` FROM modules WHERE `key` IN (?, ?, ?, ?)',
+      {
+        replacements: ['printful', 'digital-products', 'dev-consulting', 'build-in-public-course']
+      }
+    );
+
+    const existingKeys = existingModules.map(m => m.key);
+
+    // Solo insertar módulos que NO existan
+    const modulesToInsert = [
       {
         // 1. PRINTFUL - Módulo activo y validado
         key: 'printful',
@@ -137,13 +148,37 @@ module.exports = {
         created_at: now,
         updated_at: now
       }
-    ]);
+    ];
+
+    // Filtrar solo los módulos que no existen
+    const newModules = modulesToInsert.filter(m => !existingKeys.includes(m.key));
+
+    if (newModules.length === 0) {
+      console.log('ℹ️  Todos los módulos ya existen, saltando inserción');
+      return;
+    }
+
+    // Insertar solo los nuevos
+    await queryInterface.bulkInsert('modules', newModules);
 
     console.log('✅ Módulos iniciales creados:');
-    console.log('   🟢 Printful POD (LIVE - Validado)');
-    console.log('   ⚪ Digital Products (DRAFT)');
-    console.log('   ⚪ Dev Consulting (DRAFT)');
-    console.log('   ⚪ Build in Public Course (DRAFT)');
+    if (!existingKeys.includes('printful')) {
+      console.log('   🟢 Printful POD (LIVE - Validado)');
+    }
+    if (!existingKeys.includes('digital-products')) {
+      console.log('   ⚪ Digital Products (DRAFT)');
+    }
+    if (!existingKeys.includes('dev-consulting')) {
+      console.log('   ⚪ Dev Consulting (DRAFT)');
+    }
+    if (!existingKeys.includes('build-in-public-course')) {
+      console.log('   ⚪ Build in Public Course (DRAFT)');
+    }
+    
+    if (existingKeys.length > 0) {
+      console.log('\nℹ️  Módulos ya existentes (saltados):');
+      existingKeys.forEach(key => console.log('   ⏭️  ' + key));
+    }
   },
 
   async down(queryInterface, Sequelize) {

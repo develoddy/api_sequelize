@@ -480,7 +480,21 @@ export class DatabaseManagementController {
                         }
                     }
                     
-                    // 4. DETECCIÓN GENÉRICA para otros seeders
+                    // 4. Seeders de modules (20250101000000-modules-initial-data.cjs)
+                    else if (seederName.includes('modules-initial-data') || seederName.includes('module')) {
+                        try {
+                            const [result] = await sequelize.query('SELECT COUNT(*) as count FROM modules');
+                            const count = result[0].count;
+                            console.log(`   📊 Modules: ${count} registros`);
+                            isExecuted = count > 0;
+                            detectionMethod = `modules (${count} registros)`;
+                        } catch (e) { 
+                            console.log(`   ❌ Error verificando modules:`, e.message);
+                            isExecuted = false; 
+                        }
+                    }
+                    
+                    // 5. DETECCIÓN GENÉRICA para otros seeders
                     else {
                         // Analizar el nombre del seeder para inferir la tabla objetivo
                         const possibleTables = [];

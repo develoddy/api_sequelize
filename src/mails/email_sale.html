@@ -12,42 +12,45 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8f9fa;
+            background-color: #f5f5f5;
         }
         .container {
             background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            background: #000000;
             color: white;
             padding: 40px 30px;
             text-align: center;
+            border-bottom: 1px solid #e0e0e0;
         }
         .header h1 {
             margin: 0;
-            font-size: 32px;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
         }
         .order-number {
-            background-color: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
+            background-color: rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: 4px;
             display: inline-block;
             margin-top: 10px;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 14px;
         }
         .content {
             padding: 40px 30px;
         }
         .info-section {
-            background-color: #f1f2f6;
-            border-radius: 10px;
+            background-color: #fafafa;
+            border-radius: 8px;
             padding: 25px;
             margin: 25px 0;
+            border: 1px solid #f0f0f0;
         }
         .info-grid {
             display: grid;
@@ -56,21 +59,22 @@
             margin: 20px 0;
         }
         .info-card h3 {
-            color: #2d3436;
-            font-size: 16px;
+            color: #000000;
+            font-size: 15px;
             margin: 0 0 10px;
+            font-weight: 600;
         }
         .info-card p {
             margin: 5px 0;
             font-size: 14px;
-            color: #636e72;
+            color: #666666;
         }
         .product-item {
             display: grid;
             grid-template-columns: 180px 1fr;
             gap: 20px;
             padding: 25px 0;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #f0f0f0;
         }
         .product-item:last-child {
             border-bottom: none;
@@ -79,68 +83,74 @@
             width: 180px;
             height: 180px;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 6px;
+            border: 1px solid #f0f0f0;
         }
         .product-details h4 {
             margin: 0 0 10px;
-            color: #2d3436;
+            color: #000000;
             font-size: 16px;
+            font-weight: 600;
         }
         .product-details p {
             margin: 5px 0;
             font-size: 14px;
-            color: #636e72;
+            color: #666666;
         }
         .price-original {
             text-decoration: line-through;
             color: #999999;
         }
         .price-discount {
-            color: #e74c3c;
+            color: #000000;
             font-weight: 600;
         }
         .summary-section {
-            background-color: #f1f2f6;
-            border-radius: 10px;
+            background-color: #fafafa;
+            border-radius: 8px;
             padding: 25px;
             margin: 30px 0;
+            border: 1px solid #f0f0f0;
         }
         .summary-row {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
             font-size: 14px;
+            color: #333333;
         }
         .summary-total {
-            background-color: #2d3436;
+            background-color: #000000;
             color: white;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 6px;
             margin-top: 10px;
             font-size: 18px;
-            font-weight: 700;
+            font-weight: 600;
         }
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            background: #000000;
             color: white;
-            padding: 18px 40px;
+            padding: 14px 32px;
             text-decoration: none;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
             text-align: center;
             margin: 20px 0;
+            transition: background 0.3s ease;
         }
         .footer {
-            background-color: #2d3436;
-            color: #b2bec3;
+            background-color: #000000;
+            color: #999999;
             padding: 25px 30px;
             text-align: center;
             font-size: 14px;
+            border-top: 1px solid #e0e0e0;
         }
         .footer a {
-            color: #ff6b6b;
+            color: #ffffff;
             text-decoration: none;
         }
         .social-icons {
@@ -176,15 +186,15 @@
         <!-- Content -->
         <div class="content">
             <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #2d3436; font-size: 24px; margin: 0 0 10px;">¡Gracias <%= address_sale ? address_sale.name : 'Cliente' %>! 🎉</h2>
-                <p style="font-size: 16px; color: #636e72;">Hemos recibido tu pedido y lo estamos preparando con mucho cariño.</p>
+                <h2 style="color: #000000; font-size: 24px; margin: 0 0 10px; font-weight: 600;">¡Gracias <%= address_sale ? address_sale.name : 'Cliente' %>! 🎉</h2>
+                <p style="font-size: 16px; color: #666666;">Hemos recibido tu pedido y lo estamos preparando con mucho cariño.</p>
             </div>
 
             <% if (!isModulePurchase) { %>
             <!-- 🚚 Tracking de Pedido (solo para productos físicos) -->
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 2px dashed #dee2e6;">
-                <h3 style="color: #2d3436; margin: 0 0 15px; font-size: 20px;">🚚 Rastrea tu pedido</h3>
-                <p style="font-size: 14px; color: #636e72; margin-bottom: 20px;">
+            <div style="background: #fafafa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 1px solid #e0e0e0;">
+                <h3 style="color: #000000; margin: 0 0 15px; font-size: 20px; font-weight: 600;">🚚 Rastrea tu pedido</h3>
+                <p style="font-size: 14px; color: #666666; margin-bottom: 20px;">
                     Consulta el estado de tu envío en tiempo real haciendo clic en el botón de abajo
                 </p>
                 <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" 
@@ -199,41 +209,51 @@
                           margin-bottom: 15px;">
                     📦 Ver Estado de mi Pedido
                 </a>
-                <p style="font-size: 12px; color: #868e96; margin-top: 15px;">
+                <p style="font-size: 12px; color: #999999; margin-top: 15px;">
                     Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-                    <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; word-break: break-all;">
+                    <code style="background: #f5f5f5; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; word-break: break-all; border: 1px solid #e0e0e0;">
                         <%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>
                     </code>
                 </p>
             </div>
             <% } else { %>
             <!-- 📧 Información de entrega digital (para módulos) -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 25px; margin: 30px 0; color: white;">
-                <h3 style="color: white; margin: 0 0 15px; font-size: 20px; text-align: center;">🎯 ¡Módulo Digital Activado!</h3>
-                <p style="font-size: 14px; margin-bottom: 20px; text-align: center; opacity: 0.95;">
-                    Tu módulo ya está disponible. Aquí tienes las instrucciones de acceso:
+            <div style="background: #fafafa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 1px solid #e0e0e0;">
+                <h3 style="color: #000000; margin: 0 0 15px; font-size: 20px; font-weight: 600;">🎯 ¡Módulo Digital Listo!</h3>
+                <p style="font-size: 14px; margin-bottom: 20px; color: #666666;">
+                    Tu módulo digital ya está disponible para descargar
                 </p>
                 
-                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 20px; margin-top: 15px;">
-                    <h4 style="color: white; margin: 0 0 15px; font-size: 16px;">📥 Cómo acceder a tu módulo:</h4>
-                    <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
-                        <li style="margin-bottom: 10px;">Accede a tu cuenta en <strong><%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/account</strong></li>
-                        <li style="margin-bottom: 10px;">Ve a la sección <strong>"Mis Compras"</strong></li>
-                        <li style="margin-bottom: 10px;">Encuentra tu módulo <strong>"<%= order_detail[0].module?.name || 'Digital' %>"</strong></li>
-                        <li>Haz clic en <strong>"Acceder"</strong> para comenzar a usarlo</li>
-                    </ol>
-                </div>
-                
-                <div style="text-align: center; margin-top: 25px;">
-                    <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/account/purchases" 
-                       style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                        🚀 Ver Mis Compras
+                <div style="background: white; border-radius: 6px; padding: 20px; margin: 20px 0; border: 1px solid #e0e0e0;">
+                    <p style="color: #000000; margin: 0 0 15px; font-size: 16px; font-weight: 600;">
+                        <%= order_detail[0].module?.name || 'Módulo Digital' %>
+                    </p>
+                    <p style="font-size: 13px; color: #666666; margin-bottom: 20px;">
+                        Haz clic en el botón para descargar tu contenido
+                    </p>
+                    
+                    <% if (order_detail[0].module?.download_url) { %>
+                    <a href="<%= order_detail[0].module.download_url %>" 
+                       style="display: inline-block; 
+                              background: #000000; 
+                              color: #ffffff; 
+                              padding: 14px 32px; 
+                              text-decoration: none; 
+                              border-radius: 6px; 
+                              font-weight: 600;
+                              font-size: 16px;">
+                        📥 Descargar Ahora
                     </a>
+                    <% } else { %>
+                    <p style="font-size: 13px; color: #999999;">
+                        Recibirás el enlace de descarga en breve por correo electrónico
+                    </p>
+                    <% } %>
                 </div>
                 
-                <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 15px; margin-top: 20px;">
-                    <p style="font-size: 13px; margin: 0; opacity: 0.9; text-align: center;">
-                        💡 <strong>Consejo:</strong> Guarda este email para futuras referencias. Si tienes problemas, contacta con soporte.
+                <div style="background: #f5f5f5; border-radius: 6px; padding: 15px; margin-top: 20px;">
+                    <p style="font-size: 13px; margin: 0; color: #666666; text-align: center;">
+                        💡 <strong>Consejo:</strong> Guarda este email para futuras referencias del enlace de descarga
                     </p>
                 </div>
             </div>
@@ -242,7 +262,7 @@
             <% if (!isModulePurchase) { %>
             <!-- Información de Envío (solo para productos físicos) -->
             <div class="info-section">
-                <h3 style="color: #2d3436; margin: 0 0 20px;">📦 Detalles de tu pedido</h3>
+                <h3 style="color: #000000; margin: 0 0 20px; font-weight: 600;">📦 Detalles de tu pedido</h3>
                 <div class="info-grid">
                     <div class="info-card" style="margin-bottom: 1rem;">
                         <h3>Dirección de envío:</h3>
@@ -284,7 +304,7 @@
 
             <!-- Productos -->
             <div style="margin: 40px 0;">
-                <h3 style="color: #2d3436; margin-bottom: 25px;">🛍️ Productos de tu pedido</h3>
+                <h3 style="color: #000000; margin-bottom: 25px; font-weight: 600;">🛍️ Productos de tu pedido</h3>
                 <% for(var i=0; i < order_detail.length; i++) { %>
                 <div class="product-item">
                     <% if (order_detail[i].product && order_detail[i].product.portada) { %>
@@ -305,7 +325,7 @@
                         <% } else { %>
                             <p><strong>Precio unitario:</strong> <%= order_detail[i].unitPrice.toFixed(2) %> €</p>
                         <% } %>
-                        <p style="font-size: 16px; font-weight: 700; color: #2d3436;"><strong>Total:</strong> <%= order_detail[i].total.toFixed(2) %> €</p>
+                        <p style="font-size: 16px; font-weight: 600; color: #000000;"><strong>Total:</strong> <%= order_detail[i].total.toFixed(2) %> €</p>
                     </div>
                 </div>
                 <% } %>
@@ -313,13 +333,13 @@
 
             <!-- Resumen de Pago -->
             <div class="summary-section">
-                <h3 style="color: #2d3436; margin: 0 0 15px;">💳 Resumen del pago</h3>
+                <h3 style="color: #000000; margin: 0 0 15px; font-weight: 600;">💳 Resumen del pago</h3>
                 <div class="summary-row">
                     <span>Subtotal: </span>
                     <span><%= order.originalSubtotal.toFixed(2) %> €</span>
                 </div>
                 <% if (order.totalDiscount > 0) { %>
-                <div class="summary-row" style="color: #e74c3c;">
+                <div class="summary-row" style="color: #000000;">
                     <span><strong>Descuento aplicado: </strong></span>
                     <span><strong>-<%= order.totalDiscount.toFixed(2) %> €</strong></span>
                 </div>
@@ -329,8 +349,8 @@
                     <span>0.00 €</span>
                 </div>
                 <div class="summary-row">
-                    <span style="font-size: 14px; color: #636e72;">Método de pago: </span>
-                    <span style="font-size: 14px; color: #636e72;"><%= order.method_payment %></span>
+                    <span style="font-size: 14px; color: #666666;">Método de pago: </span>
+                    <span style="font-size: 14px; color: #666666;"><%= order.method_payment %></span>
                 </div>
                 <div class="summary-total">
                     <div style="display: flex; justify-content: space-between;">
@@ -343,7 +363,7 @@
             <% if (!isModulePurchase) { %>
             <!-- CTA Tracking (solo para productos físicos) -->
             <div style="text-align: center; margin: 30px 0;">
-                <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">Puedes revisar el estado de tu pedido en cualquier momento</p>
+                <p style="font-size: 16px; color: #666666; margin-bottom: 20px;">Puedes revisar el estado de tu pedido en cualquier momento</p>
                 <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" class="cta-button">
                     📦 Ver Estado de mi Pedido
                 </a>
@@ -351,22 +371,22 @@
             <% } else { %>
             <!-- CTA para módulos digitales -->
             <div style="text-align: center; margin: 30px 0;">
-                <p style="font-size: 16px; color: #636e72; margin-bottom: 20px;">¿Tienes dudas sobre tu compra digital?</p>
-                <a href="mailto:<%= process.env.EMAIL_SUPPORT || 'soporte@lujandev.com' %>" class="cta-button" style="background: #667eea;">
+                <p style="font-size: 16px; color: #666666; margin-bottom: 20px;">¿Tienes dudas sobre tu compra digital?</p>
+                <a href="mailto:<%= process.env.EMAIL_SUPPORT || 'soporte@lujandev.com' %>" class="cta-button">
                     📧 Contactar Soporte
                 </a>
             </div>
             <% } %>
 
             <!-- Información adicional -->
-            <div style="background-color: #f1f2f6; border-radius: 10px; padding: 25px; margin: 30px 0;">
-                <h3 style="color: #2d3436; margin: 0 0 15px;">📧 ¿Necesitas ayuda?</h3>
+            <div style="background-color: #fafafa; border-radius: 8px; padding: 25px; margin: 30px 0; border: 1px solid #f0f0f0;">
+                <h3 style="color: #000000; margin: 0 0 15px; font-weight: 600;">📧 ¿Necesitas ayuda?</h3>
                 <% if (!isModulePurchase) { %>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Te enviaremos los detalles de seguimiento tan pronto como tu pedido sea enviado.</p>
+                <p style="margin: 5px 0; font-size: 14px; color: #666666;">Te enviaremos los detalles de seguimiento tan pronto como tu pedido sea enviado.</p>
                 <% } else { %>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Recibirás las instrucciones de acceso a tu producto digital muy pronto.</p>
+                <p style="margin: 5px 0; font-size: 14px; color: #666666;">Recibirás las instrucciones de acceso a tu producto digital muy pronto.</p>
                 <% } %>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                <p style="margin: 5px 0; font-size: 14px; color: #666666;">Si tienes alguna pregunta, no dudes en contactarnos.</p>
             </div>
         </div>
 

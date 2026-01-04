@@ -19,6 +19,20 @@ import { PrintfulWebhookLog } from './PrintfulWebhookLog.js';
 import RetryQueue from './RetryQueue.js';
 import AnalyticsCache from './AnalyticsCache.js';
 import ProductAnalytics from './ProductAnalytics.js';
+import { Module } from './Module.js';
+
+/*
+ * RELACIÓN MODULE -> PRODUCT, SALE, SALE_DETAIL
+ * Un módulo puede tener múltiples productos, ventas y detalles
+ */
+Module.hasMany(Product, { foreignKey: 'module_id', as: 'products' });
+Product.belongsTo(Module, { foreignKey: 'module_id', as: 'module' });
+
+Module.hasMany(Sale, { foreignKey: 'module_id', as: 'sales' });
+Sale.belongsTo(Module, { foreignKey: 'module_id', as: 'module' });
+
+Module.hasMany(SaleDetail, { foreignKey: 'module_id', as: 'saleDetails' });
+// SaleDetail.belongsTo ya está definido en SaleDetail.js - no duplicar
 
 /*
  * RELACIÓN PRODUCT -> CATEGORIE
