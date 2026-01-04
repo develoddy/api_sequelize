@@ -498,6 +498,42 @@ export const registerGuest = async (req, res) => {
             
             console.log('[Sale Controller GUEST] ✅ SaleDetail created for module:', saleDetail.id);
             
+            // 🆕 Auto-actualizar syncStatus según tipo de módulo
+            if (module.type === 'digital' || module.type === 'service') {
+                await sale.update({ syncStatus: 'fulfilled' });
+                console.log('[Sale Controller GUEST] ✅ syncStatus set to fulfilled for digital/service module');
+            } else if (module.type === 'physical') {
+                // Productos físicos mantienen pending hasta fulfillment
+                console.log('[Sale Controller GUEST] 📦 syncStatus remains pending for physical module');
+            }
+            
+            // 📊 Incrementar estadísticas del módulo
+            await module.increment({
+                total_sales: 1,
+                total_revenue: module.base_price,
+                total_orders: 1
+            });
+            await module.update({ last_sale_at: new Date() });
+            console.log('[Sale Controller GUEST] 📊 Module stats updated:', {
+                total_sales: module.total_sales + 1,
+                total_revenue: parseFloat(module.total_revenue) + module.base_price
+            });
+            
+            // 🎯 AUTO-VALIDACIÓN: Si alcanzó el target, pasar de Testing → Live
+            await module.reload();
+            if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
+                await module.update({
+                    status: 'live',
+                    validated_at: new Date()
+                });
+                console.log('[Sale Controller GUEST] 🎉 MODULE AUTO-VALIDATED! Transitioned from testing → live:', {
+                    module_id: module.id,
+                    module_key: module.key,
+                    total_sales: module.total_sales,
+                    validation_target: module.validation_target_sales
+                });
+            }
+            
             // Crear Receipt automáticamente
             try {
                 await createSaleReceipt(sale, sale.method_payment, {}, saleAddress);
@@ -752,6 +788,42 @@ export const register = async (req, res) => {
             });
             
             console.log('[Sale Controller] ✅ SaleDetail created for module:', saleDetail.id);
+            
+            // 🆕 Auto-actualizar syncStatus según tipo de módulo
+            if (module.type === 'digital' || module.type === 'service') {
+                await sale.update({ syncStatus: 'fulfilled' });
+                console.log('[Sale Controller] ✅ syncStatus set to fulfilled for digital/service module');
+            } else if (module.type === 'physical') {
+                // Productos físicos mantienen pending hasta fulfillment
+                console.log('[Sale Controller] 📦 syncStatus remains pending for physical module');
+            }
+            
+            // 📊 Incrementar estadísticas del módulo
+            await module.increment({
+                total_sales: 1,
+                total_revenue: module.base_price,
+                total_orders: 1
+            });
+            await module.update({ last_sale_at: new Date() });
+            console.log('[Sale Controller] 📊 Module stats updated:', {
+                total_sales: module.total_sales + 1,
+                total_revenue: parseFloat(module.total_revenue) + module.base_price
+            });
+            
+            // 🎯 AUTO-VALIDACIÓN: Si alcanzó el target, pasar de Testing → Live
+            await module.reload();
+            if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
+                await module.update({
+                    status: 'live',
+                    validated_at: new Date()
+                });
+                console.log('[Sale Controller] 🎉 MODULE AUTO-VALIDATED! Transitioned from testing → live:', {
+                    module_id: module.id,
+                    module_key: module.key,
+                    total_sales: module.total_sales,
+                    validation_target: module.validation_target_sales
+                });
+            }
             
             // Crear recibo
             await createSaleReceipt(sale.id);

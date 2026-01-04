@@ -283,21 +283,13 @@ export const toggleModule = async (req, res) => {
 
     const newActiveState = !module.is_active;
     
-    // Determinar nuevo status
-    let newStatus = module.status;
-    if (newActiveState) {
-      // Activando
-      newStatus = 'testing';
-    } else {
-      // Desactivando
-      newStatus = module.isValidated() ? 'live' : 'draft';
-    }
-
-    // Actualizar
+    // ⚠️ IMPORTANTE: Toggle solo cambia is_active, NO cambia status
+    // El status (draft/testing/live/archived) se gestiona manualmente en la edición del módulo
+    // La validación automática (testing → live) se hace cuando se alcanza el target de ventas
+    
+    // Actualizar solo is_active (sin tocar status ni launched_at)
     await module.update({
-      is_active: newActiveState,
-      status: newStatus,
-      launched_at: newActiveState && !module.launched_at ? new Date() : module.launched_at
+      is_active: newActiveState
     });
 
     console.log(`${newActiveState ? '✅' : '⏸️'} Module ${module.name} ${newActiveState ? 'activated' : 'deactivated'}`);
@@ -416,7 +408,24 @@ export const markAsValidated = async (req, res) => {
         error: 'Module already validated'
       });
     }
+    
+    // 🎯 Verificar si cumple con el criterio de validación
+    if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
+      await module.update({
+        status: 'live',
+        validated_at: new Date()
+      });
+      
+      console.log(`✅ Module ${module.name} marked as validated (manual trigger)`);
 
+      return res.json({
+        success: true,
+        module: module.toJSON(),
+        message: 'Module validated successfully'
+      });
+    }
+
+    // Si no cumple criterio, validar manualmente de todos modos
     await module.update({
       status: 'live',
       validated_at: new Date()
@@ -536,10 +545,11 @@ async function getModuleStats(moduleId) {
  */
 export const listPublicModules = async (req, res) => {
   try {
+    // 🔓 Mostrar módulos activos en 'testing' o 'live' (Build in Public: validar públicamente)
     const modules = await Module.findAll({
       where: {
         is_active: true,
-        status: 'live'
+        status: ['testing', 'live'] // 🆕 Incluir testing para validación pública
       },
       order: [['created_at', 'DESC']]
     });
@@ -580,7 +590,7 @@ export const listPublicModules = async (req, res) => {
 
 /**
  * GET /api/modules/public/:key
- * Obtener módulo público por key (solo si está activo y live)
+ * Obtener módulo público por key (activo y en testing/live)
  */
 export const getPublicModuleByKey = async (req, res) => {
   try {
@@ -590,7 +600,7 @@ export const getPublicModuleByKey = async (req, res) => {
       where: { 
         key,
         is_active: true,
-        status: 'live'
+        status: ['testing', 'live'] // 🆕 Incluir testing para Build in Public
       } 
     });
     

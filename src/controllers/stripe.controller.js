@@ -421,7 +421,43 @@ export const stripeWebhook = async (req, res) => {
         
         console.log('[Stripe Webhook] MODULE sale created successfully:', sale.id);
         
-        // 🆕 Enviar email de confirmación para módulos
+        // 🆕 Auto-actualizar syncStatus según tipo de módulo
+        if (module.type === 'digital' || module.type === 'service') {
+          await sale.update({ syncStatus: 'fulfilled' });
+          console.log('[Stripe Webhook] ✅ syncStatus set to fulfilled for digital/service module');
+        } else if (module.type === 'physical') {
+          // Productos físicos mantienen pending hasta fulfillment
+          console.log('[Stripe Webhook] 📦 syncStatus remains pending for physical module');
+        }
+        
+        // 📊 Incrementar estadísticas del módulo
+        await module.increment({
+          total_sales: 1,
+          total_revenue: module.base_price,
+          total_orders: 1
+        });
+        await module.update({ last_sale_at: new Date() });
+        console.log('[Stripe Webhook] 📊 Module stats updated:', {
+          total_sales: module.total_sales + 1,
+          total_revenue: parseFloat(module.total_revenue) + module.base_price
+        });
+        
+        // � AUTO-VALIDACIÓN: Si alcanzó el target, pasar de Testing → Live
+        await module.reload();
+        if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
+          await module.update({
+            status: 'live',
+            validated_at: new Date()
+          });
+          console.log('[Stripe Webhook] 🎉 MODULE AUTO-VALIDATED! Transitioned from testing → live:', {
+            module_id: module.id,
+            module_key: module.key,
+            total_sales: module.total_sales,
+            validation_target: module.validation_target_sales
+          });
+        }
+        
+        // �🆕 Enviar email de confirmación para módulos
         try {
           console.log('📧 [Stripe Webhook] Attempting to send email for module purchase...');
           await sendEmail(sale.id);
