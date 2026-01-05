@@ -35,11 +35,12 @@ app.use(sentryTracingMiddleware());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// -------------------- Middleware CRÍTICO: Stripe webhook ANTES de express.json() --------------------
-// 🔴 IMPORTANTE: Las rutas de Stripe deben registrarse ANTES del middleware express.json()
-// porque Stripe requiere el body RAW (buffer) para validar firmas
-import stripeRoutes from './routes/stripe.routes.js';
-app.use('/api/stripe', stripeRoutes);
+// -------------------- Middleware para Stripe Webhook --------------------
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  console.log('[App] Stripe webhook request hit', req.method, req.originalUrl);
+  console.log('[App] Raw body isBuffer:', Buffer.isBuffer(req.body), 'length:', req.body.length);
+  next();
+});
 
 // -------------------- Middleware para Printful Webhook --------------------
 app.post('/api/printful-webhook/webhook', express.json({

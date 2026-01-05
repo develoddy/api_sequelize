@@ -19,8 +19,7 @@ import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
 import wishlistRoutes from "./wishlist.routes.js";
 import shippingratesRoutes from "./shippingrates.route.js";
-// ⚠️ STRIPE se registra ANTES en app.js (requiere body RAW)
-// import stripeRoutes from "./stripe.routes.js" // COMENTADO - ya está en app.js
+import stripeRoutes from "./stripe.routes.js";
 import chatRoutes from './chat/chat.routes.js';
 import saleRoutes  from './sale.routes.js';
 import ReturnRoutes from './returns.routes.js';
@@ -61,7 +60,7 @@ app.use("/printful", productsPrintfulRoutes);
 app.use("/gelato", productsGelatoRoutes);
 app.use("/wishlist", wishlistRoutes);
 app.use("/shipping", shippingratesRoutes);
-// ⚠️ app.use("/stripe", stripeRoutes); // COMENTADO - ya está en app.js con express.raw()
+app.use("/stripe", stripeRoutes);
 app.use("/chat", chatRoutes);
 app.use("/sales", saleRoutes);
 app.use("/returns", ReturnRoutes);

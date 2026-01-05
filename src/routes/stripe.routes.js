@@ -15,13 +15,8 @@ router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession
 // Endpoint para obtener detalles de una sesión de Stripe Checkout
 router.get("/session/:sessionId", auth.optionalAuth, getCheckoutSession);
 
-// 🔹 Webhook de Stripe - CRÍTICO: Debe recibir el body RAW (buffer)
-// express.raw() preserva el body sin parsear para validar la firma
-router.post(
-    "/webhook", 
-    express.raw({ type: 'application/json' }), 
-    stripeWebhook
-);
+// 🔹 Webhook de Stripe - RAW body configurado en app.js
+router.post("/webhook", stripeWebhook);
 
 // Test endpoint para el frontend
 router.get("/test", (req, res) => {
