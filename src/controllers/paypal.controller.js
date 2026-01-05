@@ -37,7 +37,7 @@ export const paypalWebhook = async (req, res) => {
     console.log('[PayPal Webhook] Capture ID:', capture.id);
     console.log('[PayPal Webhook] Amount:', capture.amount.value, capture.amount.currency_code);
 
-    // Verificar si la venta ya fue registrada (por n_transaction o metadata)
+    // Verificar si la venta ya fue registrada
     const existingSale = await Sale.findOne({
       where: {
         n_transaction: paypalOrderId
@@ -49,17 +49,109 @@ export const paypalWebhook = async (req, res) => {
       return res.status(200).json({ received: true, sale_id: existingSale.id });
     }
 
-    // Extraer información del payer
-    const payerEmail = capture.payer?.email_address || capture.custom_id || null;
-    const payerName = capture.payer?.name?.given_name || 'Cliente';
-    const payerSurname = capture.payer?.name?.surname || '';
+    // 🔥 Intentar obtener detalles completos de la orden desde la API de PayPal
+    console.log('[PayPal Webhook] 🔍 Fetching order details from PayPal API...');
+    console.log('[PayPal Webhook] 🔍 Order ID to fetch:', paypalOrderId);
+
+    // 🔥 SOLUCIÓN: Obtener detalles completos de la orden desde la API de PayPal
+    console.log('[PayPal Webhook] 🔍 Fetching order details from PayPal API...');
+    console.log('[PayPal Webhook] 🔍 Order ID to fetch:', paypalOrderId);
+    
+    const paypalMode = process.env.PAYPAL_MODE || 'sandbox';
+    const paypalBaseUrl = paypalMode === 'live' 
+      ? 'https://api.paypal.com' 
+      : 'https://api.sandbox.paypal.com';
+    
+    // Obtener access token de PayPal
+    const authResponse = await fetch(`${paypalBaseUrl}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64')}`
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    if (!authResponse.ok) {
+      console.error('❌ [PayPal Webhook] Failed to get PayPal access token:', authResponse.status);
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal' });
+    }
+
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+
+    if (!accessToken) {
+      console.error('❌ [PayPal Webhook] No access token received');
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal' });
+    }
+
+    // 🔥 ESTRATEGIA 1: Intentar obtener detalles del CAPTURE directamente
+    console.log('[PayPal Webhook] 🔍 Trying to get capture details:', capture.id);
+    const captureResponse = await fetch(`${paypalBaseUrl}/v2/payments/captures/${capture.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    let payerEmail = null;
+    let payerName = 'Cliente';
+    let payerSurname = '';
+
+    if (captureResponse.ok) {
+      const captureDetails = await captureResponse.json();
+      console.log('[PayPal Webhook] ✅ Capture details fetched');
+      
+      // Intentar obtener payer info del capture
+      if (captureDetails.payer?.email_address) {
+        payerEmail = captureDetails.payer.email_address;
+        payerName = captureDetails.payer.name?.given_name || 'Cliente';
+        payerSurname = captureDetails.payer.name?.surname || '';
+        console.log('[PayPal Webhook] ✅ Payer info from capture details');
+      }
+    } else {
+      console.warn('[PayPal Webhook] ⚠️ Could not fetch capture details:', captureResponse.status);
+    }
+
+    // 🔥 ESTRATEGIA 2: Si no obtuvimos email del capture, intentar con la orden
+    if (!payerEmail) {
+      console.log('[PayPal Webhook] 🔍 Trying to get order details:', paypalOrderId);
+      const orderResponse = await fetch(`${paypalBaseUrl}/v2/checkout/orders/${paypalOrderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (orderResponse.ok) {
+        const orderDetails = await orderResponse.json();
+        console.log('[PayPal Webhook] ✅ Order details fetched');
+        
+        const payer = orderDetails.payer;
+        payerEmail = payer?.email_address || null;
+        payerName = payer?.name?.given_name || 'Cliente';
+        payerSurname = payer?.name?.surname || '';
+      } else {
+        console.warn('[PayPal Webhook] ⚠️ Could not fetch order details:', orderResponse.status);
+        const errorData = await orderResponse.json();
+        console.warn('[PayPal Webhook] ⚠️ Order API error:', JSON.stringify(errorData, null, 2));
+      }
+    }
 
     console.log('[PayPal Webhook] Payer email:', payerEmail);
     console.log('[PayPal Webhook] Payer name:', payerName, payerSurname);
 
+    // 🔥 ESTRATEGIA 3: Si aún no tenemos email, esperar a que el frontend llame a /register
     if (!payerEmail) {
-      console.error('❌ [PayPal Webhook] No se puede procesar: falta email del payer');
-      return res.status(400).json({ error: 'Missing payer email' });
+      console.warn('⚠️ [PayPal Webhook] No se pudo obtener email del payer');
+      console.warn('⚠️ [PayPal Webhook] El frontend debe llamar a /register con los datos completos');
+      // No fallar el webhook, solo registrar como pendiente
+      return res.status(200).json({ 
+        received: true, 
+        note: 'Payer email not found, waiting for frontend to register sale'
+      });
     }
 
     // Buscar usuario o guest por email
@@ -74,12 +166,16 @@ export const paypalWebhook = async (req, res) => {
       // Buscar o crear guest
       let guest = await Guest.findOne({ where: { email: payerEmail } });
       if (!guest) {
+        // Generar session_id temporal para guest creado desde webhook
+        const sessionId = `webhook_${paypalOrderId}_${Date.now()}`;
+        
         guest = await Guest.create({
+          session_id: sessionId,
           name: payerName,
           surname: payerSurname,
           email: payerEmail
         });
-        console.log('[PayPal Webhook] Guest created:', guest.id);
+        console.log('[PayPal Webhook] Guest created:', guest.id, 'with session_id:', sessionId);
       } else {
         console.log('[PayPal Webhook] Guest found:', guest.id);
       }
