@@ -55,6 +55,53 @@ export const upload = multer({
 });
 
 /**
+ * 📦 Configuración de multer para subir archivos ZIP
+ */
+const zipStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const moduleKey = req.params.moduleKey || 'temp';
+    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    
+    // Crear directorio si no existe
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    // Mantener nombre original para ZIP o generar uno único
+    const uniqueSuffix = Date.now();
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  }
+});
+
+// Filtro para aceptar solo archivos ZIP
+const zipFileFilter = (req, file, cb) => {
+  const allowedTypes = /zip/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = file.mimetype === 'application/zip' || 
+                   file.mimetype === 'application/x-zip-compressed' ||
+                   file.mimetype === 'application/x-zip';
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten archivos .zip'));
+  }
+};
+
+export const uploadZip = multer({
+  storage: zipStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB por archivo ZIP
+  },
+  fileFilter: zipFileFilter
+});
+
+/**
  * Sube múltiples screenshots para un módulo
  */
 export const uploadModuleScreenshots = async (req, res) => {
@@ -168,6 +215,112 @@ export const cleanModuleScreenshots = async (req, res) => {
     res.status(500).json({
       ok: false,
       message: 'Error al limpiar las imágenes',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 📦 Sube archivo ZIP para un módulo digital
+ */
+export const uploadModuleZip = async (req, res) => {
+  try {
+    const { moduleKey } = req.params;
+    
+    console.log('📦 ZIP upload request received');
+    console.log('   Module Key:', moduleKey);
+    console.log('   File:', req.file?.originalname);
+    
+    if (!req.file) {
+      console.log('❌ No file received');
+      return res.status(400).json({
+        ok: false,
+        message: 'No se envió ningún archivo'
+      });
+    }
+
+    // Generar URL pública del archivo ZIP
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://api.lujandev.com'
+      : 'http://127.0.0.1:3500';
+
+    const zipUrl = `${baseUrl}/uploads/modules/${moduleKey}/${req.file.filename}`;
+    
+    console.log('   ✅ Saved:', req.file.filename);
+    console.log('   Size:', (req.file.size / 1024 / 1024).toFixed(2), 'MB');
+    console.log('✅ ZIP upload completed successfully');
+    
+    res.status(200).json({
+      ok: true,
+      message: 'Archivo ZIP subido correctamente',
+      url: zipUrl,
+      file: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        url: zipUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error subiendo archivo ZIP:', error);
+    res.status(500).json({
+      ok: false,
+      message: 'Error al subir el archivo ZIP',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 📦 Elimina el archivo ZIP de un módulo
+ */
+export const deleteModuleZip = async (req, res) => {
+  try {
+    const { moduleKey } = req.params;
+    const dirPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+
+    console.log('🗑️ Deleting ZIP for module:', moduleKey);
+
+    // Verificar si el directorio existe
+    if (!fs.existsSync(dirPath)) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Directorio del módulo no encontrado'
+      });
+    }
+
+    // Buscar y eliminar archivos .zip en el directorio
+    const files = fs.readdirSync(dirPath);
+    const zipFiles = files.filter(file => file.toLowerCase().endsWith('.zip'));
+
+    if (zipFiles.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: 'No se encontró ningún archivo ZIP para eliminar'
+      });
+    }
+
+    // Eliminar todos los archivos ZIP encontrados
+    zipFiles.forEach(zipFile => {
+      const filePath = path.join(dirPath, zipFile);
+      fs.unlinkSync(filePath);
+      console.log('   ✅ Deleted:', zipFile);
+    });
+
+    console.log('✅ ZIP deletion completed');
+
+    res.status(200).json({
+      ok: true,
+      message: 'Archivo(s) ZIP eliminado(s) correctamente',
+      deletedFiles: zipFiles
+    });
+
+  } catch (error) {
+    console.error('❌ Error eliminando archivo ZIP:', error);
+    res.status(500).json({
+      ok: false,
+      message: 'Error al eliminar el archivo ZIP',
       error: error.message
     });
   }

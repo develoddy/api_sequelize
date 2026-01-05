@@ -49,6 +49,19 @@ router.delete('/modules/:moduleKey/screenshots',
   uploadController.cleanModuleScreenshots
 );
 
+// 📦 Upload de archivo ZIP para productos digitales
+router.post('/modules/:moduleKey/upload-zip', 
+  auth.verifyAdmin, 
+  uploadController.uploadZip.single('zip'), 
+  uploadController.uploadModuleZip
+);
+
+// Eliminar archivo ZIP
+router.delete('/modules/:moduleKey/zip', 
+  auth.verifyAdmin, 
+  uploadController.deleteModuleZip
+);
+
 // Obtener módulo específico
 router.get('/modules/:key', auth.verifyAdmin, modulesController.getModuleByKey);
 
