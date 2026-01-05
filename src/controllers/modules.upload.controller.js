@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import Module from '../models/Module.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -131,6 +132,19 @@ export const uploadModuleScreenshots = async (req, res) => {
       return url;
     });
 
+    // 🧹 Limpiar archivos basura de macOS (._*)
+    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    if (fs.existsSync(uploadPath)) {
+      const files = fs.readdirSync(uploadPath);
+      files.forEach(file => {
+        if (file.startsWith('._')) {
+          const junkFilePath = path.join(uploadPath, file);
+          fs.unlinkSync(junkFilePath);
+          console.log('   🧹 Removed junk file:', file);
+        }
+      });
+    }
+
     console.log('✅ Upload completed successfully');
     
     res.status(200).json({
@@ -160,26 +174,55 @@ export const uploadModuleScreenshots = async (req, res) => {
 export const deleteModuleScreenshot = async (req, res) => {
   try {
     const { moduleKey, filename } = req.params;
-    const filePath = path.join(__dirname, '../../public/uploads/modules', moduleKey, filename);
+    const dirPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const filePath = path.join(dirPath, filename);
 
-    // Verificar si el archivo existe
-    if (!fs.existsSync(filePath)) {
+    console.log('🗑️ Deleting screenshot:', filename);
+
+    // 1️⃣ Obtener el módulo de la base de datos
+    const module = await Module.findOne({ where: { key: moduleKey } });
+    if (!module) {
       return res.status(404).json({
         ok: false,
-        message: 'Archivo no encontrado'
+        message: 'Módulo no encontrado'
       });
     }
 
-    // Eliminar archivo
-    fs.unlinkSync(filePath);
+    // 2️⃣ Actualizar el campo screenshots en la BD (eliminar la URL)
+    let screenshots = module.screenshots || [];
+    if (typeof screenshots === 'string') {
+      screenshots = JSON.parse(screenshots);
+    }
+    
+    // Filtrar la URL que contiene el filename
+    const updatedScreenshots = screenshots.filter(url => !url.includes(filename));
+    
+    await module.update({ screenshots: updatedScreenshots });
+    console.log('   🗄️ Updated DB: removed URL from screenshots array');
+
+    // 3️⃣ Eliminar archivo físico si existe
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log('   ✅ Deleted file:', filename);
+    } else {
+      console.log('   ⚠️ File not found on disk (already deleted?):', filename);
+    }
+
+    // 4️⃣ Eliminar archivo basura de macOS si existe (._filename)
+    const junkFilePath = path.join(dirPath, `._${filename}`);
+    if (fs.existsSync(junkFilePath)) {
+      fs.unlinkSync(junkFilePath);
+      console.log('   🧹 Deleted junk file:', `._${filename}`);
+    }
 
     res.status(200).json({
       ok: true,
-      message: 'Imagen eliminada correctamente'
+      message: 'Imagen eliminada correctamente',
+      screenshots: updatedScreenshots
     });
 
   } catch (error) {
-    console.error('Error eliminando screenshot:', error);
+    console.error('❌ Error eliminando screenshot:', error);
     res.status(500).json({
       ok: false,
       message: 'Error al eliminar la imagen',
@@ -248,6 +291,20 @@ export const uploadModuleZip = async (req, res) => {
     
     console.log('   ✅ Saved:', req.file.filename);
     console.log('   Size:', (req.file.size / 1024 / 1024).toFixed(2), 'MB');
+
+    // 🧹 Limpiar archivos basura de macOS (._*)
+    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    if (fs.existsSync(uploadPath)) {
+      const files = fs.readdirSync(uploadPath);
+      files.forEach(file => {
+        if (file.startsWith('._')) {
+          const junkFilePath = path.join(uploadPath, file);
+          fs.unlinkSync(junkFilePath);
+          console.log('   🧹 Removed junk file:', file);
+        }
+      });
+    }
+
     console.log('✅ ZIP upload completed successfully');
     
     res.status(200).json({
@@ -306,6 +363,13 @@ export const deleteModuleZip = async (req, res) => {
       const filePath = path.join(dirPath, zipFile);
       fs.unlinkSync(filePath);
       console.log('   ✅ Deleted:', zipFile);
+
+      // 🧹 Eliminar archivo basura de macOS si existe (._filename)
+      const junkFilePath = path.join(dirPath, `._${zipFile}`);
+      if (fs.existsSync(junkFilePath)) {
+        fs.unlinkSync(junkFilePath);
+        console.log('   🧹 Deleted junk file:', `._${zipFile}`);
+      }
     });
 
     console.log('✅ ZIP deletion completed');
@@ -323,5 +387,55 @@ export const deleteModuleZip = async (req, res) => {
       message: 'Error al eliminar el archivo ZIP',
       error: error.message
     });
+  }
+};
+
+/**
+ * 🧹 Utilidad: Limpia todos los archivos basura de macOS en la carpeta de módulos
+ * Función interna que puede ejecutarse periódicamente
+ */
+export const cleanMacOSJunkFiles = (modulesBasePath) => {
+  try {
+    const basePath = modulesBasePath || path.join(__dirname, '../../public/uploads/modules');
+    
+    if (!fs.existsSync(basePath)) {
+      console.log('⚠️ Ruta de módulos no existe:', basePath);
+      return { cleaned: 0, errors: [] };
+    }
+
+    let cleanedCount = 0;
+    const errors = [];
+
+    // Recorrer todos los directorios de módulos
+    const moduleDirs = fs.readdirSync(basePath);
+    
+    moduleDirs.forEach(moduleDir => {
+      const modulePath = path.join(basePath, moduleDir);
+      
+      if (fs.statSync(modulePath).isDirectory()) {
+        const files = fs.readdirSync(modulePath);
+        
+        files.forEach(file => {
+          if (file.startsWith('._')) {
+            try {
+              const junkFilePath = path.join(modulePath, file);
+              fs.unlinkSync(junkFilePath);
+              console.log(`🧹 Cleaned: ${moduleDir}/${file}`);
+              cleanedCount++;
+            } catch (err) {
+              console.error(`❌ Error cleaning ${moduleDir}/${file}:`, err.message);
+              errors.push({ module: moduleDir, file, error: err.message });
+            }
+          }
+        });
+      }
+    });
+
+    console.log(`✅ Cleanup completed: ${cleanedCount} junk files removed`);
+    return { cleaned: cleanedCount, errors };
+
+  } catch (error) {
+    console.error('❌ Error en cleanup global:', error);
+    return { cleaned: 0, errors: [{ error: error.message }] };
   }
 };
