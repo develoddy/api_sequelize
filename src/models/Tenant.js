@@ -25,7 +25,6 @@ export const Tenant = sequelize.define('Tenant', {
   email: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    unique: true,
     validate: {
       isEmail: true,
       notEmpty: true
@@ -128,7 +127,7 @@ export const Tenant = sequelize.define('Tenant', {
   timestamps: true,
   underscored: true,
   indexes: [
-    { unique: true, fields: ['email'] },
+    { unique: true, fields: ['email', 'module_key'], name: 'unique_email_module' },
     { fields: ['module_key'] },
     { fields: ['status'] },
     { fields: ['plan'] },
