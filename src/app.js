@@ -18,8 +18,15 @@ const corsOptions = {
     ? [
         process.env.URL_FRONTEND,   // http://tienda.lujandev.com
         process.env.URL_ADMIN,      // https://admin.lujandev.com
+        'https://app.lujandev.com', // App SaaS
       ].filter(Boolean)
-    : true, // Permitir todo en desarrollo
+    : [
+        'http://localhost:4200',    // Tienda (dev)
+        'http://localhost:5000',    // Tienda (dev alternativo)
+        'http://localhost:4201',    // Admin (dev)
+        'http://localhost:4202',    // App SaaS (dev)
+        'http://localhost:3000',    // Otros servicios
+      ], // Orígenes específicos en desarrollo
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'token', 'x-guest-data']

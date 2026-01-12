@@ -151,38 +151,42 @@ export const startTrial = async (req, res) => {
  * Body: {
  *   email: string,
  *   password: string,
- *   moduleKey: string
+ *   moduleKey?: string (opcional)
  * }
  */
 export const loginTenant = async (req, res) => {
   try {
     const { email, password, moduleKey } = req.body;
 
-    // Validar campos
-    if (!email || !password || !moduleKey) {
+    // Validar campos básicos
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: email, password, moduleKey'
+        error: 'Missing required fields: email, password'
       });
     }
 
-    // Buscar tenant
-    const tenant = await Tenant.findOne({
+    // Buscar TODOS los tenants del usuario
+    const tenants = await Tenant.findAll({
       where: {
-        email,
-        module_key: moduleKey
-      }
+        email
+      },
+      include: [{
+        model: Module,
+        as: 'module',
+        attributes: ['key', 'name', 'icon', 'color', 'saas_config']
+      }]
     });
 
-    if (!tenant) {
+    if (!tenants || tenants.length === 0) {
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials'
       });
     }
 
-    // Verificar password
-    const validPassword = await bcrypt.compare(password, tenant.password);
+    // Verificar password con el primer tenant (todos tienen el mismo password)
+    const validPassword = await bcrypt.compare(password, tenants[0].password);
     if (!validPassword) {
       return res.status(401).json({
         success: false,
@@ -190,50 +194,84 @@ export const loginTenant = async (req, res) => {
       });
     }
 
-    // Verificar si tiene acceso
-    if (!tenant.hasAccess()) {
-      return res.status(403).json({
-        success: false,
-        error: tenant.status === 'trial' && tenant.hasTrialExpired()
-          ? 'Your trial has expired. Please subscribe to continue.'
-          : 'Your subscription is not active. Please contact support.'
+    // Si se especificó moduleKey, buscar ese tenant específico
+    if (moduleKey) {
+      const specificTenant = tenants.find(t => t.module_key === moduleKey);
+      
+      if (!specificTenant) {
+        return res.status(404).json({
+          success: false,
+          error: 'Module not found for this user'
+        });
+      }
+
+      // Verificar si tiene acceso
+      if (!specificTenant.hasAccess()) {
+        return res.status(403).json({
+          success: false,
+          error: specificTenant.status === 'trial' && specificTenant.hasTrialExpired()
+            ? 'Your trial has expired. Please subscribe to continue.'
+            : 'Your subscription is not active. Please contact support.'
+        });
+      }
+
+      // Generar JWT token para módulo específico
+      const token = jwt.sign(
+        { 
+          tenantId: specificTenant.id, 
+          email: specificTenant.email,
+          moduleKey: specificTenant.module_key,
+          type: 'tenant'
+        },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '30d' }
+      );
+
+      console.log(`✅ Tenant logged in: ${specificTenant.email} (${moduleKey})`);
+
+      return res.json({
+        success: true,
+        tenant: {
+          id: specificTenant.id,
+          name: specificTenant.name,
+          email: specificTenant.email,
+          module_key: specificTenant.module_key,
+          plan: specificTenant.plan,
+          status: specificTenant.status,
+          trial_ends_at: specificTenant.trial_ends_at,
+          subscribed_at: specificTenant.subscribed_at,
+          days_remaining: specificTenant.status === 'trial' ? specificTenant.getDaysRemainingInTrial() : null
+        },
+        token,
+        dashboard_url: specificTenant.module?.saas_config?.dashboard_route 
+          ? `/app/${specificTenant.module.saas_config.dashboard_route}` 
+          : `/app/${moduleKey}`
       });
     }
 
-    // Generar JWT token
-    const token = jwt.sign(
-      { 
-        tenantId: tenant.id, 
-        email: tenant.email,
-        moduleKey: tenant.module_key,
-        type: 'tenant'
-      },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '30d' }
-    );
+    // Si NO se especificó moduleKey, devolver todos los módulos del usuario
+    const userModules = tenants.map(tenant => ({
+      module_key: tenant.module_key,
+      module_name: tenant.module?.name || tenant.module_key,
+      icon: tenant.module?.icon || 'fa-cube',
+      color: tenant.module?.color || 'primary',
+      status: tenant.status,
+      plan: tenant.plan,
+      trial_ends_at: tenant.trial_ends_at,
+      days_remaining: tenant.status === 'trial' ? tenant.getDaysRemainingInTrial() : null,
+      has_access: tenant.hasAccess(),
+      dashboard_url: tenant.module?.saas_config?.dashboard_route 
+        ? `/${tenant.module.saas_config.dashboard_route}` 
+        : `/${tenant.module_key}`
+    }));
 
-    // Obtener módulo para dashboard_url
-    const module = await Module.findOne({ where: { key: moduleKey } });
-
-    console.log(`✅ Tenant logged in: ${tenant.email} (${moduleKey})`);
+    console.log(`✅ Tenant logged in: ${email} (${userModules.length} modules found)`);
 
     res.json({
       success: true,
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        email: tenant.email,
-        module_key: tenant.module_key,
-        plan: tenant.plan,
-        status: tenant.status,
-        trial_ends_at: tenant.trial_ends_at,
-        subscribed_at: tenant.subscribed_at,
-        days_remaining: tenant.status === 'trial' ? tenant.getDaysRemainingInTrial() : null
-      },
-      token,
-      dashboard_url: module?.saas_config?.dashboard_route 
-        ? `/app/${module.saas_config.dashboard_route}` 
-        : `/app/${moduleKey}`
+      email,
+      modules: userModules,
+      total_modules: userModules.length
     });
   } catch (error) {
     console.error('❌ Error logging in tenant:', error);

@@ -20,6 +20,22 @@ import RetryQueue from './RetryQueue.js';
 import AnalyticsCache from './AnalyticsCache.js';
 import ProductAnalytics from './ProductAnalytics.js';
 import { Module } from './Module.js';
+import { Tenant } from './Tenant.js';
+
+/*
+ * RELACIÓN TENANT -> MODULE
+ * Un tenant pertenece a un módulo SaaS
+ */
+Tenant.belongsTo(Module, { 
+  foreignKey: 'module_key', 
+  targetKey: 'key',
+  as: 'module' 
+});
+Module.hasMany(Tenant, { 
+  foreignKey: 'module_key',
+  sourceKey: 'key',
+  as: 'tenants' 
+});
 
 /*
  * RELACIÓN MODULE -> PRODUCT, SALE, SALE_DETAIL
