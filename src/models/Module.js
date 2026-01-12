@@ -46,9 +46,10 @@ export const Module = sequelize.define('Module', {
     comment: 'Descripción larga para la landing page (soporta HTML/Markdown)'
   },
   type: {
-    type: DataTypes.ENUM('physical', 'digital', 'service', 'integration'),
+    type: DataTypes.ENUM('physical', 'digital', 'service', 'integration', 'saas'),
     defaultValue: 'physical',
-    allowNull: false
+    allowNull: false,
+    comment: 'Tipo de módulo: physical (merch), digital (ZIP), service (consultoría), integration (herramienta), saas (subscripción)'
   },
   
   // Estado y validación
@@ -195,6 +196,31 @@ export const Module = sequelize.define('Module', {
     allowNull: true,
     defaultValue: {},
     comment: 'Requerimientos técnicos para instalar/usar'
+  },
+  
+  // 🆕 Configuración SaaS
+  saas_config: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null,
+    comment: `Configuración específica para módulos SaaS: {
+      trial_days: 14,
+      api_endpoint: '/newsletter',
+      dashboard_route: '/newsletter',
+      pricing: [
+        { 
+          name: 'Starter', 
+          price: 9, 
+          interval: 'month',
+          features: ['Feature 1', 'Feature 2'],
+          stripe_price_id: 'price_xxx'
+        }
+      ],
+      features_by_plan: {
+        starter: ['feature_a', 'feature_b'],
+        pro: ['feature_a', 'feature_b', 'feature_c']
+      }
+    }`
   }
 }, {
   tableName: 'modules',
@@ -271,6 +297,37 @@ Module.prototype.getValidationStatus = function() {
         ? 'Periodo expirado sin alcanzar target'
         : `${salesNeeded} ventas más en ${daysRemaining} días`
   };
+};
+
+// 🆕 Métodos para SaaS
+
+// Verificar si el módulo es SaaS
+Module.prototype.isSaaS = function() {
+  return this.type === 'saas';
+};
+
+// Obtener planes de pricing del SaaS
+Module.prototype.getSaaSPricing = function() {
+  if (!this.isSaaS() || !this.saas_config) return [];
+  return this.saas_config.pricing || [];
+};
+
+// Obtener días de trial
+Module.prototype.getTrialDays = function() {
+  if (!this.isSaaS() || !this.saas_config) return 0;
+  return this.saas_config.trial_days || 14;
+};
+
+// Obtener ruta del dashboard
+Module.prototype.getDashboardRoute = function() {
+  if (!this.isSaaS() || !this.saas_config) return null;
+  return this.saas_config.dashboard_route || `/${this.key}`;
+};
+
+// Obtener endpoint de la API
+Module.prototype.getApiEndpoint = function() {
+  if (!this.isSaaS() || !this.saas_config) return null;
+  return this.saas_config.api_endpoint || `/${this.key}`;
 };
 
 export default Module;

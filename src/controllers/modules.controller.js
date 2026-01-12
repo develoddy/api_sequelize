@@ -76,7 +76,9 @@ export const createModule = async (req, res) => {
       detailed_description,
       features,
       tech_stack,
-      requirements
+      requirements,
+      // 🚀 SaaS fields
+      saas_config
     } = req.body;
 
     // Validar campos requeridos
@@ -122,7 +124,9 @@ export const createModule = async (req, res) => {
       detailed_description: detailed_description || null,
       features: features || [],
       tech_stack: tech_stack || [],
-      requirements: requirements || {}
+      requirements: requirements || {},
+      // 🚀 SaaS config
+      saas_config: saas_config || null
     });
 
     console.log(`✅ Module created: ${module.name} (${module.key})`);
@@ -167,7 +171,9 @@ export const updateModule = async (req, res) => {
       detailed_description,
       features,
       tech_stack,
-      requirements
+      requirements,
+      // 🚀 SaaS fields
+      saas_config
     } = req.body;
 
     const module = await Module.findOne({ where: { key } });
@@ -200,6 +206,8 @@ export const updateModule = async (req, res) => {
     if (features !== undefined) updates.features = features;
     if (tech_stack !== undefined) updates.tech_stack = tech_stack;
     if (requirements !== undefined) updates.requirements = requirements;
+    // 🚀 SaaS config
+    if (saas_config !== undefined) updates.saas_config = saas_config;
 
     await module.update(updates);
 
@@ -662,7 +670,9 @@ export const getPublicModuleByKey = async (req, res) => {
         detailed_description: module.detailed_description,
         features: parseJsonField(module.features) || [],
         tech_stack: parseJsonField(module.tech_stack) || [],
-        requirements: parseJsonField(module.requirements) || {}
+        requirements: parseJsonField(module.requirements) || {},
+        // 🚀 SaaS config
+        saas_config: parseJsonField(module.saas_config) || null
       },
       stats: {
         totalSales: parseInt(stats.totalOrders) || 0,

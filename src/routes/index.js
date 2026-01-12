@@ -39,6 +39,7 @@ import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
+import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
 
 const app = express();
 
@@ -81,5 +82,6 @@ app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de b
 app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
 app.use("/email-testing", emailTestingRoutes); // 🧪 Email Testing (NO afecta Printful)
 app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
+app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 
 export default app;
