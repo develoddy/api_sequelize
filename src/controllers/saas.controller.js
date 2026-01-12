@@ -49,7 +49,9 @@ export const startTrial = async (req, res) => {
         key: moduleKey,
         type: 'saas',
         is_active: true,
-        status: ['testing', 'live']
+        status: {
+          [Op.in]: ['testing', 'live']
+        }
       } 
     });
 
