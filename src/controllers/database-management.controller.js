@@ -6,6 +6,10 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 
+// Importar TODOS los modelos para asegurar que se registren en sequelize.sync()
+import { Tenant } from '../models/Tenant.js';
+import { Module } from '../models/Module.js';
+
 const execAsync = promisify(exec);
 
 export class DatabaseManagementController {
@@ -143,6 +147,7 @@ export class DatabaseManagementController {
                 
                 try {
                     // Esta es la operación destructiva que borra todo
+                    // Los modelos Tenant y Module ya están importados al inicio del archivo
                     await sequelize.sync({ force: true });
                     logger.warn('✅ Reset de base de datos completado');
                 } finally {
