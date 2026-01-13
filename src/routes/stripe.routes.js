@@ -4,13 +4,17 @@ import auth from '../middlewares/auth.js';
 import {
     createCheckoutSession,
     getCheckoutSession,
-    stripeWebhook
+    stripeWebhook,
+    createSubscriptionCheckout
 } from "../controllers/stripe.controller.js";
 
 const router = Router();
 console.log('[Stripe Routes] Stripe routes module loaded — webhook route available at POST /api/stripe/webhook');
 
 router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession);
+
+// 🆕 SaaS: Crear sesión de checkout para subscripciones recurrentes
+router.post("/create-subscription-checkout", createSubscriptionCheckout);
 
 // Endpoint para obtener detalles de una sesión de Stripe Checkout
 router.get("/session/:sessionId", auth.optionalAuth, getCheckoutSession);
