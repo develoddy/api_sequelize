@@ -5,7 +5,9 @@ import {
     createCheckoutSession,
     getCheckoutSession,
     stripeWebhook,
-    createSubscriptionCheckout
+    createSubscriptionCheckout,
+    cancelSubscription,
+    reactivateSubscription
 } from "../controllers/stripe.controller.js";
 
 const router = Router();
@@ -15,6 +17,12 @@ router.post("/create-checkout-session", auth.optionalAuth, createCheckoutSession
 
 // 🆕 SaaS: Crear sesión de checkout para subscripciones recurrentes
 router.post("/create-subscription-checkout", createSubscriptionCheckout);
+
+// 🆕 SaaS: Cancelar suscripción
+router.post("/cancel-subscription", cancelSubscription);
+
+// 🆕 SaaS: Reactivar suscripción
+router.post("/reactivate-subscription", reactivateSubscription);
 
 // Endpoint para obtener detalles de una sesión de Stripe Checkout
 router.get("/session/:sessionId", auth.optionalAuth, getCheckoutSession);

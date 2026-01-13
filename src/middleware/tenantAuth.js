@@ -101,25 +101,97 @@ export const optionalTenantAuth = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
-    if (decoded.type === 'tenant') {
-      const tenant = await Tenant.findByPk(decoded.tenantId);
-      
-      if (tenant) {
-        req.tenant = {
-          tenantId: tenant.id,
-          email: tenant.email,
-          moduleKey: tenant.module_key,
-          plan: tenant.plan,
-          status: tenant.status,
-          hasAccess: tenant.hasAccess()
-        };
-      }
+    if (decoded.type !== 'tenant') {
+      req.tenant = null;
+      return next();
+    }
+
+    const tenant = await Tenant.findByPk(decoded.tenantId);
+    
+    if (tenant) {
+      req.tenant = {
+        tenantId: tenant.id,
+        email: tenant.email,
+        moduleKey: tenant.module_key,
+        plan: tenant.plan,
+        status: tenant.status
+      };
+    } else {
+      req.tenant = null;
     }
 
     next();
   } catch (error) {
-    // Error en el token, pero como es opcional, continuamos
+    // Si hay error, simplemente no adjuntamos tenant
     req.tenant = null;
     next();
+  }
+};
+
+/**
+ * Middleware: Autenticación de Tenant sin verificar acceso
+ * Solo verifica que el token sea válido, sin verificar si trial expiró
+ * Útil para /me y /upgrade donde necesitamos mostrar info incluso con trial expirado
+ */
+export const authenticateTenantOnly = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'No authorization token provided'
+      });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    if (decoded.type !== 'tenant') {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token type'
+      });
+    }
+
+    const tenant = await Tenant.findByPk(decoded.tenantId);
+    
+    if (!tenant) {
+      return res.status(401).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
+    // NO verificar hasAccess() - permitir acceso incluso con trial expirado
+    req.tenant = {
+      tenantId: tenant.id,
+      email: tenant.email,
+      moduleKey: tenant.module_key,
+      plan: tenant.plan,
+      status: tenant.status
+    };
+
+    next();
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token'
+      });
+    }
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        error: 'Token expired'
+      });
+    }
+
+    console.error('❌ Error in tenant authentication middleware:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Authentication error'
+    });
   }
 };

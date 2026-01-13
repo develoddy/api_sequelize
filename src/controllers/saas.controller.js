@@ -207,17 +207,7 @@ export const loginTenant = async (req, res) => {
         });
       }
 
-      // Verificar si tiene acceso
-      if (!specificTenant.hasAccess()) {
-        return res.status(403).json({
-          success: false,
-          error: specificTenant.status === 'trial' && specificTenant.hasTrialExpired()
-            ? 'Your trial has expired. Please subscribe to continue.'
-            : 'Your subscription is not active. Please contact support.'
-        });
-      }
-
-      // Generar JWT token para módulo específico
+      // Generar JWT token para módulo específico (permitir login incluso con trial expirado)
       const token = jwt.sign(
         { 
           tenantId: specificTenant.id, 
@@ -229,7 +219,11 @@ export const loginTenant = async (req, res) => {
         { expiresIn: '30d' }
       );
 
-      console.log(`✅ Tenant logged in: ${specificTenant.email} (${moduleKey})`);
+      const hasAccess = specificTenant.hasAccess();
+      const isOnTrial = specificTenant.isOnTrial();
+      const trialExpired = specificTenant.hasTrialExpired();
+
+      console.log(`✅ Tenant logged in: ${specificTenant.email} (${moduleKey}) - Access: ${hasAccess}, Trial: ${isOnTrial}, Expired: ${trialExpired}`);
 
       return res.json({
         success: true,
@@ -238,11 +232,17 @@ export const loginTenant = async (req, res) => {
           name: specificTenant.name,
           email: specificTenant.email,
           module_key: specificTenant.module_key,
+          module_name: specificTenant.module?.name || specificTenant.module_key,
           plan: specificTenant.plan,
           status: specificTenant.status,
           trial_ends_at: specificTenant.trial_ends_at,
           subscribed_at: specificTenant.subscribed_at,
-          days_remaining: specificTenant.status === 'trial' ? specificTenant.getDaysRemainingInTrial() : null
+          cancelled_at: specificTenant.cancelled_at,
+          subscription_ends_at: specificTenant.subscription_ends_at,
+          stripe_subscription_id: specificTenant.stripe_subscription_id,
+          days_remaining: specificTenant.status === 'trial' ? specificTenant.getDaysRemainingInTrial() : null,
+          has_access: hasAccess,
+          is_on_trial: isOnTrial
         },
         token,
         dashboard_url: specificTenant.module?.saas_config?.dashboard_route 
@@ -313,11 +313,16 @@ export const checkAccess = async (req, res) => {
         name: tenant.name,
         email: tenant.email,
         module_key: tenant.module_key,
+        module_name: tenant.module?.name || tenant.module_key,
         plan: tenant.plan,
         status: tenant.status,
         trial_ends_at: tenant.trial_ends_at,
         subscribed_at: tenant.subscribed_at,
+        cancelled_at: tenant.cancelled_at,
+        subscription_ends_at: tenant.subscription_ends_at,
+        stripe_subscription_id: tenant.stripe_subscription_id,
         days_remaining: tenant.status === 'trial' ? tenant.getDaysRemainingInTrial() : null,
+        has_access: hasAccess,
         is_on_trial: tenant.isOnTrial()
       }
     });
@@ -361,6 +366,7 @@ export const getTenantProfile = async (req, res) => {
         subscribed_at: tenant.subscribed_at,
         cancelled_at: tenant.cancelled_at,
         subscription_ends_at: tenant.subscription_ends_at,
+        stripe_subscription_id: tenant.stripe_subscription_id,
         settings: tenant.settings,
         created_at: tenant.created_at,
         updated_at: tenant.updated_at,

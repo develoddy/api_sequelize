@@ -14,6 +14,8 @@ import { SaleAddress } from '../models/SaleAddress.js';
 import { File } from '../models/File.js';
 import { Option } from '../models/Option.js';
 import { Cupone } from '../models/Cupone.js';
+import { Tenant } from '../models/Tenant.js';
+import { Module } from '../models/Module.js';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
@@ -334,6 +336,77 @@ async function handleCheckoutCompleted(event, res) {
 
   const userId = Number(session.metadata.userId) || null;
   const guestId = Number(session.metadata.guestId) || null;
+  
+  // 🆕 Detectar si es subscripción SaaS
+  const tenantId = session.metadata.tenantId ? Number(session.metadata.tenantId) : null;
+  const isSaasSubscription = session.metadata.type === 'saas_subscription' && tenantId;
+  
+  // 🆕 Si es subscripción SaaS, manejar y retornar temprano
+  if (isSaasSubscription) {
+    console.log('🚀 [Stripe Webhook] Processing SaaS subscription checkout:', {
+      tenantId,
+      moduleKey: session.metadata.moduleKey,
+      planName: session.metadata.planName,
+      sessionId: session.id,
+      subscriptionFromSession: session.subscription
+    });
+    
+    try {
+      const { Tenant } = await import('../models/Tenant.js');
+      const tenant = await Tenant.findByPk(tenantId);
+      
+      if (!tenant) {
+        console.error(`❌ [Stripe Webhook] Tenant ${tenantId} not found for SaaS subscription`);
+        return res.status(200).json({ received: true, error: 'Tenant not found' });
+      }
+      
+      // Obtener subscription ID del session
+      let subscriptionId = session.subscription;
+      
+      // Si no está en session, obtener la sesión completa de Stripe
+      if (!subscriptionId) {
+        console.log('⚠️ [Stripe Webhook] No subscription in session, retrieving full session...');
+        const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ['subscription']
+        });
+        subscriptionId = fullSession.subscription?.id || fullSession.subscription;
+      }
+      
+      if (!subscriptionId) {
+        console.error('❌ [Stripe Webhook] No subscription ID found after retrieval');
+        return res.status(200).json({ received: true, error: 'No subscription ID' });
+      }
+      
+      console.log('📝 [Stripe Webhook] Subscription ID obtained:', subscriptionId);
+      
+      // Actualizar tenant con subscripción activa
+      await tenant.update({
+        status: 'active',
+        plan: session.metadata.planName || 'paid',
+        stripe_subscription_id: subscriptionId,
+        subscribed_at: new Date()
+      });
+      
+      console.log('✅ [Stripe Webhook] Tenant subscription activated:', {
+        tenantId: tenant.id,
+        email: tenant.email,
+        plan: tenant.plan,
+        subscriptionId,
+        status: 'active'
+      });
+      
+      return res.status(200).json({ 
+        received: true, 
+        type: 'saas_subscription',
+        tenantId: tenant.id,
+        subscriptionId
+      });
+      
+    } catch (error) {
+      console.error('❌ [Stripe Webhook] Error handling SaaS subscription:', error);
+      return res.status(200).json({ received: true, error: error.message });
+    }
+  }
   
   // 🆕 Detectar si es compra de módulo
   const moduleId = session.metadata.moduleId ? Number(session.metadata.moduleId) : null;
@@ -1350,12 +1423,13 @@ async function handleSubscriptionUpdated(event, res) {
     if (subscription.cancel_at_period_end) {
       const endDate = new Date(subscription.current_period_end * 1000);
       
-      console.log(`⚠️ [Stripe Webhook] Tenant ${tenant.email} canceló subscripción (acceso hasta ${endDate.toISOString()})`);
+      console.log(`⚠️ [Stripe Webhook] Tenant ${tenant.email} canceló suscripción (acceso hasta ${endDate.toISOString()})`);
       
+      // ⚠️ NO cambiar status a "cancelled" - mantener "active" hasta que expire
       await tenant.update({
-        status: 'cancelled',
         cancelled_at: new Date(),
         subscription_ends_at: endDate
+        // status se mantiene en "active" para que conserve acceso
       });
     } 
     // Si se reactivó una subscripción cancelada
@@ -1444,12 +1518,13 @@ export const createSubscriptionCheckout = async (req, res) => {
   try {
     const { tenantId, moduleKey, planName, stripePriceId, successUrl, cancelUrl } = req.body;
 
-    console.log('🚀 [Stripe SaaS] Creating subscription checkout:', {
-      tenantId,
-      moduleKey,
-      planName,
-      stripePriceId
-    });
+    console.log('🚀 [Stripe SaaS] Creating subscription checkout:');
+    console.log('   📋 Tenant ID:', tenantId);
+    console.log('   📦 Module:', moduleKey);
+    console.log('   💎 Plan:', planName);
+    console.log('   💳 Stripe Price ID:', stripePriceId);
+    console.log('   📍 Success URL:', successUrl);
+    console.log('   ❌ Cancel URL:', cancelUrl);
 
     // Validar campos requeridos
     if (!tenantId || !moduleKey || !planName || !stripePriceId) {
@@ -1501,6 +1576,12 @@ export const createSubscriptionCheckout = async (req, res) => {
       console.log('✅ [Stripe SaaS] Customer created:', customerId);
     }
 
+    // Log detallado antes de crear la sesión
+    console.log('🔵 [Stripe SaaS] Creating Stripe Checkout session with:');
+    console.log('   👤 Customer:', customerId);
+    console.log('   💳 Price ID:', stripePriceId);
+    console.log('   📦 Plan Name:', planName);
+
     // Crear sesión de Checkout de Stripe con modo 'subscription'
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -1545,3 +1626,145 @@ export const createSubscriptionCheckout = async (req, res) => {
     });
   }
 };
+
+/**
+ * POST /api/stripe/cancel-subscription
+ * Cancelar suscripción de un tenant
+ * 
+ * Body: {
+ *   tenantId: number,
+ *   reason?: string  // Motivo de cancelación (opcional)
+ * }
+ */
+export const cancelSubscription = async (req, res) => {
+  try {
+    const { tenantId, reason } = req.body;
+
+    console.log('🚫 [Stripe SaaS] Canceling subscription:', {
+      tenantId,
+      reason: reason || 'No reason provided'
+    });
+
+    // Validar campos requeridos
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: tenantId'
+      });
+    }
+
+    // Buscar tenant
+    const { Tenant } = await import('../models/Tenant.js');
+    const tenant = await Tenant.findByPk(tenantId);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+
+    // Verificar que tenga suscripción activa
+    if (!tenant.stripe_subscription_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
+
+    console.log('📋 [Stripe SaaS] Subscription to cancel:', tenant.stripe_subscription_id);
+
+    // Cancelar en Stripe (al final del período)
+    const subscription = await stripe.subscriptions.update(
+      tenant.stripe_subscription_id,
+      {
+        cancel_at_period_end: true,
+        metadata: {
+          cancellation_reason: reason || 'User requested',
+          cancelled_at: new Date().toISOString()
+        }
+      }
+    );
+
+    // Actualizar tenant con fecha de cancelación
+    await tenant.update({
+      cancelled_at: new Date(),
+      subscription_ends_at: new Date(subscription.current_period_end * 1000)
+    });
+
+    console.log('✅ [Stripe SaaS] Subscription will cancel at:', new Date(subscription.current_period_end * 1000));
+
+    res.json({
+      success: true,
+      message: 'Subscription will be cancelled at the end of the billing period',
+      endsAt: new Date(subscription.current_period_end * 1000)
+    });
+
+  } catch (error) {
+    console.error('❌ [Stripe SaaS] Error canceling subscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error canceling subscription',
+      error: error.message
+    });
+  }
+};
+
+// Reactivar suscripción
+export const reactivateSubscription = async (req, res) => {
+  try {
+    const { tenantId } = req.body;
+    const userId = req.tenant?.id;
+
+    console.log('🔄 [Stripe SaaS] Reactivating subscription for tenant:', tenantId || userId);
+
+    const tenant = await Tenant.findByPk(tenantId || userId);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found'
+      });
+    }
+
+    if (!tenant.stripe_subscription_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
+
+    // Reactivar suscripción en Stripe eliminando cancel_at_period_end
+    const subscription = await stripe.subscriptions.update(
+      tenant.stripe_subscription_id,
+      {
+        cancel_at_period_end: false
+      }
+    );
+
+    console.log('✅ [Stripe SaaS] Subscription reactivated in Stripe:', subscription.id);
+
+    // Limpiar campos de cancelación en la base de datos
+    await tenant.update({
+      cancelled_at: null,
+      subscription_ends_at: null
+    });
+
+    console.log('✅ [Stripe SaaS] Subscription reactivated in database for:', tenant.email);
+
+    res.json({
+      success: true,
+      message: 'Subscription reactivated successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ [Stripe SaaS] Error reactivating subscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error reactivating subscription',
+      error: error.message
+    });
+  }
+};
+
+
