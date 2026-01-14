@@ -184,6 +184,8 @@ import './models/ReturnRequest.js';
 import './models/Notification.js';
 import './models/Module.js';
 import './models/Tenant.js';
+import './models/TenantNote.js';
+import './models/StripeWebhookLog.js';
 
 // Asociaciones
 import './models/Associations.js';

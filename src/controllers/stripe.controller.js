@@ -16,6 +16,7 @@ import { Option } from '../models/Option.js';
 import { Cupone } from '../models/Cupone.js';
 import { Tenant } from '../models/Tenant.js';
 import { Module } from '../models/Module.js';
+import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
@@ -292,9 +293,15 @@ export const stripeWebhook = async (req, res) => {
   console.log('[Stripe Webhook] req.headers:', JSON.stringify(req.headers || {}, null, 2));
   const sig = req.headers['stripe-signature'];
   let event;
+  let webhookLog = null;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    
+    // 📝 Crear log del webhook recibido
+    webhookLog = await StripeWebhookLog.createFromEvent(event);
+    console.log(`📝 [Stripe Webhook] Log creado con ID ${webhookLog.id} para evento ${event.id}`);
+    
   } catch (err) {
     console.error('❌ [Stripe Webhook] Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -302,33 +309,48 @@ export const stripeWebhook = async (req, res) => {
 
   console.log('🎯 [Stripe Webhook] Event type received:', event.type);
 
-  // ✅ Manejar checkout.session.completed (compras únicas y primera subscripción)
-  if (event.type === 'checkout.session.completed') {
-    return await handleCheckoutCompleted(event, res);
-  }
+  // Marcar webhook como en procesamiento
+  await webhookLog.markAsProcessing();
 
-  // 🆕 Manejar eventos de subscripciones SaaS
-  if (event.type === 'invoice.paid') {
-    return await handleInvoicePaid(event, res);
-  }
+  try {
+    // ✅ Manejar checkout.session.completed (compras únicas y primera subscripción)
+    if (event.type === 'checkout.session.completed') {
+      await handleCheckoutCompleted(event, res, webhookLog);
+      return;
+    }
 
-  if (event.type === 'customer.subscription.updated') {
-    return await handleSubscriptionUpdated(event, res);
-  }
+    // 🆕 Manejar eventos de subscripciones SaaS
+    if (event.type === 'invoice.paid') {
+      await handleInvoicePaid(event, res, webhookLog);
+      return;
+    }
 
-  if (event.type === 'customer.subscription.deleted') {
-    return await handleSubscriptionDeleted(event, res);
-  }
+    if (event.type === 'customer.subscription.updated') {
+      await handleSubscriptionUpdated(event, res, webhookLog);
+      return;
+    }
 
-  console.log('⚠️ [Stripe Webhook] Ignoring event type:', event.type);
-  return res.json({ received: true });
+    if (event.type === 'customer.subscription.deleted') {
+      await handleSubscriptionDeleted(event, res, webhookLog);
+      return;
+    }
+
+    console.log('⚠️ [Stripe Webhook] Ignoring event type:', event.type);
+    await webhookLog.markAsSuccess('Event type ignored (not relevant)');
+    return res.json({ received: true });
+    
+  } catch (error) {
+    console.error('❌ [Stripe Webhook] Error processing webhook:', error);
+    await webhookLog.markAsFailed(error.message);
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 /**
  * Manejar evento checkout.session.completed
  * (Compras Printful y primera creación de subscripción SaaS)
  */
-async function handleCheckoutCompleted(event, res) {
+async function handleCheckoutCompleted(event, res, webhookLog) {
   console.log('✅ [Stripe Webhook] Processing checkout.session.completed event');
   const session = event.data.object;
 
@@ -407,6 +429,8 @@ async function handleCheckoutCompleted(event, res) {
         console.error('⚠️ Error enviando payment success email:', err);
       });
       
+      await webhookLog.markAsSuccess('SaaS subscription activated');
+      
       return res.status(200).json({ 
         received: true, 
         type: 'saas_subscription',
@@ -416,6 +440,7 @@ async function handleCheckoutCompleted(event, res) {
       
     } catch (error) {
       console.error('❌ [Stripe Webhook] Error handling SaaS subscription:', error);
+      await webhookLog.markAsFailed(`SaaS subscription error: ${error.message}`);
       return res.status(200).json({ received: true, error: error.message });
     }
   }
@@ -1335,7 +1360,7 @@ const decrementSingleCouponStripe = async (couponCode) => {
  * Manejar evento invoice.paid
  * Se dispara cuando se paga una factura (renovación mensual de subscripción)
  */
-async function handleInvoicePaid(event, res) {
+async function handleInvoicePaid(event, res, webhookLog) {
   try {
     console.log('💳 [Stripe Webhook] Processing invoice.paid event');
     const invoice = event.data.object;
@@ -1397,10 +1422,12 @@ async function handleInvoicePaid(event, res) {
     }
 
     console.log('✅ [Stripe Webhook] Invoice paid processed successfully');
+    await webhookLog.markAsSuccess('Invoice paid processed');
     return res.json({ received: true });
 
   } catch (error) {
     console.error('❌ [Stripe Webhook] Error handling invoice.paid:', error);
+    await webhookLog.markAsFailed(`invoice.paid error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
 }
@@ -1409,7 +1436,7 @@ async function handleInvoicePaid(event, res) {
  * Manejar evento customer.subscription.updated
  * Se dispara cuando se actualiza una subscripción (cambio de plan, cancelación, etc.)
  */
-async function handleSubscriptionUpdated(event, res) {
+async function handleSubscriptionUpdated(event, res, webhookLog) {
   try {
     console.log('🔄 [Stripe Webhook] Processing customer.subscription.updated event');
     const subscription = event.data.object;
@@ -1466,10 +1493,12 @@ async function handleSubscriptionUpdated(event, res) {
     }
 
     console.log('✅ [Stripe Webhook] Subscription updated processed successfully');
+    await webhookLog.markAsSuccess('Subscription updated processed');
     return res.json({ received: true });
 
   } catch (error) {
     console.error('❌ [Stripe Webhook] Error handling subscription.updated:', error);
+    await webhookLog.markAsFailed(`subscription.updated error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
 }
@@ -1478,7 +1507,7 @@ async function handleSubscriptionUpdated(event, res) {
  * Manejar evento customer.subscription.deleted
  * Se dispara cuando una subscripción es eliminada/expirada definitivamente
  */
-async function handleSubscriptionDeleted(event, res) {
+async function handleSubscriptionDeleted(event, res, webhookLog) {
   try {
     console.log('🗑️ [Stripe Webhook] Processing customer.subscription.deleted event');
     const subscription = event.data.object;
@@ -1516,10 +1545,12 @@ async function handleSubscriptionDeleted(event, res) {
     });
 
     console.log('✅ [Stripe Webhook] Subscription deleted processed successfully');
+    await webhookLog.markAsSuccess('Subscription deleted processed');
     return res.json({ received: true });
 
   } catch (error) {
     console.error('❌ [Stripe Webhook] Error handling subscription.deleted:', error);
+    await webhookLog.markAsFailed(`subscription.deleted error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
 }

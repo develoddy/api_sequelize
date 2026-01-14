@@ -184,15 +184,4 @@ Tenant.prototype.cancelSubscription = async function(endDate = null) {
   return this;
 };
 
-/**
- * Associations
- */
-Tenant.associate = (models) => {
-  Tenant.belongsTo(models.Module, {
-    foreignKey: 'module_key',
-    targetKey: 'key',
-    as: 'module'
-  });
-};
-
 export default Tenant;

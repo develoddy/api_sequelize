@@ -41,6 +41,7 @@ import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
 import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
 import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
+import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
 
 const app = express();
 
@@ -86,5 +87,6 @@ app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
 app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
+app.use("/saas-admin", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant CRUD)
 
 export default app;

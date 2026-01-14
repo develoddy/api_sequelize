@@ -21,6 +21,7 @@ import AnalyticsCache from './AnalyticsCache.js';
 import ProductAnalytics from './ProductAnalytics.js';
 import { Module } from './Module.js';
 import { Tenant } from './Tenant.js';
+import { TenantNote } from './TenantNote.js';
 
 /*
  * RELACIÓN TENANT -> MODULE
@@ -35,6 +36,19 @@ Module.hasMany(Tenant, {
   foreignKey: 'module_key',
   sourceKey: 'key',
   as: 'tenants' 
+});
+
+/*
+ * RELACIÓN TENANT -> TENANT_NOTES
+ * Un tenant puede tener múltiples notas administrativas
+ */
+Tenant.hasMany(TenantNote, { 
+  foreignKey: 'tenant_id', 
+  as: 'notes' 
+});
+TenantNote.belongsTo(Tenant, { 
+  foreignKey: 'tenant_id', 
+  as: 'tenant' 
 });
 
 /*
