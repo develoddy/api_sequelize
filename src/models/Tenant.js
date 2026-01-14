@@ -1,5 +1,6 @@
 import { sequelize } from '../database/database.js';
 import { DataTypes, Op } from 'sequelize';
+import bcrypt from 'bcrypt';
 
 /**
  * Model: Tenant
@@ -182,6 +183,41 @@ Tenant.prototype.cancelSubscription = async function(endDate = null) {
   this.subscription_ends_at = endDate || new Date();
   await this.save();
   return this;
+};
+
+/**
+ * Hooks de Sequelize
+ */
+
+// 🔐 Hook: Encriptar contraseña antes de crear tenant
+Tenant.beforeCreate(async (tenant) => {
+  if (tenant.password) {
+    const salt = await bcrypt.genSalt(10);
+    tenant.password = await bcrypt.hash(tenant.password, salt);
+  }
+  
+  // 🕐 Auto-setear trial_ends_at si no está definido
+  if (!tenant.trial_ends_at && tenant.status === 'trial') {
+    const trialDays = parseInt(process.env.TRIAL_DAYS || '14', 10);
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + trialDays);
+    tenant.trial_ends_at = trialEndDate;
+    
+    console.log(`✅ Trial auto-configurado: ${trialDays} días (expira: ${trialEndDate.toISOString()})`);
+  }
+});
+
+// 🔐 Hook: Encriptar contraseña antes de actualizar (si cambió)
+Tenant.beforeUpdate(async (tenant) => {
+  if (tenant.changed('password')) {
+    const salt = await bcrypt.genSalt(10);
+    tenant.password = await bcrypt.hash(tenant.password, salt);
+  }
+});
+
+// Método para comparar contraseñas
+Tenant.prototype.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 export default Tenant;

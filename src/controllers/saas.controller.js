@@ -79,23 +79,22 @@ export const startTrial = async (req, res) => {
       });
     }
 
-    // Hashear password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ⚠️ NO hashear aquí - el hook beforeCreate del modelo lo hace automáticamente
 
     // Obtener días de trial del módulo
-    const trialDays = module.saas_config?.trial_days || 14;
+    const trialDays = module.saas_config?.trial_days || parseInt(process.env.TRIAL_DAYS || '14', 10);
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
-    // Crear tenant
+    // Crear tenant (password se hasheará automáticamente en beforeCreate hook)
     const tenant = await Tenant.create({
       name,
       email,
-      password: hashedPassword,
+      password, // Se encriptará automáticamente
       module_key: moduleKey,
       plan: plan || 'trial',
       status: 'trial',
-      trial_ends_at: trialEndsAt,
+      trial_ends_at: trialEndsAt, // Redundante pero explícito
       trial_extended: false,
       settings: {},
       metadata: {
@@ -194,8 +193,8 @@ export const loginTenant = async (req, res) => {
       });
     }
 
-    // Verificar password con el primer tenant (todos tienen el mismo password)
-    const validPassword = await bcrypt.compare(password, tenants[0].password);
+    // Verificar password usando el método del modelo
+    const validPassword = await tenants[0].comparePassword(password);
     if (!validPassword) {
       return res.status(401).json({
         success: false,

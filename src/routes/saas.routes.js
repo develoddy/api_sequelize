@@ -1,6 +1,7 @@
 import express from 'express';
 import * as saasController from '../controllers/saas.controller.js';
 import { authenticateTenant, authenticateTenantOnly, optionalTenantAuth } from '../middleware/tenantAuth.js';
+import { registerLimiter, loginLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = express.Router();
 
@@ -9,9 +10,9 @@ const router = express.Router();
  * Gestión de trials, subscripciones y tenants
  */
 
-// ✅ Públicas (sin autenticación)
-router.post('/saas/trial/start', saasController.startTrial);
-router.post('/saas/login', saasController.loginTenant);
+// ✅ Públicas (sin autenticación, CON rate limiting)
+router.post('/saas/trial/start', registerLimiter, saasController.startTrial);
+router.post('/saas/login', loginLimiter, saasController.loginTenant);
 
 // 🔒 Protegidas (requieren autenticación de tenant)
 router.get('/saas/check-access', authenticateTenant, saasController.checkAccess);

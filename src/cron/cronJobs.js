@@ -7,12 +7,14 @@ import {
     aggregateWeeklyMetrics, 
     aggregateMonthlyMetrics 
 } from '../services/analyticsCalculation.service.js';
+import { startWebhookRetryCron } from './retry-webhooks.cron.js';
 
 /**
  * ⏰ CRON JOBS
  * Sprint 6B Iteración 4: Automatización de reportes
  * Sprint 6D: Procesamiento automático de retry queue
  * Sprint 6E: Cálculo automático de analytics
+ * SaaS Management: Retry de webhooks fallidos
  */
 
 /**
@@ -139,6 +141,9 @@ export function initCronJobs() {
     console.log('   📊 Analytics Diarias: 2:00 AM (Europe/Madrid)');
     console.log('   📊 Analytics Semanales: Lunes 3:00 AM (Europe/Madrid)');
     console.log('   📊 Analytics Mensuales: Día 1 del mes 4:00 AM (Europe/Madrid)');
+    
+    // 🔄 Iniciar cron de retry de webhooks (SaaS Management)
+    startWebhookRetryCron();
 }
 
 /**

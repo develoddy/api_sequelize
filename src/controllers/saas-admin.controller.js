@@ -111,10 +111,12 @@ export const extendTrial = async (req, res) => {
     const { id } = req.params;
     const { days } = req.body;
     
-    if (!days || days <= 0) {
+    // Validar que days sea un número positivo
+    const daysNum = parseInt(days, 10);
+    if (!days || isNaN(daysNum) || daysNum <= 0 || daysNum > 365) {
       return res.status(400).json({
         success: false,
-        message: 'Debe especificar el número de días a extender'
+        message: 'Debe especificar un número válido de días (1-365)'
       });
     }
     
@@ -127,19 +129,30 @@ export const extendTrial = async (req, res) => {
       });
     }
     
+    // Validar que el tenant esté en estado apropiado para extender trial
+    if (tenant.status === 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede extender trial de un tenant con subscripción activa'
+      });
+    }
+    
     // Calculate new trial end date
     const currentTrialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : new Date();
     const newTrialEnd = new Date(currentTrialEnd);
-    newTrialEnd.setDate(newTrialEnd.getDate() + parseInt(days));
+    newTrialEnd.setDate(newTrialEnd.getDate() + daysNum);
     
     await tenant.update({
       trial_ends_at: newTrialEnd,
-      status: 'trial' // Reset to trial if was expired
+      status: 'trial', // Reset to trial if was expired
+      trial_extended: true
     });
+    
+    console.log(`✅ [Admin] Trial extendido ${daysNum} días para tenant ${tenant.email} by ${req.user?.email}`);
     
     res.json({
       success: true,
-      message: `Trial extendido por ${days} días`,
+      message: `Trial extendido por ${daysNum} días`,
       tenant
     });
     
@@ -288,10 +301,22 @@ export const changePlan = async (req, res) => {
     const { id } = req.params;
     const { new_plan } = req.body;
     
-    if (!new_plan) {
+    // Validar que el plan esté especificado
+    if (!new_plan || typeof new_plan !== 'string' || new_plan.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Debe especificar el nuevo plan'
+        message: 'Debe especificar un plan válido'
+      });
+    }
+    
+    // Lista de planes válidos
+    const validPlans = ['trial', 'starter', 'pro', 'business', 'enterprise', 'free'];
+    const normalizedPlan = new_plan.toLowerCase().trim();
+    
+    if (!validPlans.includes(normalizedPlan)) {
+      return res.status(400).json({
+        success: false,
+        message: `Plan inválido. Planes válidos: ${validPlans.join(', ')}`
       });
     }
     
@@ -306,13 +331,23 @@ export const changePlan = async (req, res) => {
     
     const oldPlan = tenant.plan;
     
+    // No permitir cambiar a trial si ya estuvo activo
+    if (normalizedPlan === 'trial' && tenant.subscribed_at) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede cambiar a trial un tenant que ya tuvo subscripción activa'
+      });
+    }
+    
     await tenant.update({
-      plan: new_plan
+      plan: normalizedPlan
     });
+    
+    console.log(`✅ [Admin] Plan cambiado de ${oldPlan} a ${normalizedPlan} para tenant ${tenant.email} by ${req.user?.email}`);
     
     res.json({
       success: true,
-      message: `Plan cambiado de ${oldPlan} a ${new_plan}`,
+      message: `Plan cambiado de ${oldPlan} a ${normalizedPlan}`,
       tenant
     });
     
@@ -337,10 +372,30 @@ export const addNote = async (req, res) => {
     const { id } = req.params;
     const { note, created_by, note_type, is_important } = req.body;
     
-    if (!note) {
+    // Validar que la nota no esté vacía
+    if (!note || typeof note !== 'string' || note.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Debe proporcionar una nota'
+        message: 'Debe proporcionar una nota válida'
+      });
+    }
+    
+    // Validar longitud máxima (10,000 caracteres)
+    if (note.length > 10000) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nota no puede exceder 10,000 caracteres'
+      });
+    }
+    
+    // Validar tipo de nota
+    const validNoteTypes = ['general', 'support', 'billing', 'technical', 'cancellation'];
+    const noteType = note_type || 'general';
+    
+    if (!validNoteTypes.includes(noteType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Tipo de nota inválido. Tipos válidos: ${validNoteTypes.join(', ')}`
       });
     }
     
@@ -353,13 +408,18 @@ export const addNote = async (req, res) => {
       });
     }
     
+    // Usar email del admin autenticado si está disponible
+    const createdBy = req.user?.email || created_by || 'admin';
+    
     const newNote = await TenantNote.create({
       tenant_id: id,
-      note,
-      note_type: note_type || 'general',
-      created_by: created_by || 'admin',
-      is_important: is_important || false
+      note: note.trim(),
+      note_type: noteType,
+      created_by: createdBy,
+      is_important: Boolean(is_important)
     });
+    
+    console.log(`✅ [Admin] Nota agregada a tenant ${tenant.email} by ${createdBy} (tipo: ${noteType})`);
     
     res.json({
       success: true,

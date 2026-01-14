@@ -42,6 +42,7 @@ import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Le
 import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
 import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
+import healthRoutes from './health.routes.js'; // 🏥 Health Check
 
 const app = express();
 
@@ -88,5 +89,6 @@ app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
 app.use("/saas-admin", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant CRUD)
+app.use("/api", healthRoutes); // 🏥 Health Check (GET /api/health)
 
 export default app;
