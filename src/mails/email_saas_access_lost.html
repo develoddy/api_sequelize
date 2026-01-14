@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso suspendido - {MODULE_NAME}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #1a1a1a;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .container {
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+        .header {
+            background: #000000;
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            border-bottom: 1px solid #000000;
+        }
+        .header h1 {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.85;
+            font-weight: 300;
+        }
+        .content {
+            padding: 50px 40px;
+        }
+        .status-message {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .status-message h2 {
+            color: #000000;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+        .status-message p {
+            color: #666666;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .alert-box {
+            background: #000000;
+            color: white;
+            padding: 40px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        .alert-box h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+        .alert-box p {
+            margin: 10px 0;
+            opacity: 0.85;
+            font-size: 14px;
+        }
+        .alert-box .date {
+            font-size: 24px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #f8f8f8;
+            padding: 30px;
+            margin: 40px 0;
+            border-left: 3px solid #000000;
+        }
+        .info-box h4 {
+            margin: 0 0 15px 0;
+            color: #000000;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .info-box p {
+            margin: 0;
+            color: #666666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0 0 0;
+        }
+        .info-box li {
+            padding: 8px 0;
+            color: #666666;
+            font-size: 14px;
+        }
+        .info-box li:before {
+            content: "·";
+            color: #000000;
+            font-weight: bold;
+            display: inline-block;
+            width: 20px;
+            font-size: 20px;
+            line-height: 14px;
+        }
+        .restore-section {
+            background: #f8f8f8;
+            padding: 40px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        .restore-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #000000;
+        }
+        .restore-section p {
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .restore-section .highlight {
+            font-size: 48px;
+            font-weight: 300;
+            color: #000000;
+            margin: 25px 0;
+            letter-spacing: -2px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #000000;
+            color: white;
+            padding: 16px 48px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            margin: 20px 0;
+            text-align: center;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+        }
+        .cta-button:hover {
+            background: #333333;
+        }
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .footer {
+            background-color: #f8f8f8;
+            padding: 40px;
+            text-align: center;
+            color: #999999;
+            font-size: 13px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #000000;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .footer strong {
+            color: #000000;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Acceso suspendido</h1>
+            <p>Tu suscripción a {MODULE_NAME} ha finalizado</p>
+        </div>
+
+        <div class="content">
+            <div class="status-message">
+                <h2>Tu cuenta está en modo solo lectura</h2>
+                <p>
+                    Tu suscripción cancelada finalizó y el acceso completo ha sido suspendido. 
+                    Aún puedes ver tus datos, pero no realizar cambios.
+                </p>
+            </div>
+
+            <div class="alert-box">
+                <h3>Suscripción finalizada</h3>
+                <div class="date">{SUBSCRIPTION_END_DATE}</div>
+                <p>Tu período de acceso completo terminó en esta fecha</p>
+            </div>
+
+            <div class="info-box">
+                <h4>Estado actual de tu cuenta</h4>
+                <ul>
+                    <li>Acceso en modo solo lectura disponible</li>
+                    <li>Puedes ver todos tus datos guardados</li>
+                    <li>No puedes crear ni editar contenido</li>
+                    <li>Tus datos se conservarán durante 90 días</li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="restore-section">
+                <h3>Recupera el acceso completo</h3>
+                <p>Renueva tu suscripción ahora y continúa donde lo dejaste</p>
+                <div class="highlight">Desde 9.99€/mes</div>
+                
+                <div class="button-container">
+                    <a href="{RENEW_URL}" class="cta-button">
+                        Renovar Suscripción
+                    </a>
+                </div>
+
+                <p style="font-size: 13px; margin-top: 25px;">
+                    Al renovar, recuperarás acceso inmediato a todas las funcionalidades
+                </p>
+            </div>
+
+            <div class="info-box">
+                <h4>¿Qué incluye la renovación?</h4>
+                <ul>
+                    <li>Acceso ilimitado a todas las herramientas</li>
+                    <li>Todos tus datos y configuraciones intactos</li>
+                    <li>Soporte técnico prioritario</li>
+                    <li>Actualizaciones y nuevas características</li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <div style="text-align: center; background: #f8f8f8; padding: 30px; margin: 40px 0;">
+                <h4 style="margin: 0 0 15px 0; color: #000000; font-size: 15px; font-weight: 600;">
+                    Conservación de datos
+                </h4>
+                <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.6;">
+                    Tus datos se mantendrán seguros durante <strong style="color: #000000;">90 días</strong> 
+                    después del fin de tu suscripción. Después de este período, 
+                    serán eliminados permanentemente según nuestra política de privacidad.
+                </p>
+            </div>
+
+            <p style="text-align: center; font-size: 13px; color: #999999; margin-top: 40px;">
+                ¿Tienes preguntas sobre tu cuenta?<br>
+                <a href="mailto:support@lujandev.com" style="color: #000000; font-weight: 500;">Contáctanos</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{MODULE_NAME}</strong></p>
+            <p style="margin: 15px 0;">
+                <a href="{RENEW_URL}">Renovar Suscripción</a> · 
+                <a href="mailto:support@lujandev.com">Soporte</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 25px;">
+                {TENANT_EMAIL}<br>
+                © 2026 LujanDev
+            </p>
+        </div>
+    </div>
+</body>
+</html>

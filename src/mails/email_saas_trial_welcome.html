@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a {MODULE_NAME}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #1a1a1a;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .container {
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+        .header {
+            background: #000000;
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            border-bottom: 1px solid #000000;
+        }
+        .header h1 {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.85;
+            font-weight: 300;
+        }
+        .content {
+            padding: 50px 40px;
+        }
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .welcome-message h2 {
+            color: #000000;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+        .welcome-message p {
+            color: #666666;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .trial-box {
+            background: #f8f8f8;
+            border-left: 3px solid #000000;
+            padding: 30px;
+            margin: 40px 0;
+        }
+        .trial-box h3 {
+            margin: 0 0 15px 0;
+            color: #000000;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .trial-box p {
+            margin: 8px 0;
+            color: #40px 0;
+        }
+        .features h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #000000;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+            padding: 0;
+        }
+        .feature-icon {
+            background: #000000;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-right: 16px;
+            flex-shrink: 0;
+            font-weight: 600;
+        }
+        .feature-item strong {
+            color: #000000;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .feature-item span {
+            color: #666666;
+            font-size: 14px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #000000;
+            color: white;
+            padding: 16px 48px;
+            text-decoration: none;
+            font-wei40px 0;
+        }
+        .footer {
+            background-color: #f8f8f8;
+            padding: 40px;
+            text-align: center;
+            color: #999999;
+            font-size: 13px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #000000;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .footer strong {
+            color: #000000;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 40px 0;
+        }
+        .info-box {
+            background-color: #f8f8f8;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 3px solid #000000;
+        }
+        .info-box h4 {
+            margin: 0 0 10px 0;
+            color: #000000;
+            fontBienvenido a {MODULE_NAME}
+            font-weight: 600;
+        }
+        .info-box p {
+            margin: 0;
+            color: #666666;
+            font-size: 14px;
+            line-height: 1.6nter;
+        }
+        .cta-button:hover {
+            opacity: 0.9;
+        }Tu Prueba Gratuita</h3>
+                <div class="days">14 días</div>
+                <p><strong>Comienza:</strong> {TRIAL_START_DATE}</p>
+                <p><strong>Finaliza:</strong> {TRIAL_END_DATE}</p>
+                <p style="margin-top: 20px;">
+                    Acceso completo a todas las funcionalidades. Sin restricciones.
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="contQué puedes hacer ahora</h3>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">→</div>
+                    <div>
+                        <strong>Accede a tu dashboard</strong><br>
+                        <span>Explora todas las herramientas disponibles</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">→</div>
+                    <div>
+                        <strong>Configura tu cuenta</strong><br>
+                        <span>Personaliza según tus necesidades</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">→</div>
+                    <div>
+                        <strong>Prueba todas las funciones</strong><br>
+                        <span>Sin restricciones durante el trial</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">→</div>
+                    <div>
+                        <strong>Soporte disponible</strong><br>
+                        <span>Explora todas las herramientas disponibles</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">⚙️</div>
+                    <div>
+                        <strong>Confi
+                </a>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="info-box">
+                <h4>Importante</h4>
+                <p>
+                    Te enviaremos un recordatorio 3 días antes de que finalice tu prueba. 
+                    Sin compromisos. Cancela cuando quieras
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">💬</div>
+                    <div>
+                        <strong>Soporte disponible</strong><br>
+                        <span style="color: #666; font-size: 14px;">Estamos aquí para ayudarte</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-container">
+                <a href="{DASHBOARD_URL}" class="cta-button">
+                    Ir a Mi Dashboard →
+                </a>
+            </div>
+
+            <div class="divider"></div>
+
+            <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                <h4 style="margin: 0 0 10px 0; color: #2e7d32;">💡 Consejo:</h4>
+                <p style="margin: 0; color: #2e7d32;">
+                    Te enviaremos un recordatorio 3 días antes de que finalice tu prueba. 
+                    No hay compromisos, puedes cancelar en cualquier momento.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>{MODULE_NAME}</strong></p>
+            <p style="margin: 10px 0;">
+                <a href="{DASHB5px 0;">
+                <a href="{DASHBOARD_URL}">Dashboard</a> · 
+                <a href="{DASHBOARD_URL}/account">Mi Cuenta</a> · 
+                <a href="mailto:support@lujandev.com">Soporte</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 25px;">
+                {TENANT_EMAIL}<br>
+                © 2026 LujanDev
+        </div>
+    </div>
+</body>
+</html>

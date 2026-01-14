@@ -235,6 +235,14 @@ async function main() {
             } catch (error) {
                 console.error('❌ Error inicializando cron jobs:', error);
             }
+
+            // Inicializar cron de notificaciones SaaS trial
+            try {
+                const { startTrialNotificationsCron } = await import('./cron/trial-notifications.cron.js');
+                startTrialNotificationsCron();
+            } catch (error) {
+                console.error('❌ Error inicializando trial notifications cron:', error);
+            }
         });
 
     } catch (error) {

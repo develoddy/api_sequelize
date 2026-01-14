@@ -40,6 +40,7 @@ import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
 import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
+import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 
 const app = express();
 
@@ -83,5 +84,7 @@ app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
 app.use("/email-testing", emailTestingRoutes); // 🧪 Email Testing (NO afecta Printful)
 app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
 app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
+app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
+app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
 
 export default app;

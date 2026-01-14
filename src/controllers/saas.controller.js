@@ -4,6 +4,7 @@ import { User } from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
+import { sendTrialWelcomeEmail } from './saas-email.controller.js';
 
 /**
  * Controller: SaaS
@@ -117,6 +118,12 @@ export const startTrial = async (req, res) => {
     );
 
     console.log(`✅ Trial started: ${tenant.email} for ${moduleKey} (${trialDays} days)`);
+
+    // 📧 Enviar email de bienvenida (async, no bloqueante)
+    sendTrialWelcomeEmail(tenant.id).catch(err => {
+      console.error('⚠️ Error enviando welcome email:', err);
+      // No bloquear respuesta si falla el email
+    });
 
     res.status(201).json({
       success: true,

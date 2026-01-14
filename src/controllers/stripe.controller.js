@@ -20,6 +20,11 @@ import { Module } from '../models/Module.js';
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
 import { sendEmail } from './sale.controller.js';
+import { 
+  sendPaymentSuccessEmail, 
+  sendSubscriptionCancelledEmail, 
+  sendAccessLostEmail 
+} from './saas-email.controller.js';
 
 import stripe from '../devtools/utils/stripe.js';
 
@@ -393,6 +398,13 @@ async function handleCheckoutCompleted(event, res) {
         plan: tenant.plan,
         subscriptionId,
         status: 'active'
+      });
+      
+      // 📧 Enviar email de pago exitoso
+      sendPaymentSuccessEmail(tenant.id, {
+        amount: (session.amount_total / 100).toFixed(2)
+      }).catch(err => {
+        console.error('⚠️ Error enviando payment success email:', err);
       });
       
       return res.status(200).json({ 
@@ -1375,6 +1387,11 @@ async function handleInvoicePaid(event, res) {
         cancelled_at: null,
         subscription_ends_at: null
       });
+      
+      // 📧 Enviar email de pago exitoso en renovación
+      sendPaymentSuccessEmail(tenant.id).catch(err => {
+        console.error('⚠️ Error enviando payment success email:', err);
+      });
     } else {
       console.log(`ℹ️ [Stripe Webhook] Tenant ${tenant.email} ya está activo, renovación procesada`);
     }
@@ -1431,6 +1448,11 @@ async function handleSubscriptionUpdated(event, res) {
         subscription_ends_at: endDate
         // status se mantiene en "active" para que conserve acceso
       });
+      
+      // 📧 Enviar email de cancelación
+      sendSubscriptionCancelledEmail(tenant.id).catch(err => {
+        console.error('⚠️ Error enviando subscription cancelled email:', err);
+      });
     } 
     // Si se reactivó una subscripción cancelada
     else if (tenant.status === 'cancelled' && !subscription.cancel_at_period_end) {
@@ -1486,6 +1508,11 @@ async function handleSubscriptionDeleted(event, res) {
     await tenant.update({
       status: 'expired',
       subscription_ends_at: new Date()
+    });
+
+    // 📧 Enviar email de acceso perdido
+    sendAccessLostEmail(tenant.id).catch(err => {
+      console.error('⚠️ Error enviando access lost email:', err);
     });
 
     console.log('✅ [Stripe Webhook] Subscription deleted processed successfully');

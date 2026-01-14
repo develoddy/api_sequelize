@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suscripción cancelada - {MODULE_NAME}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #1a1a1a;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .container {
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+        .header {
+            background: #000000;
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            border-bottom: 1px solid #000000;
+        }
+        .header h1 {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.85;
+            font-weight: 300;
+        }
+        .content {
+            padding: 50px 40px;
+        }
+        .status-message {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .status-message h2 {
+            color: #000000;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+        .status-message p {
+            color: #666666;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .access-box {
+            background: #f8f8f8;
+            border: 2px solid #000000;
+            padding: 35px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        .access-box h3 {
+            margin: 0 0 15px 0;
+            color: #000000;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        .access-box .date {
+            font-size: 36px;
+            font-weight: 300;
+            color: #000000;
+            margin: 20px 0;
+            letter-spacing: -1px;
+        }
+        .access-box p {
+            margin: 10px 0 0 0;
+            color: #666666;
+            font-size: 14px;
+        }
+        .info-box {
+            background-color: #f8f8f8;
+            padding: 30px;
+            margin: 40px 0;
+            border-left: 3px solid #000000;
+        }
+        .info-box h4 {
+            margin: 0 0 15px 0;
+            color: #000000;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .info-box p {
+            margin: 0;
+            color: #666666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0 0 0;
+        }
+        .info-box li {
+            padding: 8px 0;
+            color: #666666;
+            font-size: 14px;
+        }
+        .info-box li:before {
+            content: "·";
+            color: #000000;
+            font-weight: bold;
+            display: inline-block;
+            width: 20px;
+            font-size: 20px;
+            line-height: 14px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #000000;
+            color: white;
+            padding: 16px 48px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            margin: 20px 0;
+            text-align: center;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+        }
+        .cta-button.secondary {
+            background: white;
+            color: #000000;
+            border: 2px solid #000000;
+        }
+        .cta-button:hover {
+            background: #333333;
+        }
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .footer {
+            background-color: #f8f8f8;
+            padding: 40px;
+            text-align: center;
+            color: #999999;
+            font-size: 13px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #000000;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .footer strong {
+            color: #000000;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 40px 0;
+        }
+        .feedback-section {
+            margin: 50px 0;
+            text-align: center;
+        }
+        .feedback-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #000000;
+        }
+        .feedback-section p {
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Suscripción cancelada</h1>
+            <p>Has cancelado tu suscripción a {MODULE_NAME}</p>
+        </div>
+
+        <div class="content">
+            <div class="status-message">
+                <h2>Tu cancelación ha sido procesada</h2>
+                <p>
+                    Lamentamos verte partir. Tu suscripción se ha cancelado, pero aún puedes 
+                    acceder a todas las funcionalidades hasta el final del período actual.
+                </p>
+            </div>
+
+            <div class="access-box">
+                <h3>Acceso disponible hasta</h3>
+                <div class="date">{ACCESS_UNTIL_DATE}</div>
+                <p>Después de esta fecha, tu cuenta pasará a modo solo lectura</p>
+            </div>
+
+            <div class="info-box">
+                <h4>¿Qué sucede ahora?</h4>
+                <ul>
+                    <li>No se realizarán más cargos a tu método de pago</li>
+                    <li>Mantendrás acceso completo hasta {ACCESS_UNTIL_DATE}</li>
+                    <li>Después, podrás ver tus datos pero no editarlos</li>
+                    <li>Tu cuenta y datos se conservarán durante 90 días</li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="info-box">
+                <h4>¿Cambiaste de opinión?</h4>
+                <p>
+                    Puedes reactivar tu suscripción en cualquier momento antes de {ACCESS_UNTIL_DATE}. 
+                    Simplemente accede a tu cuenta y reanuda el servicio. No perderás ningún dato.
+                </p>
+            </div>
+
+            <div class="button-container">
+                <a href="{DASHBOARD_URL}/account" class="cta-button">
+                    Reactivar Suscripción
+                </a>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="feedback-section">
+                <h3>Ayúdanos a mejorar</h3>
+                <p>
+                    Tu opinión es importante para nosotros. ¿Podrías contarnos por qué 
+                    decidiste cancelar tu suscripción?
+                </p>
+                <a href="mailto:support@lujandev.com?subject=Feedback%20sobre%20cancelación" 
+                   style="color: #000000; font-weight: 500; text-decoration: underline;">
+                    Enviar feedback
+                </a>
+            </div>
+
+            <p style="text-align: center; font-size: 13px; color: #999999; margin-top: 50px;">
+                Si necesitas ayuda o tienes preguntas<br>
+                <a href="mailto:support@lujandev.com" style="color: #000000; font-weight: 500;">Contáctanos</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{MODULE_NAME}</strong></p>
+            <p style="margin: 15px 0;">
+                <a href="{DASHBOARD_URL}">Dashboard</a> · 
+                <a href="{DASHBOARD_URL}/account">Mi Cuenta</a> · 
+                <a href="mailto:support@lujandev.com">Soporte</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 25px;">
+                {TENANT_EMAIL}<br>
+                © 2026 LujanDev
+            </p>
+        </div>
+    </div>
+</body>
+</html>
