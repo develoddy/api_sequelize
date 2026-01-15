@@ -43,6 +43,8 @@ import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
 import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
+import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
+import modulePreviewRoutes from './modulePreview.routes.js'; // 🎯 Generic Preview Mode for any SaaS module
 
 const app = express();
 
@@ -90,5 +92,7 @@ app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
 app.use("/saas-admin", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant CRUD)
 app.use("/api", healthRoutes); // 🏥 Health Check (GET /api/health)
+app.use("/mailflow", mailflowRoutes); // 📧 MailFlow - Onboarding Sequences
+app.use("/modules", modulePreviewRoutes); // 🎯 Generic Preview Mode (Public + Auth endpoints)
 
 export default app;

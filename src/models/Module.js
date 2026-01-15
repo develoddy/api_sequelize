@@ -221,6 +221,30 @@ export const Module = sequelize.define('Module', {
         pro: ['feature_a', 'feature_b', 'feature_c']
       }
     }`
+  },
+  
+  // 🎯 Preview Mode Configuration (Generic for any module)
+  preview_config: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null,
+    comment: `Configuración del modo preview público para validación sin login: {
+      enabled: true,
+      route: '/preview/mailflow',
+      public_endpoint: '/api/modules/mailflow/preview/generate',
+      show_in_store: true,
+      demo_button_text: 'Try Demo - No signup required',
+      generator_function: 'generateMailflowPreview',
+      conversion_config: {
+        recovery_key: 'mailflow_preview',
+        redirect_route: '/mailflow/onboarding',
+        auto_activate: true
+      },
+      rate_limiting: {
+        max_requests: 10,
+        window_minutes: 15
+      }
+    }`
   }
 }, {
   tableName: 'modules',
@@ -328,6 +352,44 @@ Module.prototype.getDashboardRoute = function() {
 Module.prototype.getApiEndpoint = function() {
   if (!this.isSaaS() || !this.saas_config) return null;
   return this.saas_config.api_endpoint || `/${this.key}`;
+};
+
+// 🎯 Métodos para Preview Mode
+
+// Verificar si el módulo tiene preview habilitado
+Module.prototype.hasPreviewEnabled = function() {
+  return this.preview_config && this.preview_config.enabled === true;
+};
+
+// Obtener configuración de preview
+Module.prototype.getPreviewConfig = function() {
+  if (!this.hasPreviewEnabled()) return null;
+  return this.preview_config;
+};
+
+// Obtener ruta pública del preview
+Module.prototype.getPreviewRoute = function() {
+  if (!this.hasPreviewEnabled()) return null;
+  return this.preview_config.route || `/preview/${this.key}`;
+};
+
+// Obtener texto del botón demo
+Module.prototype.getDemoButtonText = function() {
+  if (!this.hasPreviewEnabled()) return null;
+  return this.preview_config.demo_button_text || 'Try Demo';
+};
+
+// Verificar si debe mostrar botón en tienda
+Module.prototype.shouldShowInStore = function() {
+  return this.hasPreviewEnabled() && this.preview_config.show_in_store === true;
+};
+
+// Obtener configuración de rate limiting
+Module.prototype.getPreviewRateLimiting = function() {
+  if (!this.hasPreviewEnabled() || !this.preview_config.rate_limiting) {
+    return { max_requests: 10, window_minutes: 15 };
+  }
+  return this.preview_config.rate_limiting;
 };
 
 export default Module;

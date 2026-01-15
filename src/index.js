@@ -186,6 +186,12 @@ import './models/Module.js';
 import './models/Tenant.js';
 import './models/TenantNote.js';
 import './models/StripeWebhookLog.js';
+import './models/MailflowSequence.js';
+import './models/MailflowContact.js';
+
+// 🎯 Preview Mode Services (Auto-register generators)
+import './services/mailflowPreview.js';
+import modulePreviewService from './services/modulePreviewService.js';
 
 // Asociaciones
 import './models/Associations.js';
@@ -218,6 +224,10 @@ async function main() {
 
         // Iniciar Socket.IO y esperar a que esté listo
         const io = await initSocketIO(server);
+
+        // 🎯 Initialize Preview Mode system
+        modulePreviewService.initializeBuiltInPreviews();
+        console.log('✅ Module Preview System initialized');
         setupChatSocketIO(io);
         setupNotificationsSocketIO(io);
 

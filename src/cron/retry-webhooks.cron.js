@@ -17,7 +17,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
  * Lógica de reintento de webhook
  */
 const retryWebhook = async (webhookLog) => {
-  console.log(`🔄 [Webhook Retry] Reintentando webhook #${webhookLog.id} (intento ${webhookLog.attempts + 1}/3)`);
+  console.log(`🔄 [Webhook Retry] Reintentando webhook #${webhookLog.id} (intento ${webhookLog.retry_count + 1}/3)`);
   
   try {
     const event = JSON.parse(webhookLog.event_data);
@@ -63,11 +63,11 @@ export const runWebhookRetry = async () => {
   console.log('🔄 [Webhook Retry] Buscando webhooks fallidos para reintentar...');
   
   try {
-    // Buscar webhooks con status=failed y attempts < 3
+    // Buscar webhooks con status=failed y retry_count < 3
     const failedWebhooks = await StripeWebhookLog.findAll({
       where: {
         status: 'failed',
-        attempts: {
+        retry_count: {
           [Op.lt]: 3
         }
       },
@@ -87,7 +87,7 @@ export const runWebhookRetry = async () => {
     
     for (const webhookLog of failedWebhooks) {
       // Incrementar intentos
-      const newAttempts = webhookLog.attempts + 1;
+      const newRetryCount = webhookLog.retry_count + 1;
       
       // Reintentar procesamiento
       const result = await retryWebhook(webhookLog);
@@ -98,12 +98,12 @@ export const runWebhookRetry = async () => {
         succeeded++;
         console.log(`✅ [Webhook Retry] Webhook #${webhookLog.id} completado exitosamente`);
       } else {
-        // Falló: incrementar attempts
-        if (newAttempts >= 3) {
+        // Falló: incrementar retry_count
+        if (newRetryCount >= 3) {
           // Máximo de intentos alcanzado
           await webhookLog.update({
-            attempts: newAttempts,
-            error_message: `${webhookLog.error_message || ''}\nIntento ${newAttempts}: ${result.message}`,
+            retry_count: newRetryCount,
+            error_message: `${webhookLog.error_message || ''}\nIntento ${newRetryCount}: ${result.message}`,
             status: 'failed_max_attempts'
           });
           maxAttemptsReached++;
@@ -111,11 +111,11 @@ export const runWebhookRetry = async () => {
         } else {
           // Aún hay intentos disponibles
           await webhookLog.update({
-            attempts: newAttempts,
-            error_message: `${webhookLog.error_message || ''}\nIntento ${newAttempts}: ${result.message}`
+            retry_count: newRetryCount,
+            error_message: `${webhookLog.error_message || ''}\nIntento ${newRetryCount}: ${result.message}`
           });
           failed++;
-          console.log(`❌ [Webhook Retry] Webhook #${webhookLog.id} falló (intento ${newAttempts}/3)`);
+          console.log(`❌ [Webhook Retry] Webhook #${webhookLog.id} falló (intento ${newRetryCount}/3)`);
         }
       }
     }
