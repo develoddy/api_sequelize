@@ -157,6 +157,13 @@ export async function convertPreviewToReal(req, res) {
     const { module_key } = req.params;
     const { previewData, autoActivate = true } = req.body;
     
+    console.log('🔐 Convert preview - Auth check:', {
+      hasUser: !!req.user,
+      hasTenant: !!req.tenant,
+      tenantId: req.tenant?.id || req.tenant?.tenantId,
+      userId: req.user?.id
+    });
+    
     // Validar autenticación (debe estar en req.user y req.tenant)
     if (!req.user || !req.tenant) {
       return res.status(401).json({
@@ -182,10 +189,16 @@ export async function convertPreviewToReal(req, res) {
       { autoActivate }
     );
     
+    console.log('✅ Preview converted successfully:', {
+      module: module_key,
+      sequenceId: result.sequence?.id,
+      status: result.sequence?.status
+    });
+    
     res.json({
       success: true,
       message: 'Preview converted successfully',
-      result
+      ...result  // Incluir todo el resultado (success, sequence, totalContacts, message)
     });
     
   } catch (error) {

@@ -16,6 +16,38 @@ import { MailflowSequence } from '../models/MailflowSequence.js';
 import { MailflowContact } from '../models/MailflowContact.js';
 
 /**
+ * Mapear valores del frontend a valores ENUM de la BD
+ * Frontend puede enviar: increase_sales, build_loyalty, onboarding, nurture, conversion, re-engagement
+ * BD solo acepta: first-purchase, trial-conversion, engagement, onboarding
+ */
+function mapGoalToEnum(frontendGoal) {
+  const goalMap = {
+    // Valores del wizard
+    'increase_sales': 'first-purchase',
+    'build_loyalty': 'engagement',
+    'onboarding': 'onboarding',
+    'nurture': 'engagement',
+    'conversion': 'trial-conversion',
+    're-engagement': 'engagement',
+    'increase_engagement': 'engagement',
+    
+    // Valores directos de la BD (fallbacks)
+    'first-purchase': 'first-purchase',
+    'trial-conversion': 'trial-conversion',
+    'engagement': 'engagement'
+  };
+  
+  const mapped = goalMap[frontendGoal];
+  
+  if (!mapped) {
+    console.warn(`⚠️ Goal '${frontendGoal}' no mapeado, usando 'onboarding' por defecto`);
+    return 'onboarding';
+  }
+  
+  return mapped;
+}
+
+/**
  * Generador de preview para MailFlow
  * Crea secuencias de emails sin guardar en BD
  */
@@ -68,21 +100,43 @@ async function generateMailflowPreview(data) {
 async function convertMailflowPreview(previewData, tenantId, userId, options) {
   const { autoActivate = true } = options;
   
-  // Crear secuencia en BD
+  // Generar sequenceId único
+  const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  
+  // Mapear el goal del frontend al ENUM de la BD
+  const mappedGoal = mapGoalToEnum(previewData.sequenceType);
+  
+  console.log('🔄 Converting preview:', {
+    originalGoal: previewData.sequenceType,
+    mappedGoal,
+    industry: previewData.industry,
+    sequenceName: previewData.sequenceName
+  });
+  
+  // Mapear correctamente los campos del preview a los campos del modelo
+  // previewData viene con: sequenceName, sequenceType, industry, brandName, emails
+  // MailflowSequence requiere: sequenceId, name, businessType, goal, brandName, emails
   const sequence = await MailflowSequence.create({
+    sequenceId,
     tenantId,
     userId,
-    sequenceName: previewData.sequenceName,
-    sequenceType: previewData.sequenceType,
-    industry: previewData.industry,
+    name: previewData.sequenceName,           // sequenceName → name
+    businessType: previewData.industry,        // industry → businessType
+    goal: mappedGoal,                          // sequenceType → goal (con mapeo)
     brandName: previewData.brandName,
     emails: previewData.emails,
+    emailTone: previewData._conversionData?.options?.emailTone || 'friendly',
     status: autoActivate ? 'active' : 'draft',
-    isActive: autoActivate,
-    emailsSent: 0,
-    emailsDelivered: 0,
-    emailsOpened: 0,
-    emailsClicked: 0
+    activatedAt: autoActivate ? new Date() : null,
+    estimatedContacts: 0,
+    stats: {
+      emailsSent: 0,
+      emailsDelivered: 0,
+      emailsOpened: 0,
+      emailsClicked: 0,
+      emailsBounced: 0,
+      emailsUnsubscribed: 0
+    }
   });
   
   // Si hay contactos pre-cargados en el preview, importarlos
@@ -102,9 +156,15 @@ async function convertMailflowPreview(previewData, tenantId, userId, options) {
   
   return {
     success: true,
-    sequenceId: sequence.sequenceId,
-    sequenceName: sequence.sequenceName,
-    status: sequence.status,
+    sequence: {
+      id: sequence.sequenceId,
+      name: sequence.name,
+      businessType: sequence.businessType,
+      goal: sequence.goal,
+      brandName: sequence.brandName,
+      status: sequence.status,
+      emailCount: sequence.emails.length
+    },
     totalContacts: previewData.contacts?.length || 0,
     message: autoActivate 
       ? 'MailFlow sequence created and activated successfully'

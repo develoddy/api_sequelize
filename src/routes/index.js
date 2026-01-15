@@ -34,6 +34,7 @@ import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from './postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
+import trackingEventsRoutes from './trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
 import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
@@ -82,6 +83,7 @@ app.use("/newsletter", newsletterRoutes);
 app.use("/postal-codes", postalCodeRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/orders/tracking", trackingRoutes); // ✅ Ruta pública tracking
+app.use("/tracking", trackingEventsRoutes); // 📊 Tracking de eventos del funnel (POST /tracking/events)
 app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
 app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)

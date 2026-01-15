@@ -52,11 +52,19 @@ export const authenticateTenant = async (req, res, next) => {
 
     // Adjuntar info del tenant al request
     req.tenant = {
+      id: tenant.id,
       tenantId: tenant.id,
       email: tenant.email,
       moduleKey: tenant.module_key,
       plan: tenant.plan,
       status: tenant.status
+    };
+    
+    // También establecer req.user para compatibilidad con otros controladores
+    req.user = {
+      id: tenant.id,
+      email: tenant.email,
+      tenantId: tenant.id
     };
 
     next();
