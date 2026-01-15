@@ -57,7 +57,8 @@ async function generateMailflowPreview(data) {
     brandName = 'Your Brand',
     sequenceType = 'onboarding',
     goals = [],
-    options = {}
+    options = {},
+    contacts = [] // Contactos opcionales del CSV
   } = data;
   
   // Determinar el goal específico
@@ -72,6 +73,20 @@ async function generateMailflowPreview(data) {
     options.emailTone || 'friendly'  // emailTone
   );
   
+  // Contactos de ejemplo si no se proporcionaron (MVP)
+  const sampleContacts = [
+    { email: 'john.doe@example.com', firstName: 'John', lastName: 'Doe' },
+    { email: 'jane.smith@example.com', firstName: 'Jane', lastName: 'Smith' },
+    { email: 'mike.wilson@example.com', firstName: 'Mike', lastName: 'Wilson' },
+    { email: 'sarah.brown@example.com', firstName: 'Sarah', lastName: 'Brown' },
+    { email: 'david.garcia@example.com', firstName: 'David', lastName: 'Garcia' }
+  ];
+  
+  // Usar contactos proporcionados o ejemplos (limitar a 5 para MVP)
+  const previewContacts = contacts && contacts.length > 0 
+    ? contacts.slice(0, 5)  // Limitar a primeros 5 contactos
+    : sampleContacts;
+  
   // Retornar preview sin guardar en BD
   return {
     sequenceName: sequence.name,
@@ -79,10 +94,12 @@ async function generateMailflowPreview(data) {
     industry,
     brandName,
     emails: sequence.emails,
+    contacts: previewContacts,  // Incluir contactos en el preview
     stats: {
       totalEmails: sequence.emails.length,
       estimatedDuration: `${Math.ceil(sequence.emails[sequence.emails.length - 1].delayHours / 24)} days`,
-      sequenceGoal: goal
+      sequenceGoal: goal,
+      previewContacts: previewContacts.length
     },
     // Datos adicionales para conversión
     _conversionData: {
