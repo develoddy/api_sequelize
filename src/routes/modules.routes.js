@@ -80,4 +80,7 @@ router.post('/modules/:key/archive', auth.verifyAdmin, modulesController.archive
 // Marcar como validado
 router.patch('/modules/:key/validate', auth.verifyAdmin, modulesController.markAsValidated);
 
+// 🎬 Configurar preview mode
+router.post('/modules/:key/configure-preview', auth.verifyAdmin, modulesController.configurePreview);
+
 export default router;

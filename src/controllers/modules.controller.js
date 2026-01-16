@@ -741,6 +741,65 @@ export const getPublicModuleById = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/modules/:key/configure-preview
+ * Configurar preview mode para un módulo
+ */
+export const configurePreview = async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    // Buscar módulo
+    const module = await Module.findOne({
+      where: { key }
+    });
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        error: 'Module not found'
+      });
+    }
+    
+    // Configuración predeterminada según el tipo de módulo
+    const defaultPreviewConfig = {
+      enabled: true,
+      route: `/preview/${key}`,
+      public_endpoint: `/api/modules/${key}/preview/generate`,
+      show_in_store: true,
+      demo_button_text: 'Try Demo - No signup required',
+      generator_function: `generate${key.charAt(0).toUpperCase() + key.slice(1)}Preview`,
+      conversion_config: {
+        recovery_key: `${key}_preview`,
+        redirect_route: `/${key}/onboarding`,
+        auto_activate: true
+      },
+      rate_limiting: {
+        max_requests: 10,
+        window_minutes: 15
+      }
+    };
+    
+    // Actualizar módulo
+    await module.update({
+      preview_config: defaultPreviewConfig
+    });
+    
+    res.json({
+      success: true,
+      message: `Preview mode configured for module '${module.name}'`,
+      config: defaultPreviewConfig
+    });
+    
+  } catch (error) {
+    console.error('❌ Error configuring preview:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 export default {
   listModules,
   getModuleByKey,
@@ -749,6 +808,7 @@ export default {
   archiveModule,
   markAsValidated,
   getModulesSummary,
+  configurePreview,
   // Public endpoints
   listPublicModules,
   getPublicModuleByKey,
