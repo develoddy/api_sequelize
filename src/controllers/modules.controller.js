@@ -10,6 +10,48 @@ import { Op } from 'sequelize';
  */
 
 /**
+ * Normalizar saas_config.dashboard_route
+ * Asegura formato consistente: sin slashes iniciales, sin /dashboard al final
+ * @param {Object} saasConfig - Configuración SaaS
+ * @returns {Object} - Configuración normalizada
+ */
+function normalizeSaasConfig(saasConfig) {
+  if (!saasConfig) return saasConfig;
+  
+  const config = typeof saasConfig === 'string' ? JSON.parse(saasConfig) : { ...saasConfig };
+  
+  if (config.dashboard_route !== undefined) {
+    const original = config.dashboard_route;
+    
+    // Si está vacío o solo tiene espacios, convertir a null
+    if (!original || original.trim() === '') {
+      config.dashboard_route = null;
+    } else {
+      // Eliminar slashes iniciales y finales
+      let route = original.replace(/^\/+/, '').replace(/\/+$/, '');
+      
+      // Normalizar múltiples slashes consecutivos a uno solo
+      route = route.replace(/\/+/g, '/');
+      
+      // 🚨 FIX: Eliminar /dashboard al final si existe (ruta errónea común)
+      route = route.replace(/\/dashboard$/, '');
+      
+      // Eliminar slashes finales otra vez después de eliminar /dashboard
+      route = route.replace(/\/+$/, '');
+      
+      // Si quedó vacío, retornar null
+      config.dashboard_route = route || null;
+      
+      if (original !== config.dashboard_route) {
+        console.log(`📝 dashboard_route normalizado: "${original}" → "${config.dashboard_route}"`);
+      }
+    }
+  }
+  
+  return config;
+}
+
+/**
  * GET /api/modules
  * Listar todos los módulos
  */
@@ -126,7 +168,7 @@ export const createModule = async (req, res) => {
       tech_stack: tech_stack || [],
       requirements: requirements || {},
       // 🚀 SaaS config
-      saas_config: saas_config || null
+      saas_config: saas_config ? normalizeSaasConfig(saas_config) : null
     });
 
     console.log(`✅ Module created: ${module.name} (${module.key})`);
@@ -207,7 +249,7 @@ export const updateModule = async (req, res) => {
     if (tech_stack !== undefined) updates.tech_stack = tech_stack;
     if (requirements !== undefined) updates.requirements = requirements;
     // 🚀 SaaS config
-    if (saas_config !== undefined) updates.saas_config = saas_config;
+    if (saas_config !== undefined) updates.saas_config = normalizeSaasConfig(saas_config);
 
     await module.update(updates);
 
