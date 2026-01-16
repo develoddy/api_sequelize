@@ -2,11 +2,11 @@ import rateLimit from 'express-rate-limit';
 
 /**
  * Rate limiter para registro de usuarios
- * Máximo 5 registros por hora por IP
+ * Máximo 50 registros por hora por IP (ajustado para testing)
  */
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
-  max: 5, // 5 requests por ventana
+  max: process.env.NODE_ENV === 'production' ? 20 : 100, // 🔧 20 en prod, 100 en dev
   message: {
     success: false,
     message: 'Demasiados intentos de registro. Por favor intenta de nuevo en 1 hora.'
