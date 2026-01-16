@@ -139,8 +139,8 @@ export const startTrial = async (req, res) => {
       },
       token,
       dashboard_url: module.saas_config?.dashboard_route 
-        ? `/app/${module.saas_config.dashboard_route}` 
-        : `/app/${moduleKey}`
+        ? `/${module.saas_config.dashboard_route.replace(/^\/+/, '')}` // 🔧 Eliminar slashes iniciales duplicados
+        : `/${moduleKey}`
     });
   } catch (error) {
     console.error('❌ Error starting trial:', error);
@@ -252,8 +252,8 @@ export const loginTenant = async (req, res) => {
         },
         token,
         dashboard_url: specificTenant.module?.saas_config?.dashboard_route 
-          ? `/app/${specificTenant.module.saas_config.dashboard_route}` 
-          : `/app/${moduleKey}`
+          ? `/${specificTenant.module.saas_config.dashboard_route.replace(/^\/+/, '')}` // 🔧 Eliminar slashes iniciales
+          : `/${moduleKey}`
       });
     }
 
@@ -269,7 +269,7 @@ export const loginTenant = async (req, res) => {
       days_remaining: tenant.status === 'trial' ? tenant.getDaysRemainingInTrial() : null,
       has_access: tenant.hasAccess(),
       dashboard_url: tenant.module?.saas_config?.dashboard_route 
-        ? `/${tenant.module.saas_config.dashboard_route}` 
+        ? `/${tenant.module.saas_config.dashboard_route.replace(/^\/+/, '')}` // 🔧 Eliminar slashes iniciales
         : `/${tenant.module_key}`
     }));
 
