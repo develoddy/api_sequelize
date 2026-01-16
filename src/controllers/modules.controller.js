@@ -11,7 +11,7 @@ import { Op } from 'sequelize';
 
 /**
  * Normalizar saas_config.dashboard_route
- * Asegura formato consistente: sin slashes iniciales, sin /dashboard al final
+ * Asegura formato consistente: CON slash inicial, sin /dashboard duplicado
  * @param {Object} saasConfig - Configuración SaaS
  * @returns {Object} - Configuración normalizada
  */
@@ -27,8 +27,8 @@ function normalizeSaasConfig(saasConfig) {
     if (!original || original.trim() === '') {
       config.dashboard_route = null;
     } else {
-      // Eliminar slashes iniciales y finales
-      let route = original.replace(/^\/+/, '').replace(/\/+$/, '');
+      // Eliminar slashes finales
+      let route = original.trim().replace(/\/+$/, '');
       
       // Normalizar múltiples slashes consecutivos a uno solo
       route = route.replace(/\/+/g, '/');
@@ -38,6 +38,11 @@ function normalizeSaasConfig(saasConfig) {
       
       // Eliminar slashes finales otra vez después de eliminar /dashboard
       route = route.replace(/\/+$/, '');
+      
+      // 🔧 ASEGURAR que tenga slash inicial (es una ruta de frontend)
+      if (route && !route.startsWith('/')) {
+        route = '/' + route;
+      }
       
       // Si quedó vacío, retornar null
       config.dashboard_route = route || null;
