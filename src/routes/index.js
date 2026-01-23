@@ -92,7 +92,7 @@ app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
 app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
-app.use("/saas-admin", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant CRUD)
+app.use("/admin/saas", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant CRUD + Tracking Events)
 app.use("/api", healthRoutes); // 🏥 Health Check (GET /api/health)
 app.use("/mailflow", mailflowRoutes); // 📧 MailFlow - Onboarding Sequences
 app.use("/modules", modulePreviewRoutes); // 🎯 Generic Preview Mode (Public + Auth endpoints)

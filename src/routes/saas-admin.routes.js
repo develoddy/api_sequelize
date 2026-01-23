@@ -19,4 +19,10 @@ router.post('/tenants/:id/change-plan', logAdminAction('CHANGE_PLAN'), saasAdmin
 router.post('/tenants/:id/notes', saasAdminController.addNote);
 router.delete('/tenants/:id', logAdminAction('DELETE_TENANT'), saasAdminController.deleteTenant);
 
+// Tracking Events Management
+router.get('/tracking-events', saasAdminController.getTrackingEvents);
+router.get('/tracking-events/modules', saasAdminController.getUniqueModules);
+router.get('/tracking-events/event-types', saasAdminController.getUniqueEvents);
+router.get('/tracking-events/export', saasAdminController.exportTrackingEventsToCSV);
+
 export default router;
