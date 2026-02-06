@@ -46,6 +46,7 @@ import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Managem
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
 import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
 import modulePreviewRoutes from './modulePreview.routes.js'; // 🎯 Generic Preview Mode for any SaaS module
+import videoExpressRoutes from './videoExpress.routes.js'; // 🎬 Product Video Express - AI Video Generation
 
 const app = express();
 
@@ -96,5 +97,6 @@ app.use("/admin/saas", saasAdminRoutes); // 🔧 SaaS Admin Management (Tenant C
 app.use("/api", healthRoutes); // 🏥 Health Check (GET /api/health)
 app.use("/mailflow", mailflowRoutes); // 📧 MailFlow - Onboarding Sequences
 app.use("/modules", modulePreviewRoutes); // 🎯 Generic Preview Mode (Public + Auth endpoints)
+app.use("/video-express", videoExpressRoutes); // 🎬 Product Video Express - AI Video Generation
 
 export default app;

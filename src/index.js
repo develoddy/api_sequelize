@@ -188,6 +188,7 @@ import './models/TenantNote.js';
 import './models/StripeWebhookLog.js';
 import './models/MailflowSequence.js';
 import './models/MailflowContact.js';
+import './models/VideoJob.js';
 
 // 🎯 Preview Mode Services (Auto-register generators)
 import './services/mailflowPreview.js';
@@ -254,6 +255,14 @@ async function main() {
                 startTrialNotificationsCron();
             } catch (error) {
                 console.error('❌ Error inicializando trial notifications cron:', error);
+            }
+
+            // Inicializar cron de Video Express polling
+            try {
+                const { startVideoExpressPolling } = await import('./cron/videoExpressPolling.js');
+                startVideoExpressPolling();
+            } catch (error) {
+                console.error('❌ Error inicializando Video Express polling:', error);
             }
         });
 
