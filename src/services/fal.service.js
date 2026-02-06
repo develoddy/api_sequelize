@@ -16,11 +16,19 @@ import axios from 'axios';
 
 // Configuración de la API
 const FAL_API_KEY = process.env.FAL_API_KEY;
-const FAL_API_BASE_URL = 'https://fal.run';
+// ✅ Usando Queue API (recomendado por fal.ai) - asíncrono y confiable
+const FAL_API_BASE_URL = 'https://queue.fal.run';
 
-// Modelo recomendado para image-to-video estable
-// Alternativas: 'fal-ai/stable-video-diffusion', 'fal-ai/fast-animatediff-turbo'
-const FAL_MODEL = process.env.FAL_MODEL || 'fal-ai/fast-animatediff-turbo';
+// Modelo para image-to-video (Stable Video Diffusion es el más estable)
+// Alternativas: 'fal-ai/fast-svd', 'fal-ai/stable-video', 'fal-ai/animatediff'
+const FAL_MODEL = process.env.FAL_MODEL || 'fal-ai/fast-svd';
+
+// 🎭 Modo simulación (para testing sin gastar créditos)
+const SIMULATION_MODE = process.env.FAL_SIMULATION_MODE === 'true';
+
+if (SIMULATION_MODE) {
+    console.log('🎭 FAL.AI MODO SIMULACIÓN ACTIVADO - No se consumirán créditos');
+}
 
 // Timeout para requests (30 segundos)
 const REQUEST_TIMEOUT = 30000;
@@ -93,6 +101,20 @@ function validateApiKey() {
 export async function submitJob(imageUrl, animationStyle = 'parallax') {
     validateApiKey();
 
+    // 🎭 MODO SIMULACIÓN - No consume créditos
+    if (SIMULATION_MODE) {
+        console.log('🎭 SIMULACIÓN: Generando video fake (no se envía a fal.ai)...');
+        const fakeRequestId = `sim-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log('✅ Job simulado creado con ID:', fakeRequestId);
+        
+        return {
+            requestId: fakeRequestId,
+            status: 'IN_QUEUE',
+            message: 'Job simulado - proceso instantáneo (sin usar créditos reales)'
+        };
+    }
+
     // Validar que el estilo de animación sea válido
     if (!ANIMATION_PROMPTS[animationStyle]) {
         throw new Error(`Estilo de animación inválido: ${animationStyle}`);
@@ -101,45 +123,45 @@ export async function submitJob(imageUrl, animationStyle = 'parallax') {
     const styleConfig = ANIMATION_PROMPTS[animationStyle];
 
     try {
-        // Payload para fal.ai
+        // Payload para fal-ai/fast-svd (Stable Video Diffusion)
         const payload = {
-            // Imagen de entrada
+            // Imagen de entrada (debe ser URL accesible públicamente)
             image_url: imageUrl,
-
-            // Prompt dinámico según estilo
-            prompt: styleConfig.prompt,
-            negative_prompt: NEGATIVE_PROMPT,
-
-            // Parámetros de generación (críticos para estabilidad)
-            motion_strength: styleConfig.motion_strength, // 0.3-0.4 = movimiento sutil
-            num_frames: 30,           // 5 segundos @ 6fps
-            fps: 6,                   // frame rate (óptimo para redes sociales)
-            guidance_scale: 15,       // adherencia fuerte a imagen original
-            num_inference_steps: 20,  // balance velocidad/calidad
-
-            // Output
-            output_format: 'mp4',
-            output_quality: 'high',
-
-            // Semilla aleatoria para variabilidad
-            seed: Math.floor(Math.random() * 1000000)
+            
+            // Parámetros para Stable Video Diffusion
+            motion_bucket_id: 127,    // Controla la cantidad de movimiento (1-255, default 127)
+            fps: 6,                   // Frame rate (default 6)
+            cond_aug: 0.02            // Augmentation condicional (default 0.02)
         };
 
         console.log(`📤 Enviando job a fal.ai (${animationStyle})...`);
+        console.log(`📍 Endpoint: ${FAL_API_BASE_URL}/${FAL_MODEL}`);
+        console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
+        console.log(`📍 Endpoint: ${FAL_API_BASE_URL}/${FAL_MODEL}`);
 
-        // POST al endpoint de fal.ai
+        // POST al endpoint de fal.ai Queue API
         const response = await falClient.post(`/${FAL_MODEL}`, payload);
 
-        console.log('✅ Job enviado a fal.ai:', response.data.request_id);
+        console.log('✅ Respuesta de fal.ai:', JSON.stringify(response.data, null, 2));
+
+        // Queue API retorna request_id (o puede ser solo 'id')
+        const requestId = response.data.request_id || response.data.id;
+        
+        if (!requestId) {
+            throw new Error('fal.ai no retornó request_id en la respuesta');
+        }
+
+        console.log('✅ Job enviado a fal.ai con request_id:', requestId);
 
         return {
-            requestId: response.data.request_id,
+            requestId,
             status: response.data.status || 'IN_QUEUE',
             message: 'Job enviado exitosamente a fal.ai'
         };
 
     } catch (error) {
         console.error('❌ Error al enviar job a fal.ai:', error.message);
+        console.error('❌ Error completo:', error.response?.data || error);
 
         // Manejo de errores específicos
         if (error.response) {
@@ -147,14 +169,25 @@ export async function submitJob(imageUrl, animationStyle = 'parallax') {
             const status = error.response.status;
             const errorData = error.response.data;
 
+            console.error(`❌ Status HTTP: ${status}`);
+            console.error(`❌ Response data:`, errorData);
+
             if (status === 401) {
-                throw new Error('FAL_API_KEY inválida o expirada');
+                throw new Error('FAL_API_KEY inválida o no autorizada');
+            } else if (status === 403) {
+                // Error 403 específico de balance agotado
+                if (errorData.detail && errorData.detail.includes('Exhausted balance')) {
+                    throw new Error('🚨 SIN SALDO: Tu cuenta de fal.ai no tiene créditos. Recarga en https://fal.ai/dashboard/billing');
+                }
+                throw new Error('Acceso denegado por fal.ai. Verifica tu cuenta.');
             } else if (status === 429) {
                 throw new Error('Límite de requests de fal.ai alcanzado. Intenta en unos minutos.');
             } else if (status === 400) {
-                throw new Error(`Imagen inválida o parámetros incorrectos: ${errorData.error || 'unknown'}`);
+                throw new Error(`Imagen inválida o parámetros incorrectos: ${JSON.stringify(errorData)}`);
+            } else if (status === 404) {
+                throw new Error(`Modelo no encontrado: ${FAL_MODEL}. Verifica FAL_MODEL en .env`);
             } else {
-                throw new Error(`Error de fal.ai (${status}): ${errorData.error || error.message}`);
+                throw new Error(`Error de fal.ai (${status}): ${JSON.stringify(errorData)}`);
             }
         } else if (error.code === 'ECONNABORTED') {
             throw new Error('Timeout al conectar con fal.ai. Intenta nuevamente.');
@@ -177,32 +210,91 @@ export async function checkJobStatus(requestId) {
         throw new Error('requestId es requerido para checkJobStatus');
     }
 
+    // 🎭 MODO SIMULACIÓN - Simula completación instantánea
+    if (SIMULATION_MODE && requestId.startsWith('sim-')) {
+        console.log('🎭 SIMULACIÓN: Job completado instantáneamente');
+        
+        // URL de video de ejemplo (puedes usar cualquier video MP4 público)
+        const exampleVideoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        
+        return {
+            status: 'completed',
+            output: {
+                video: exampleVideoUrl
+            },
+            error: null,
+            progress: 100,
+            processingTimeMs: 1500
+        };
+    }
+
     try {
         console.log(`🔍 Consultando estado del job: ${requestId}...`);
 
         // GET al endpoint de status
-        const response = await falClient.get(`/${FAL_MODEL}/requests/${requestId}/status`);
-
-        const data = response.data;
+        const statusResponse = await falClient.get(`/${FAL_MODEL}/requests/${requestId}/status`);
+        const statusData = statusResponse.data;
 
         // Mapear estados de fal.ai a estados internos
         let status = 'processing';
-        if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
+        if (statusData.status === 'COMPLETED' || statusData.status === 'SUCCESS') {
             status = 'completed';
-        } else if (data.status === 'FAILED' || data.status === 'ERROR') {
+        } else if (statusData.status === 'FAILED' || statusData.status === 'ERROR') {
             status = 'failed';
-        } else if (data.status === 'IN_QUEUE' || data.status === 'IN_PROGRESS') {
+        } else if (statusData.status === 'IN_QUEUE' || statusData.status === 'IN_PROGRESS') {
             status = 'processing';
         }
 
         console.log(`📊 Estado del job ${requestId}: ${status}`);
 
+        // 🔍 Queue API: Si completó, obtener resultado del response_url
+        if (status === 'completed' && statusData.response_url) {
+            console.log('📥 Obteniendo resultado final de:', statusData.response_url);
+            
+            try {
+                // Hacer request COMPLETO a la URL (no usar baseURL)
+                const resultResponse = await axios.get(statusData.response_url, {
+                    headers: {
+                        'Authorization': `Key ${FAL_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 30000
+                });
+                const resultData = resultResponse.data;
+                
+                console.log('📦 Respuesta completa con output:', JSON.stringify(resultData, null, 2));
+                
+                return {
+                    status,
+                    output: resultData.data || resultData.output || resultData,  // Output con video
+                    error: resultData.error || null,
+                    progress: 100,
+                    processingTimeMs: statusData.metrics?.inference_time || null
+                };
+            } catch (fetchError) {
+                console.error('❌ Error al obtener resultado:', fetchError.message);
+                if (fetchError.response) {
+                    console.error('❌ Status:', fetchError.response.status);
+                    console.error('❌ Data:', fetchError.response.data);
+                }
+                // Fallback: intentar con output del status (por si acaso)
+                return {
+                    status,
+                    output: statusData.output || null,
+                    error: statusData.error || null,
+                    progress: statusData.progress || null,
+                    processingTimeMs: statusData.metrics?.inference_time || null
+                };
+            }
+        }
+
+        // Si aún procesando o hay output en status
         return {
             status,
-            output: data.output || null,           // URL del video si está completo
-            error: data.error || null,             // Mensaje de error si falló
-            progress: data.progress || null,       // Porcentaje de progreso (si disponible)
-            processingTimeMs: data.processing_time_ms || null
+            output: statusData.output || null,
+            error: statusData.error || null,
+            progress: statusData.progress || null,
+            processingTimeMs: statusData.metrics?.inference_time || null
         };
 
     } catch (error) {

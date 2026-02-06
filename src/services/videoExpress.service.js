@@ -160,6 +160,27 @@ async function checkAndUpdateJob(job) {
     try {
         console.log(`🔍 Consultando estado de job ${job.id} (fal: ${job.fal_request_id})...`);
 
+        // 🎭 MODO SIMULACIÓN: Completar inmediatamente
+        const isSimulation = job.fal_request_id && job.fal_request_id.startsWith('sim-');
+        
+        if (isSimulation) {
+            console.log(`🎭 SIMULACIÓN: Completando job ${job.id} instantáneamente...`);
+            
+            const processingTime = Date.now() - new Date(job.created_at).getTime();
+            await job.update({
+                status: 'completed',
+                output_video_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                output_video_filename: 'simulation-video.mp4',
+                duration_seconds: 5.0,
+                processing_time_ms: processingTime,
+                fal_processing_time_ms: 1500,
+                completed_at: new Date()
+            });
+            
+            console.log(`✅ Job simulado ${job.id} completado (sin usar créditos reales)`);
+            return;
+        }
+
         // Timeout check: si lleva más de 5 minutos, marcar como fallido
         const elapsedTime = Date.now() - new Date(job.created_at).getTime();
         if (elapsedTime > MAX_PROCESSING_TIME_MS) {
@@ -180,10 +201,20 @@ async function checkAndUpdateJob(job) {
             console.log(`✅ Job ${job.id} completado en fal.ai`);
 
             // Descargar video y guardarlo localmente
-            const videoUrl = statusResponse.output?.video_url || statusResponse.output?.url;
+            // fal.ai puede devolver la URL en diferentes formatos:
+            // - output.video.url (fast-svd)
+            // - output.video_url (otros modelos)
+            // - output.url (legacy)
+            const videoUrl = statusResponse.output?.video?.url 
+                          || statusResponse.output?.video_url 
+                          || statusResponse.output?.url;
+            
+            console.log('🔍 DEBUG output completo:', JSON.stringify(statusResponse.output, null, 2));
+            console.log('🎬 Video URL extraída:', videoUrl);
             
             if (!videoUrl) {
-                throw new Error('fal.ai no devolvió URL de video');
+                console.error('❌ Estructura de output recibida:', statusResponse.output);
+                throw new Error('fal.ai no devolvió URL de video en ningún formato conocido');
             }
 
             const { localPath, filename } = await downloadVideo(videoUrl, job.id);
@@ -291,10 +322,15 @@ async function getPublicImageUrl(localPath) {
     // En desarrollo: asumir que las imágenes están en /uploads
     // y son accesibles públicamente via http://localhost:4000/uploads/...
     
-    const baseUrl = process.env.PUBLIC_API_URL || 'http://localhost:4000';
-    const relativePath = localPath.replace(/.*\/uploads\//, '/uploads/');
+    const baseUrl = (process.env.PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, ''); // Quitar / final
     
-    return `${baseUrl}${relativePath}`;
+    // Extraer path relativo desde 'uploads/' (puede venir con o sin / inicial)
+    let relativePath = localPath.replace(/.*?(uploads\/.*)$/, '/$1'); // Asegurar / inicial
+    
+    const fullUrl = `${baseUrl}${relativePath}`;
+    console.log(`🌐 URL pública generada: ${fullUrl}`);
+    
+    return fullUrl;
 }
 
 /**

@@ -36,6 +36,9 @@ const __dirname = path.dirname(__filename);
 export const createJob = async (req, res) => {
     try {
         console.log('📥 POST /api/video-express/jobs');
+        console.log('👤 Usuario autenticado:', req.user?.id, req.user?.email);
+        console.log('📁 Archivo recibido:', req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'NO FILE');
+        console.log('🎨 Animation style:', req.body.animation_style);
 
         // Validar autenticación (asumimos que existe middleware de auth)
         // req.user debe existir después del middleware de autenticación
@@ -83,12 +86,22 @@ export const createJob = async (req, res) => {
         }
 
         // Crear job
+        console.log(`🎬 Creando video job para usuario ${userId}...`);
         const job = await VideoExpressService.createVideoJob(
             userId,
             imagePath,
             imageFilename,
             animation_style
         );
+
+        console.log('✅ Job creado exitosamente');
+        console.log('📊 Job ID:', job.id);
+        console.log('📊 Estado final:', job.status);
+        console.log('📊 Fal Request ID:', job.fal_request_id || 'PENDIENTE');
+        
+        if (job.error_message) {
+            console.log('⚠️ Error asociado:', job.error_message);
+        }
 
         return res.status(201).json({
             status: 201,
@@ -106,6 +119,8 @@ export const createJob = async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error al crear job:', error);
+        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ Error completo:', JSON.stringify(error, null, 2));
 
         return res.status(500).json({
             status: 500,
@@ -420,9 +435,16 @@ export const downloadVideo = async (req, res) => {
             });
         }
 
-        // Verificar que el archivo existe
-        const videoPath = job.output_video_url;
-        if (!fs.existsSync(videoPath)) {
+        const videoUrl = job.output_video_url;
+
+        // 🎭 MODO SIMULACIÓN: Si es URL externa, hacer redirect
+        if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
+            console.log(`🎭 SIMULACIÓN: Redirigiendo a video externo: ${videoUrl}`);
+            return res.redirect(videoUrl);
+        }
+
+        // Modo normal: servir archivo local
+        if (!fs.existsSync(videoUrl)) {
             return res.status(404).json({
                 status: 404,
                 message: 'Archivo de video no encontrado en el servidor'
@@ -431,7 +453,7 @@ export const downloadVideo = async (req, res) => {
 
         // Enviar archivo
         const filename = job.output_video_filename || `video-${job.id}.mp4`;
-        res.download(videoPath, filename, (err) => {
+        res.download(videoUrl, filename, (err) => {
             if (err) {
                 console.error('❌ Error al enviar archivo:', err);
                 if (!res.headersSent) {

@@ -26,16 +26,19 @@ export default {
     },
     verifyAdmin: async(req, res, next) => {
         try {
-            console.log('🔍 [verifyAdmin] Headers received:', req.headers.token ? 'Token present' : 'No token');
+            // ✅ Aceptar token desde header O query param (para descargas con window.open)
+            const tokenValue = req.headers.token || req.query.token;
             
-            if ( !req.headers.token ) {
+            console.log('🔍 [verifyAdmin] Headers received:', tokenValue ? 'Token present' : 'No token');
+            
+            if ( !tokenValue ) {
                 console.log('❌ [verifyAdmin] No token provided');
                 return res.status(401).send({
                     message: 'No has enviado el token'
                 });
             }
             
-            const response = await token.decode( req.headers.token );
+            const response = await token.decode( tokenValue );
             console.log('🔍 [verifyAdmin] Token decode result:', response);
             
             if ( response ) {
