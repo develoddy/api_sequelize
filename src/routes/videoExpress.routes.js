@@ -23,7 +23,7 @@ const router = express.Router();
 // Configurar multer para uploads de imágenes
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = './uploads/video-express';
+        const uploadDir = './public/uploads/modules/video-express';
         fs.mkdirSync(uploadDir, { recursive: true });
         cb(null, uploadDir);
     },

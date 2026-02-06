@@ -29,7 +29,7 @@ const __dirname = path.dirname(__filename);
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/jpg'];
-const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || path.join(__dirname, '../../uploads/video-express');
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || path.join(__dirname, '../../public/uploads/modules/video-express');
 const MAX_PROCESSING_TIME_MS = 5 * 60 * 1000; // 5 minutos timeout
 
 /**
@@ -319,16 +319,28 @@ async function downloadVideo(videoUrl, jobId) {
  * @returns {Promise<string>} - URL pública
  */
 async function getPublicImageUrl(localPath) {
-    // En desarrollo: asumir que las imágenes están en /uploads
-    // y son accesibles públicamente via http://localhost:4000/uploads/...
+    // En desarrollo: asumir que las imágenes están en /public/uploads/modules
+    // y son accesibles públicamente via http://localhost:4000/uploads/modules/...
     
     const baseUrl = (process.env.PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, ''); // Quitar / final
     
-    // Extraer path relativo desde 'uploads/' (puede venir con o sin / inicial)
-    let relativePath = localPath.replace(/.*?(uploads\/.*)$/, '/$1'); // Asegurar / inicial
+    // Extraer path desde 'public/' y convertir a URL pública
+    // Si el path contiene 'public/', extraemos desde ahí
+    // Ejemplo: './public/uploads/modules/video-express/file.jpg' -> '/uploads/modules/video-express/file.jpg'
+    let relativePath;
+    if (localPath.includes('public/')) {
+        relativePath = localPath.replace(/.*?public(\/?.*)$/, '$1');
+        if (!relativePath.startsWith('/')) relativePath = '/' + relativePath;
+    } else if (localPath.includes('uploads/')) {
+        // Fallback: si solo tiene 'uploads/', asume que falta 'modules'
+        relativePath = localPath.replace(/.*?(uploads\/.*)$/, '/$1');
+    } else {
+        // Si no tiene ni 'public' ni 'uploads', error
+        throw new Error(`Path inválido: ${localPath}`);
+    }
     
     const fullUrl = `${baseUrl}${relativePath}`;
-    console.log(`🌐 URL pública generada: ${fullUrl}`);
+    console.log(`🌐 URL pública generada desde ${localPath}: ${fullUrl}`);
     
     return fullUrl;
 }
