@@ -373,6 +373,9 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   // 6. Calcular tendencias
   const trends = calculateTrends(events, period);
   
+  // 7. Validar criterios de acciones (nuevo)
+  const actionCriteria = validateActionCriteria(kpis, healthScore, events);
+  
   return {
     moduleKey,
     moduleName: capitalize(moduleKey.replace(/-/g, ' ')),
@@ -381,6 +384,7 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
     recommendation,
     alerts,
     trends,
+    actionCriteria, // Nuevo campo
     period,
     date_from: dateFrom.toISOString(),
     date_to: dateTo.toISOString()
@@ -416,8 +420,9 @@ function calculateKPIs(events, moduleKey) {
     }
   }).length;
   
+  // ✅ Downloads: solo eventos explícitos de descarga (NO contar 'generated')
   const downloads = events.filter(e => 
-    e.event.includes('download') || e.event.includes('generated')
+    e.event.includes('download') && !e.event.includes('generated')
   ).length;
   
   // Feedback
@@ -676,6 +681,95 @@ function generateRecommendation(kpis, healthScore, totalEvents) {
       'Optimizar conversión'
     ]
   };
+}
+
+/**
+ * Validar criterios de acciones del motor
+ * Determina qué acciones están habilitadas y por qué
+ */
+function validateActionCriteria(kpis, healthScore, events) {
+  const daysRunning = calculateDaysRunning(events);
+  
+  // 🟢 Criterios para CREAR MÓDULO OFICIAL
+  const promotionCriteria = {
+    sessions_min: kpis.totalSessions >= 20,
+    completions_min: kpis.wizard_completions >= 5,
+    feedback_min: kpis.total_feedback >= 5,
+    days_min: daysRunning >= 3,
+    // Al menos una señal positiva fuerte
+    signal_positive: (
+      kpis.conversion_rate >= 15 ||
+      kpis.helpful_rate >= 60 ||
+      kpis.retention_rate >= 20
+    )
+  };
+  
+  const canPromote = Object.values(promotionCriteria).every(v => v === true);
+  
+  // 🔴 Criterios para ARCHIVAR
+  const archiveCriteria = {
+    sessions_min: kpis.totalSessions >= 15,
+    // Al menos una señal negativa clara
+    signal_negative: (
+      (kpis.wizard_completions === 0 && kpis.wizard_starts >= 10) ||
+      (kpis.helpful_rate < 30 && kpis.total_feedback >= 5) ||
+      (healthScore < 40 && kpis.totalSessions >= 20)
+    )
+  };
+  
+  const canArchive = Object.values(archiveCriteria).every(v => v === true);
+  
+  // ⏸️ CONTINUAR siempre disponible
+  const canContinue = true;
+  
+  return {
+    can_promote: canPromote,
+    can_archive: canArchive,
+    can_continue: canContinue,
+    promotion_criteria: promotionCriteria,
+    archive_criteria: archiveCriteria,
+    days_running: daysRunning,
+    blocking_reasons: {
+      promote: !canPromote ? getBlockingReasons(promotionCriteria, 'promote') : [],
+      archive: !canArchive ? getBlockingReasons(archiveCriteria, 'archive') : []
+    }
+  };
+}
+
+/**
+ * Calcular días desde el primer evento
+ */
+function calculateDaysRunning(events) {
+  if (events.length === 0) return 0;
+  
+  const firstEventDate = new Date(events[0].timestamp);
+  const now = new Date();
+  const diffMs = now - firstEventDate;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
+/**
+ * Obtener razones específicas del bloqueo
+ */
+function getBlockingReasons(criteria, actionType) {
+  const reasons = [];
+  
+  if (actionType === 'promote') {
+    if (!criteria.sessions_min) reasons.push('Mínimo 20 sesiones requeridas');
+    if (!criteria.completions_min) reasons.push('Mínimo 5 wizard completados requeridos');
+    if (!criteria.feedback_min) reasons.push('Mínimo 5 feedbacks requeridos');
+    if (!criteria.days_min) reasons.push('Mínimo 3 días de validación requeridos');
+    if (!criteria.signal_positive) reasons.push('Necesita al menos una señal positiva fuerte (conversión ≥15% o feedback ≥60% o retención ≥20%)');
+  }
+  
+  if (actionType === 'archive') {
+    if (!criteria.sessions_min) reasons.push('Necesita al menos 15 sesiones para confirmar el patrón');
+    if (!criteria.signal_negative) reasons.push('No hay señal negativa clara suficiente para archivar');
+  }
+  
+  return reasons;
 }
 
 /**

@@ -65,10 +65,10 @@ const upload = multer({
 // Rate Limiters
 // ==========================================
 
-// Upload: 10 uploads por hora por IP
+// Upload: 10 uploads por hora por IP (100 en dev)
 const uploadLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hora
-    max: 10,
+    max: process.env.NODE_ENV === 'production' ? 10 : 100, // 🔧 10 en prod, 100 en dev
     message: { 
         success: false, 
         error: 'Demasiadas subidas. Intenta en una hora.' 
@@ -77,10 +77,10 @@ const uploadLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// Generate: 5 generaciones por hora por IP
+// Generate: 5 generaciones por hora por IP (50 en dev)
 const generateLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 5,
+    max: process.env.NODE_ENV === 'production' ? 5 : 50, // 🔧 5 en prod, 50 en dev
     message: { 
         success: false, 
         error: 'Demasiadas generaciones. Intenta en una hora.' 
