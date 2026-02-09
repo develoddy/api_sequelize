@@ -18,8 +18,8 @@ export const VideoJob = sequelize.define('video_jobs', {
     // Relación con usuario
     user_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        comment: 'ID del usuario admin que creó el job'
+        allowNull: true, // Nullable para preview jobs (sin auth)
+        comment: 'ID del usuario admin que creó el job (null para preview)'
     },
 
     // INPUT: Imagen del producto
@@ -48,7 +48,39 @@ export const VideoJob = sequelize.define('video_jobs', {
         type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed'),
         allowNull: false,
         defaultValue: 'pending',
-        comment: 'Estado actual: pending → processing → completed/failed'
+        comment: 'Estado actual del job'
+    },
+
+    // Preview Mode (jobs sin autenticación)
+    is_preview: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Flag para jobs de preview (sin auth)'
+    },
+
+    ip_address: {
+        type: DataTypes.STRING(45),
+        allowNull: true,
+        comment: 'IP del usuario (para rate limiting en preview)'
+    },
+
+    preview_objective: {
+        type: DataTypes.ENUM('organic', 'ads'),
+        allowNull: true,
+        comment: 'Objetivo seleccionado en preview'
+    },
+
+    preview_feedback: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        comment: 'Feedback del usuario: ¿el video fue útil?'
+    },
+
+    preview_feedback_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Cuándo se dio el feedback'
     },
 
     // Integración con fal.ai

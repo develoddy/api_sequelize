@@ -78,7 +78,7 @@ export async function createVideoJob(userId, imagePath, imageFilename, animation
  * 
  * @param {string} jobId - UUID del job
  */
-async function processJob(jobId) {
+export async function processJob(jobId) {
     try {
         const job = await VideoJob.findByPk(jobId);
         
@@ -87,14 +87,17 @@ async function processJob(jobId) {
         }
 
         console.log(`⚙️ Procesando job ${jobId}...`);
+        console.log(`📋 Job info: is_preview=${job.is_preview}, status=${job.status}, image=${job.product_image_url}`);
 
         // Obtener URL pública de la imagen
         // En producción, esto debería ser una URL de S3 o CDN
         // Para MVP local: convertir ruta local a URL pública
         const publicImageUrl = await getPublicImageUrl(job.product_image_url);
+        console.log(`🌐 URL pública generada: ${publicImageUrl}`);
 
         // Enviar a fal.ai
         const falResponse = await FalService.submitJob(publicImageUrl, job.animation_style);
+        console.log(`✅ Respuesta de fal.ai: requestId=${falResponse.requestId}`);
 
         // Actualizar job con el request_id de fal.ai
         await job.update({
