@@ -58,6 +58,12 @@ export const Module = sequelize.define('Module', {
     defaultValue: false,
     allowNull: false
   },
+  show_in_store: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Si el módulo se muestra en el MVP Hub público'
+  },
   status: {
     type: DataTypes.ENUM('draft', 'testing', 'live', 'archived'),
     defaultValue: 'draft',
