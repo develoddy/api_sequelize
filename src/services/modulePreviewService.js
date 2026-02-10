@@ -99,17 +99,10 @@ export async function getPreviewConfig(moduleKey) {
  * @throws {Error} Si el módulo no tiene preview habilitado o no existe generador
  */
 export async function generatePreview(moduleKey, data = {}) {
-  // Validar que el módulo tenga preview configurado
-  const config = await getPreviewConfig(moduleKey);
+  // ✅ ESTRATEGIA NUEVA: Priorizar generador registrado sobre configuración en BD
+  // Esto permite que MVPs funcionen sin necesidad de llenar la tabla modules
   
-  if (!config) {
-    throw new Error(
-      `Preview mode not enabled for module '${moduleKey}'. ` +
-      `Please configure preview_config in the modules table.`
-    );
-  }
-  
-  // Buscar generador registrado
+  // 1. Buscar generador registrado (obligatorio)
   const generatorFn = previewGenerators.get(moduleKey);
   
   if (!generatorFn) {
@@ -119,18 +112,26 @@ export async function generatePreview(moduleKey, data = {}) {
     );
   }
   
-  // Ejecutar generador
+  // 2. Intentar obtener config de BD (opcional para metadata)
+  let config = null;
+  try {
+    config = await getPreviewConfig(moduleKey);
+  } catch (error) {
+    console.log(`ℹ️ No DB config found for '${moduleKey}', using generator with default metadata`);
+  }
+  
+  // 3. Ejecutar generador
   try {
     const preview = await generatorFn(data);
     
-    // Agregar metadata común
+    // 4. Agregar metadata común
     return {
       ...preview,
       _metadata: {
         moduleKey,
-        moduleName: config.moduleName,
+        moduleName: config?.moduleName || moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1),
         generatedAt: new Date().toISOString(),
-        sessionKey: config.conversion_config?.recovery_key || `${moduleKey}_preview`,
+        sessionKey: config?.conversion_config?.recovery_key || `${moduleKey}_preview`,
         expiresIn: '24h' // Los previews expiran en 24h
       }
     };
