@@ -49,6 +49,7 @@ import modulePreviewRoutes from './modulePreview.routes.js'; // 🎯 Generic Pre
 import videoExpressRoutes from './videoExpress.routes.js'; // 🎬 Product Video Express - AI Video Generation
 import videoExpressPreviewRoutes from './videoExpressPreview.routes.js'; // 🎬 Video Express Preview (Public)
 import mvpHubRoutes from './mvpHub.routes.js'; // 🏠 MVP Hub - Dynamic listing of available MVPs
+import mvpAnalyticsRoutes from './mvpAnalytics.routes.js'; // 📊 MVP Analytics - Dynamic analytics from tracking_events
 
 const app = express();
 
@@ -102,5 +103,6 @@ app.use("/modules", modulePreviewRoutes); // 🎯 Generic Preview Mode (Public +
 app.use("/video-express", videoExpressRoutes); // 🎬 Product Video Express - AI Video Generation (Auth)
 app.use("/video-express/preview", videoExpressPreviewRoutes); // 🎬 Video Express Preview (Public)
 app.use("/", mvpHubRoutes); // 🏠 MVP Hub - Dynamic MVP listing (Public)
+app.use("/mvp-analytics", mvpAnalyticsRoutes); // 📊 MVP Analytics - Aggregated stats from tracking_events
 
 export default app;
