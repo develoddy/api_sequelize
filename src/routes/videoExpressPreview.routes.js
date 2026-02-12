@@ -264,21 +264,15 @@ router.get('/status/:jobId', async (req, res) => {
         if (job.status === 'completed') {
             console.log(`✅ Job completado, enviando URL: ${job.output_video_url}`);
             
-            // Para videos externos (simulados), usar la URL del endpoint de download
-            // que hace de proxy para evitar problemas de CORS
-            let videoUrl = job.output_video_url;
-            if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
-                // Construir URL completa del backend para el proxy
-                const protocol = req.protocol; // http o https
-                const host = req.get('host'); // localhost:3500
-                videoUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
-                console.log(`🔄 Usando endpoint proxy: ${videoUrl}`);
-            }
+            // SIEMPRE usar el endpoint de download para servir el video
+            // Esto funciona tanto para videos externos (proxy) como locales (streaming)
+            const protocol = req.protocol; // http o https
+            const host = req.get('host'); // localhost:3500
+            const videoUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
+            const downloadUrl = videoUrl; // Misma URL para ambos
             
-            // Construir URL completa para el downloadUrl
-            const protocol = req.protocol;
-            const host = req.get('host');
-            const downloadUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
+            console.log(`🔄 Video URL: ${videoUrl}`);
+            console.log(`📦 Download URL: ${downloadUrl}`);
             
             return res.json({
                 success: true,
