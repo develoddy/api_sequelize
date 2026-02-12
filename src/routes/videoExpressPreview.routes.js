@@ -277,6 +277,7 @@ router.get('/status/:jobId', async (req, res) => {
             return res.json({
                 success: true,
                 status: 'completed',
+                progress: 100, // 🎯 Siempre 100% cuando está completado
                 videoUrl: videoUrl,
                 thumbnailUrl: null,
                 duration: job.duration_seconds || 5,
