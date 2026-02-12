@@ -27,9 +27,9 @@ let isRunning = false; // Flag para prevenir ejecuciones simultáneas
 export function startVideoExpressPolling() {
     console.log('🚀 Iniciando cron job de Video Express Polling...');
 
-    // Ejecutar cada 30 segundos
-    // Sintaxis cron: "*/30 * * * * *" = cada 30 segundos
-    const cronSchedule = '*/30 * * * * *';
+    // Ejecutar cada 10 segundos (optimizado para reducir latencia)
+    // Sintaxis cron: "*/10 * * * * *" = cada 10 segundos
+    const cronSchedule = '*/10 * * * * *';
 
     const job = cron.schedule(cronSchedule, async () => {
         // Prevenir ejecuciones simultáneas
@@ -56,7 +56,7 @@ export function startVideoExpressPolling() {
     });
 
     job.start();
-    console.log('✅ Cron job de Video Express iniciado (cada 30s)');
+    console.log('✅ Cron job de Video Express iniciado (cada 10s - optimizado)');
 
     return job;
 }

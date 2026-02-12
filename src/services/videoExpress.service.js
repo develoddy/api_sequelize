@@ -32,6 +32,9 @@ const ALLOWED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/jpg'];
 const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || path.join(__dirname, '../../public/uploads/modules/video-express');
 const MAX_PROCESSING_TIME_MS = 5 * 60 * 1000; // 5 minutos timeout
 
+// 🚀 OPTIMIZACIÓN: Cachear URL base para evitar parsing repetido
+const PUBLIC_BASE_URL = (process.env.PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
+
 /**
  * Crea un nuevo job de generación de video
  * 
@@ -334,7 +337,7 @@ async function getPublicImageUrl(localPath) {
     // En desarrollo: asumir que las imágenes están en /public/uploads/modules
     // y son accesibles públicamente via http://localhost:4000/uploads/modules/...
     
-    const baseUrl = (process.env.PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, ''); // Quitar / final
+    // 🚀 OPTIMIZACIÓN: Usar URL base cacheada en lugar de parsear cada vez
     
     // Extraer path desde 'public/' y convertir a URL pública
     // Si el path contiene 'public/', extraemos desde ahí
@@ -351,7 +354,7 @@ async function getPublicImageUrl(localPath) {
         throw new Error(`Path inválido: ${localPath}`);
     }
     
-    const fullUrl = `${baseUrl}${relativePath}`;
+    const fullUrl = `${PUBLIC_BASE_URL}${relativePath}`; // Usa variable cacheada
     console.log(`🌐 URL pública generada desde ${localPath}: ${fullUrl}`);
     
     return fullUrl;
