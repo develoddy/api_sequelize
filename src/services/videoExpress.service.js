@@ -164,20 +164,28 @@ async function checkAndUpdateJob(job) {
         console.log(`🔍 Consultando estado de job ${job.id} (fal: ${job.fal_request_id})...`);
 
         // 🎭 MODO SIMULACIÓN: Completar inmediatamente
-        const isSimulation = job.fal_request_id && job.fal_request_id.startsWith('sim-');
+        // Detecta simulación explícita (sim-*) o límite alcanzado (limit-*)
+        const isSimulation = job.fal_request_id && 
+                           (job.fal_request_id.startsWith('sim-') || 
+                            job.fal_request_id.startsWith('limit-'));
         
         if (isSimulation) {
+            const isLimitReached = job.fal_request_id.startsWith('limit-');
             console.log(`🎭 SIMULACIÓN: Completando job ${job.id} instantáneamente...`);
+            if (isLimitReached) {
+                console.log('💰 Motivo: Límite de créditos alcanzado');
+            }
             
             const processingTime = Date.now() - new Date(job.created_at).getTime();
             await job.update({
                 status: 'completed',
-                output_video_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                output_video_url: 'https://www.w3schools.com/html/mov_bbb.mp4',
                 output_video_filename: 'simulation-video.mp4',
                 duration_seconds: 5.0,
                 processing_time_ms: processingTime,
                 fal_processing_time_ms: 1500,
-                completed_at: new Date()
+                completed_at: new Date(),
+                is_simulated: true
             });
             
             console.log(`✅ Job simulado ${job.id} completado (sin usar créditos reales)`);
@@ -231,7 +239,8 @@ async function checkAndUpdateJob(job) {
                 duration_seconds: 5.0, // Aproximado (30 frames @ 6fps = 5s)
                 processing_time_ms: processingTime,
                 fal_processing_time_ms: statusResponse.processingTimeMs,
-                completed_at: new Date()
+                completed_at: new Date(),
+                is_simulated: false // Video REAL generado con fal.ai
             });
 
             console.log(`✅ Job ${job.id} completado y guardado en ${localPath}`);

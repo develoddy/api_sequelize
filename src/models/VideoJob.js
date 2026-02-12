@@ -141,6 +141,14 @@ export const VideoJob = sequelize.define('video_jobs', {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Cuándo terminó el job'
+    },
+
+    // Protección de créditos
+    is_simulated: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'true si es video placeholder (SIMULATION_MODE o límite alcanzado)'
     }
 
 }, {

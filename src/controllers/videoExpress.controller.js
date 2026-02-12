@@ -1,4 +1,5 @@
 import * as VideoExpressService from '../services/videoExpress.service.js';
+import * as FalService from '../services/fal.service.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -476,11 +477,113 @@ export const downloadVideo = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/video-express/credit-status
+ * Obtiene el estado actual del contador de créditos
+ * 
+ * Response:
+ * {
+ *   status: 200,
+ *   data: {
+ *     real_videos_generated: 5,
+ *     limit: 25,
+ *     remaining: 20,
+ *     percentage_used: 20,
+ *     can_generate: true,
+ *     last_reset: "2026-02-12T10:30:00Z",
+ *     history: [...]
+ *   }
+ * }
+ */
+export const getCreditStatus = async (req, res) => {
+    try {
+        console.log('📥 GET /api/video-express/credit-status');
+
+        // Autenticación requerida
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                status: 401,
+                message: 'Usuario no autenticado'
+            });
+        }
+
+        const creditStatus = FalService.getCreditCounterStatus();
+
+        return res.status(200).json({
+            status: 200,
+            data: creditStatus
+        });
+
+    } catch (error) {
+        console.error('❌ Error al obtener estado de créditos:', error);
+
+        return res.status(500).json({
+            status: 500,
+            message: 'Error al obtener estado de créditos',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
+        });
+    }
+};
+
+/**
+ * POST /api/video-express/credit-reset
+ * Resetea el contador de créditos (solo admin)
+ * 
+ * Response:
+ * {
+ *   status: 200,
+ *   message: 'Contador de créditos reseteado exitosamente',
+ *   data: { real_videos_generated: 0, limit: 25, ... }
+ * }
+ */
+export const resetCreditCounter = async (req, res) => {
+    try {
+        console.log('📥 POST /api/video-express/credit-reset');
+
+        // Autenticación requerida
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                status: 401,
+                message: 'Usuario no autenticado'
+            });
+        }
+
+        // Verificar que el usuario sea admin (ajusta según tu lógica de roles)
+        // if (req.user.role !== 'admin') {
+        //     return res.status(403).json({
+        //         status: 403,
+        //         message: 'No tienes permisos para resetear el contador'
+        //     });
+        // }
+
+        const resetData = FalService.resetCreditCounter();
+
+        console.log('✅ Contador de créditos reseteado por usuario:', req.user.email);
+
+        return res.status(200).json({
+            status: 200,
+            message: 'Contador de créditos reseteado exitosamente',
+            data: resetData
+        });
+
+    } catch (error) {
+        console.error('❌ Error al resetear contador de créditos:', error);
+
+        return res.status(500).json({
+            status: 500,
+            message: 'Error al resetear contador de créditos',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
+        });
+    }
+};
+
 export default {
     createJob,
     listJobs,
     getJob,
     deleteJob,
     getStats,
-    downloadVideo
+    downloadVideo,
+    getCreditStatus,
+    resetCreditCounter
 };

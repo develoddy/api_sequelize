@@ -106,4 +106,24 @@ router.get('/stats', auth.verifyAdmin, VideoExpressController.getStats);
  */
 router.get('/download/:id', auth.verifyAdmin, VideoExpressController.downloadVideo);
 
+/**
+ * GET /api/video-express/credit-status
+ * Obtener estado del contador de créditos de fal.ai
+ * 
+ * Requiere: Autenticación
+ * 
+ * Response: { real_videos_generated, limit, remaining, percentage_used, can_generate }
+ */
+router.get('/credit-status', auth.verifyAdmin, VideoExpressController.getCreditStatus);
+
+/**
+ * POST /api/video-express/credit-reset
+ * Resetear contador de créditos (solo admin)
+ * 
+ * Requiere: Autenticación (admin)
+ * 
+ * Response: { message, data }
+ */
+router.post('/credit-reset', auth.verifyAdmin, VideoExpressController.resetCreditCounter);
+
 export default router;

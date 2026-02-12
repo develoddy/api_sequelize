@@ -263,14 +263,33 @@ router.get('/status/:jobId', async (req, res) => {
         // Completed
         if (job.status === 'completed') {
             console.log(`✅ Job completado, enviando URL: ${job.output_video_url}`);
+            
+            // Para videos externos (simulados), usar la URL del endpoint de download
+            // que hace de proxy para evitar problemas de CORS
+            let videoUrl = job.output_video_url;
+            if (videoUrl && (videoUrl.startsWith('http://') || videoUrl.startsWith('https://'))) {
+                // Construir URL completa del backend para el proxy
+                const protocol = req.protocol; // http o https
+                const host = req.get('host'); // localhost:3500
+                videoUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
+                console.log(`🔄 Usando endpoint proxy: ${videoUrl}`);
+            }
+            
+            // Construir URL completa para el downloadUrl
+            const protocol = req.protocol;
+            const host = req.get('host');
+            const downloadUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
+            
             return res.json({
                 success: true,
                 status: 'completed',
-                videoUrl: job.output_video_url,
+                videoUrl: videoUrl,
                 thumbnailUrl: null,
                 duration: job.duration_seconds || 5,
                 fileSize: 0,
-                downloadUrl: `/api/video-express/preview/download/${jobId}`
+                downloadUrl: downloadUrl,
+                isSimulated: job.is_simulated || false, // Indica si es video placeholder
+                limitReached: job.fal_request_id?.startsWith('limit-') || false
             });
         }
         
@@ -336,10 +355,40 @@ router.get('/download/:jobId', async (req, res) => {
             });
         }
         
-        // Si es una URL externa (modo simulación), redirigir
+        // Si es una URL externa (modo simulación), hacer proxy del video
         if (job.output_video_url.startsWith('http://') || job.output_video_url.startsWith('https://')) {
-            console.log(`🔗 Redirigiendo a URL externa (simulación): ${job.output_video_url}`);
-            return res.redirect(job.output_video_url);
+            console.log(`📡 Haciendo proxy de URL externa (simulación): ${job.output_video_url}`);
+            
+            try {
+                // Fetch del video externo
+                const axios = (await import('axios')).default;
+                const videoResponse = await axios.get(job.output_video_url, {
+                    responseType: 'stream',
+                    timeout: 30000
+                });
+                
+                // Configurar headers para streaming y reproducción inline
+                res.setHeader('Content-Type', 'video/mp4');
+                res.setHeader('Accept-Ranges', 'bytes');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET');
+                res.setHeader('Cache-Control', 'public, max-age=3600');
+                
+                // Usar inline para reproducción en <video> tag, no attachment
+                res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
+                
+                // Pipe del stream al response
+                videoResponse.data.pipe(res);
+                
+                console.log(`✅ Video proxy iniciado correctamente`);
+                return;
+            } catch (proxyError) {
+                console.error(`❌ Error al hacer proxy del video:`, proxyError.message);
+                
+                // Si falla el proxy, intentar redirect como fallback
+                console.log(`🔄 Fallback: intentando redirect...`);
+                return res.redirect(job.output_video_url);
+            }
         }
         
         // Si es un path local, servir el archivo
@@ -364,8 +413,12 @@ router.get('/download/:jobId', async (req, res) => {
         const filename = `product-video-${Date.now()}.mp4`;
         console.log(`📤 Sirviendo archivo: ${filename}`);
         
+        // Headers para reproducción inline en <video> tag
         res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
         
         const stream = fs.createReadStream(videoPath);
         stream.pipe(res);
