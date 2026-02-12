@@ -94,17 +94,12 @@ async function calculateMvpMetrics(moduleKey) {
       }
     });
 
-    // 5. Tenants activos (usuarios registrados que usan el MVP)
-    const activeTenants = await Tenant.count({
-      where: {
-        module_id: {
-          [Op.in]: sequelize.literal(
-            `(SELECT id FROM modules WHERE \`key\` = '${moduleKey}')`
-          )
-        },
-        is_active: true
-      }
-    });
+    // 5. Tenants activos (DESHABILITADO - Ya no se usa modules/tenants en fase MVP)
+    // Solo se activa después de validar y promocionar a módulo oficial
+    const activeTenants = 0;
+    
+    // NOTA: En fase MVP, todas las métricas vienen de tracking_events
+    // La tabla tenants solo se usa después de ejecutar "Create Module" en Admin Panel
 
     // 6. Métricas específicas por MVP
     let specificMetrics = {};
@@ -191,10 +186,11 @@ function calculateHealthScore(signals) {
   // Feedback positivo (10 puntos máx)
   score += Math.min(10, signals.positiveFeedback * 5);
 
-  // Tenants activos (bonus)
-  if (signals.activeTenants > 0) {
-    score += Math.min(20, signals.activeTenants * 5);
-  }
+  // Tenants activos (DESHABILITADO en fase MVP)
+  // Solo cuenta después de promocionar a módulo oficial
+  // if (signals.activeTenants > 0) {
+  //   score += Math.min(20, signals.activeTenants * 5);
+  // }
 
   return Math.min(100, score);
 }
@@ -285,7 +281,7 @@ export async function checkPromotionCriteria(moduleKey) {
   
   const criteria = {
     healthScore: metrics.healthScore >= 70,
-    recentActivity: metrics.metrics.recentSessions >= 10,
+    // userAdoption: metrics.metrics.activeTenants >= 3, // DESHABILITADO - No aplica en fase MVP 10,
     userAdoption: metrics.metrics.activeTenants >= 3,
     wizardCompletion: metrics.metrics.wizardCompletions >= 5,
     positiveFeedback: metrics.metrics.positiveFeedback >= 3
@@ -294,7 +290,7 @@ export async function checkPromotionCriteria(moduleKey) {
   const passed = Object.values(criteria).filter(Boolean).length;
   const total = Object.keys(criteria).length;
   
-  const readyForPromotion = passed >= 3; // Al menos 3 de 5 criterios
+  const readyForPromotion = passed >= 3; // Al menos 3 de 4 criterios (sin userAdoption en MVP)
 
   return {
     moduleKey,
