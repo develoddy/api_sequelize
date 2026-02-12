@@ -482,6 +482,34 @@ function calculateKPIs(events, moduleKey) {
     ? Math.round((helpfulFeedback / feedbackEvents.length) * 100) 
     : 0;
   
+  // === MONETIZATION METRICS (Nuevo: Feb 2026) ===
+  const monetizationIntentEvents = events.filter(e => 
+    e.event === 'monetization_intent_clicked'
+  );
+  
+  const proEmailSubmittedEvents = events.filter(e => 
+    e.event === 'pro_email_submitted'
+  );
+  
+  const proModalDismissedEvents = events.filter(e => 
+    e.event === 'pro_modal_dismissed'
+  );
+  
+  // Tasa de conversión monetización: preview → intent
+  const preview_to_intent_rate = wizardCompletions > 0
+    ? Math.round((monetizationIntentEvents.length / wizardCompletions) * 100)
+    : 0;
+  
+  // Tasa de conversión monetización: intent → email
+  const intent_to_email_rate = monetizationIntentEvents.length > 0
+    ? Math.round((proEmailSubmittedEvents.length / monetizationIntentEvents.length) * 100)
+    : 0;
+  
+  // Tasa de dismissal sin email
+  const modal_dismissal_rate = monetizationIntentEvents.length > 0
+    ? Math.round((proModalDismissedEvents.length / monetizationIntentEvents.length) * 100)
+    : 0;
+  
   // Usuarios recurrentes (multiple sessions)
   const sessionsByUser = {};
   events.forEach(e => {
@@ -520,6 +548,13 @@ function calculateKPIs(events, moduleKey) {
     retention_rate,
     returningUsers,
     insufficient_data,
+    // === MONETIZATION METRICS ===
+    monetization_intent_count: monetizationIntentEvents.length,
+    pro_email_submitted_count: proEmailSubmittedEvents.length,
+    pro_modal_dismissed_count: proModalDismissedEvents.length,
+    preview_to_intent_rate,
+    intent_to_email_rate,
+    modal_dismissal_rate,
     // Metadata adicional para debug
     _meta: {
       total_events: events.length,
