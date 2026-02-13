@@ -29,20 +29,22 @@ export const getAllMvps = async (req, res) => {
     }
 
     // Query SQL para agregar eventos por módulo
+    // 🎯 FASE 2: Solo contar eventos públicos (source='preview'), excluir tests internos (source='admin')
     const query = `
       SELECT 
         module,
         COUNT(DISTINCT session_id) as total_sessions,
-        COUNT(CASE WHEN event = 'wizard_started' THEN 1 END) as wizard_starts,
+        COUNT(CASE WHEN event LIKE '%wizard_started%' THEN 1 END) as wizard_starts,
         COUNT(CASE WHEN event = 'wizard_completed' THEN 1 END) as wizard_completions,
         COUNT(CASE WHEN event = 'preview_generated' THEN 1 END) as preview_generated,
-        COUNT(CASE WHEN event = 'feedback_submitted' THEN 1 END) as total_feedback,
-        COUNT(CASE WHEN event = 'feedback_submitted' AND JSON_EXTRACT(properties, '$.rating') IN ('positive', 'very_positive') THEN 1 END) as positive_feedback,
+        COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,
+        COUNT(CASE WHEN event LIKE '%feedback%' AND JSON_EXTRACT(properties, '$.answer') = 'yes' THEN 1 END) as positive_feedback,
         MIN(created_at) as first_event,
         MAX(created_at) as last_event
       FROM tracking_events
       WHERE module IS NOT NULL 
         AND module != ''
+        AND source = 'preview'
         ${dateFilter}
       GROUP BY module
       HAVING total_sessions > 0
@@ -171,21 +173,23 @@ export const getMvpDetail = async (req, res) => {
     }
 
     // Query detallado para un módulo específico
+    // 🎯 FASE 2: Solo analizar eventos públicos (source='preview'), excluir tests internos del admin
     const query = `
       SELECT 
         COUNT(DISTINCT session_id) as total_sessions,
         COUNT(DISTINCT user_id) as unique_users,
-        COUNT(CASE WHEN event = 'wizard_started' THEN 1 END) as wizard_starts,
+        COUNT(CASE WHEN event LIKE '%wizard_started%' THEN 1 END) as wizard_starts,
         COUNT(CASE WHEN event = 'wizard_completed' THEN 1 END) as wizard_completions,
-        COUNT(CASE WHEN event = 'download_clicked' THEN 1 END) as downloads,
-        COUNT(CASE WHEN event = 'feedback_submitted' THEN 1 END) as total_feedback,
-        COUNT(CASE WHEN event = 'feedback_submitted' AND JSON_EXTRACT(properties, '$.rating') IN ('positive', 'very_positive') THEN 1 END) as positive_feedback,
+        COUNT(CASE WHEN event LIKE '%download%' THEN 1 END) as downloads,
+        COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,
+        COUNT(CASE WHEN event LIKE '%feedback%' AND JSON_EXTRACT(properties, '$.answer') = 'yes' THEN 1 END) as positive_feedback,
         AVG(TIMESTAMPDIFF(SECOND, 
-          (SELECT MIN(te2.created_at) FROM tracking_events te2 WHERE te2.session_id = tracking_events.session_id),
-          (SELECT MAX(te2.created_at) FROM tracking_events te2 WHERE te2.session_id = tracking_events.session_id)
+          (SELECT MIN(te2.created_at) FROM tracking_events te2 WHERE te2.session_id = tracking_events.session_id AND te2.source = 'preview'),
+          (SELECT MAX(te2.created_at) FROM tracking_events te2 WHERE te2.session_id = tracking_events.session_id AND te2.source = 'preview')
         )) as avg_session_duration
       FROM tracking_events
       WHERE module = ?
+        AND source = 'preview'
         ${dateFilter}
     `;
 
