@@ -57,10 +57,12 @@ async function calculateMvpMetrics(moduleKey) {
 
   try {
     // 1. Sesiones recientes (eventos de tracking)
+    // ✅ FASE 2: Solo contar tracking público (excluir admin/internal)
     const recentSessions = await TrackingEvent.count({
       where: {
         module: moduleKey,
-        timestamp: { [Op.gte]: thirtyDaysAgo }
+        timestamp: { [Op.gte]: thirtyDaysAgo },
+        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
       },
       distinct: true,
       col: 'session_id'
@@ -71,7 +73,8 @@ async function calculateMvpMetrics(moduleKey) {
       where: {
         module: moduleKey,
         event: { [Op.like]: '%preview%' },
-        timestamp: { [Op.gte]: thirtyDaysAgo }
+        timestamp: { [Op.gte]: thirtyDaysAgo },
+        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
       }
     });
 
@@ -80,7 +83,8 @@ async function calculateMvpMetrics(moduleKey) {
       where: {
         module: moduleKey,
         event: 'wizard_completed',
-        timestamp: { [Op.gte]: thirtyDaysAgo }
+        timestamp: { [Op.gte]: thirtyDaysAgo },
+        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
       }
     });
 
@@ -90,7 +94,8 @@ async function calculateMvpMetrics(moduleKey) {
         module: moduleKey,
         event: 'feedback_submitted',
         properties: { [Op.like]: '%"positive":true%' },
-        timestamp: { [Op.gte]: thirtyDaysAgo }
+        timestamp: { [Op.gte]: thirtyDaysAgo },
+        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
       }
     });
 

@@ -145,6 +145,22 @@ export const createModule = async (req, res) => {
       });
     }
 
+    // 🎯 Auto-generar preview_config básico
+    const defaultPreviewConfig = {
+      enabled: true,
+      status: 'draft', // Sincronizado con module.status
+      dashboard_route: `/${key}`,
+      api_endpoint: '',
+      trial_days: 14,
+      route: `/preview/${key}`,
+      show_in_store: false, // Solo cuando status='live'
+      demo_button_text: 'Try Demo - No signup required',
+      rate_limiting: {
+        max_requests: 10,
+        window_minutes: 15
+      }
+    };
+
     // Crear módulo
     const module = await Module.create({
       key,
@@ -173,7 +189,9 @@ export const createModule = async (req, res) => {
       tech_stack: tech_stack || [],
       requirements: requirements || {},
       // 🚀 SaaS config
-      saas_config: saas_config ? normalizeSaasConfig(saas_config) : null
+      saas_config: saas_config ? normalizeSaasConfig(saas_config) : null,
+      // 🎯 Preview config auto-generado
+      preview_config: defaultPreviewConfig
     });
 
     console.log(`✅ Module created: ${module.name} (${module.key})`);
@@ -237,13 +255,52 @@ export const updateModule = async (req, res) => {
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (type !== undefined) updates.type = type;
-    if (status !== undefined) updates.status = status;
+    if (status !== undefined) {
+      updates.status = status;
+      
+      // 🎯 Auto-sincronizar status en preview_config
+      if (module.preview_config) {
+        // 🛡️ Asegurar que preview_config es un objeto (no string)
+        // Previene corrupción cuando Sequelize devuelve string en lugar de objeto
+        const currentConfig = typeof module.preview_config === 'string'
+          ? JSON.parse(module.preview_config)
+          : module.preview_config;
+
+        updates.preview_config = {
+          ...currentConfig,
+          status: status,
+          show_in_store: status === 'live' // Mostrar solo si está live
+        };
+      } else {
+        // Si no existe preview_config, crearlo automáticamente
+        updates.preview_config = {
+          enabled: true,
+          status: status,
+          dashboard_route: `/${key}`,
+          api_endpoint: '',
+          trial_days: 14,
+          route: `/preview/${key}`,
+          show_in_store: status === 'live',
+          demo_button_text: 'Try Demo - No signup required',
+          rate_limiting: {
+            max_requests: 10,
+            window_minutes: 15
+          }
+        };
+      }
+    }
     if (validation_days !== undefined) updates.validation_days = validation_days;
     if (validation_target_sales !== undefined) updates.validation_target_sales = validation_target_sales;
     if (icon !== undefined) updates.icon = icon;
     if (color !== undefined) updates.color = color;
     if (base_price !== undefined) updates.base_price = base_price;
-    if (config !== undefined) updates.config = { ...module.config, ...config };
+    if (config !== undefined) {
+      // 🛡️ Asegurar que config es un objeto (prevenir corrupción)
+      const currentConfig = typeof module.config === 'string'
+        ? JSON.parse(module.config)
+        : (module.config || {});
+      updates.config = { ...currentConfig, ...config };
+    }
     // 🆕 Campos de marketing
     if (tagline !== undefined) updates.tagline = tagline;
     if (screenshots !== undefined) updates.screenshots = screenshots;

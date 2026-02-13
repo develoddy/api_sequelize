@@ -53,7 +53,7 @@ export function registerPreviewGenerator(moduleKey, generatorFn) {
 export async function getPreviewConfig(moduleKey) {
   const module = await Module.findOne({
     where: { key: moduleKey },
-    attributes: ['id', 'key', 'name', 'preview_config', 'saas_config']
+    attributes: ['id', 'key', 'name', 'status', 'preview_config', 'saas_config']
   });
   
   if (!module) {
@@ -82,6 +82,8 @@ export async function getPreviewConfig(moduleKey) {
     moduleId: module.id,
     moduleKey: module.key,
     moduleName: module.name,
+    status: module.status,  // ✅ Incluir status para validación en frontend
+    previewEnabled: previewConfig.enabled,
     ...previewConfig
   };
 }

@@ -13,6 +13,9 @@ import { Op } from 'sequelize';
 /**
  * Recibir evento de tracking
  * POST /api/tracking/events
+ * 
+ * Detecta si es tracking interno (admin) vs público (preview)
+ * para mantener métricas limpias en Analytics.
  */
 export const trackEvent = async (req, res) => {
   try {
@@ -34,6 +37,11 @@ export const trackEvent = async (req, res) => {
       });
     }
     
+    // ✅ FASE 2: Detectar tracking interno vs público
+    // Si source viene como 'admin' o 'internal' desde el frontend, mantenerlo
+    // Esto permite que Analytics excluya tracking de pruebas internas
+    const finalSource = source || 'preview'; // Default: preview (público)
+    
     // Guardar evento en DB
     const trackingEvent = await TrackingEvent.create({
       event,
@@ -43,7 +51,7 @@ export const trackEvent = async (req, res) => {
       user_id: userId,
       tenant_id: tenantId,
       module,
-      source,
+      source: finalSource,  // ✅ Guardar source distinguido
       user_agent: req.headers['user-agent'],
       ip_address: req.ip,
       created_at: new Date()
@@ -57,7 +65,8 @@ export const trackEvent = async (req, res) => {
         userId,
         tenantId,
         module,
-        source
+        source: finalSource,
+        isInternal: finalSource === 'admin' || finalSource === 'internal'
       });
     }
     

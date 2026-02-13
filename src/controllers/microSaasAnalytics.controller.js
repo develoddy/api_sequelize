@@ -371,6 +371,8 @@ export const getTrendingMVPs = async (req, res) => {
  * 
  * ✅ CORRECCIÓN: Retorna métricas en 0 si no hay tracking_events
  * No retorna null - un módulo sin tracking sigue siendo válido
+ * 
+ * ✅ FASE 2: Filtra eventos internos (source='admin') para métricas públicas limpias
  */
 async function calculateModuleAnalytics(moduleKey, period = '30d') {
   const dateFrom = getDateFromPeriod(period);
@@ -383,15 +385,18 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   });
   
   // 2. Obtener eventos de tracking del módulo
+  // ✅ FILTRO CRÍTICO: Excluir tracking interno (admin, internal)
+  // Solo contar eventos públicos para métricas reales
   const events = await TrackingEvent.findAll({
     where: {
       module: moduleKey,
-      timestamp: { [Op.gte]: dateFrom }
+      timestamp: { [Op.gte]: dateFrom },
+      source: { [Op.notIn]: ['admin', 'internal'] }  // ✅ Solo tracking público
     },
     order: [['timestamp', 'ASC']]
   });
   
-  // ✅ 3. Si no hay eventos, retornar métricas en 0 (no null)
+  // ✅ 3. Si no hay eventos públicos, retornar métricas en 0 (no null)
   if (events.length === 0) {
     console.log(`⚠️  Módulo ${moduleKey}: sin tracking events, retornando métricas en 0`);
     
