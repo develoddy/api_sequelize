@@ -51,55 +51,75 @@ const SCORE_WEIGHTS = {
 
 /**
  * GET /api/admin/saas/micro-saas/analytics
- * Obtener analytics de todos los micro-SaaS activos
+ * Obtener analytics de todos los módulos activos
+ * 
+ * ✅ CORRECCIÓN: Obtiene módulos desde tabla 'modules' (LEFT JOIN)
+ * No desde 'tracking_events' (INNER JOIN)
+ * 
+ * Principio: Module = MVP
+ * Un módulo sin tracking sigue siendo un MVP en validación
  */
 export const getAllMicroSaasAnalytics = async (req, res) => {
   try {
     const { period = '30d' } = req.query;
     
-    // 1. Obtener módulos únicos con eventos de tracking
-    const modulesWithEvents = await TrackingEvent.findAll({
-      attributes: [[TrackingEvent.sequelize.fn('DISTINCT', TrackingEvent.sequelize.col('module')), 'module']],
+    console.log(`📊 Obteniendo analytics de módulos activos (período: ${period})...`);
+    
+    // ✅ 1. Obtener módulos DESDE la tabla modules (no desde tracking_events)
+    const activeModules = await Module.findAll({
       where: {
-        module: { [Op.not]: null },
-        timestamp: { [Op.gte]: getDateFromPeriod(period) }
+        status: { [Op.in]: ['testing', 'live'] },
+        is_active: true
       },
-      raw: true
+      attributes: ['key', 'name', 'status', 'launched_at', 'validation_days', 'validation_target_sales'],
+      order: [['created_at', 'DESC']]
     });
     
-    const moduleKeys = modulesWithEvents.map(m => m.module).filter(Boolean);
-    
-    if (moduleKeys.length === 0) {
+    if (activeModules.length === 0) {
       return res.json({
         success: true,
         analytics: [],
-        message: 'No micro-SaaS with tracking events found'
+        message: 'No hay módulos activos en testing o live',
+        summary: {
+          total_modules: 0,
+          avg_score: 0,
+          ready_to_promote: 0,
+          needs_improvement: 0,
+          to_archive: 0
+        }
       });
     }
     
-    // 2. Calcular analytics para cada módulo
-    const analyticsPromises = moduleKeys.map(moduleKey => 
-      calculateModuleAnalytics(moduleKey, period)
+    console.log(`✅ Encontrados ${activeModules.length} módulos activos`);
+    
+    // ✅ 2. Calcular analytics para cada módulo (LEFT JOIN implícito)
+    // Si no hay tracking_events, retorna métricas en 0
+    const analyticsPromises = activeModules.map(module => 
+      calculateModuleAnalytics(module.key, period)
     );
     
-    const analytics = await Promise.all(analyticsPromises);
+    const analytics = (await Promise.all(analyticsPromises)).filter(Boolean);
     
     // 3. Ordenar por health score descendente
     analytics.sort((a, b) => b.healthScore - a.healthScore);
+    
+    const avgScore = analytics.length > 0
+      ? Math.round(analytics.reduce((sum, a) => sum + a.healthScore, 0) / analytics.length)
+      : 0;
     
     res.json({
       success: true,
       analytics,
       summary: {
         total_modules: analytics.length,
-        avg_score: Math.round(analytics.reduce((sum, a) => sum + a.healthScore, 0) / analytics.length),
-        ready_to_promote: analytics.filter(a => a.recommendation.action === 'create_module').length,
+        avg_score: avgScore,
+        ready_to_promote: analytics.filter(a => a.recommendation.action === 'validate').length,
         needs_improvement: analytics.filter(a => a.recommendation.action === 'continue').length,
         to_archive: analytics.filter(a => a.recommendation.action === 'archive').length
       }
     });
   } catch (error) {
-    console.error('❌ Error getting all micro-SaaS analytics:', error);
+    console.error('❌ Error getting all analytics:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -232,17 +252,20 @@ export const createModuleFromMVP = async (req, res) => {
 
 /**
  * POST /api/admin/saas/micro-saas/:moduleKey/decision
- * Ejecutar decisión sobre un MVP (continue/archive/create_module)
+ * Ejecutar decisión sobre un MVP (continue/archive/validate)
+ * 
+ * ✅ CORRECCIÓN: 'validate' cambia status del módulo a 'live'
+ * No crea un nuevo módulo - el módulo ya existe con status='testing'
  */
 export const executeMVPDecision = async (req, res) => {
   try {
     const { moduleKey } = req.params;
     const { action, reason } = req.body;
     
-    if (!['continue', 'archive', 'create_module'].includes(action)) {
+    if (!['continue', 'archive', 'validate'].includes(action)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid action. Must be: continue, archive, or create_module'
+        error: 'Invalid action. Must be: continue, archive, or validate'
       });
     }
     
@@ -258,12 +281,17 @@ export const executeMVPDecision = async (req, res) => {
     let result;
     
     switch (action) {
-      case 'create_module':
-        // Crear módulo formal
-        result = await createModuleFromMVP(
-          { params: { moduleKey }, body: {} },
-          { json: (data) => data, status: (code) => ({ json: (data) => data }) }
+      case 'validate':
+        // ✅ Cambiar status a 'live' (validar módulo)
+        await Module.update(
+          { 
+            status: 'live',
+            launched_at: new Date()
+          },
+          { where: { key: moduleKey } }
         );
+        result = { validated: true, status: 'live', reason };
+        console.log(`✅ Módulo ${moduleKey} validado - status cambiado a 'live'`);
         break;
         
       case 'archive':
@@ -340,12 +368,21 @@ export const getTrendingMVPs = async (req, res) => {
 
 /**
  * Calcular analytics completos de un módulo
+ * 
+ * ✅ CORRECCIÓN: Retorna métricas en 0 si no hay tracking_events
+ * No retorna null - un módulo sin tracking sigue siendo válido
  */
 async function calculateModuleAnalytics(moduleKey, period = '30d') {
   const dateFrom = getDateFromPeriod(period);
   const dateTo = new Date();
   
-  // 1. Obtener todos los eventos del módulo
+  // 1. Buscar información del módulo en la DB
+  const module = await Module.findOne({
+    where: { key: moduleKey },
+    attributes: ['key', 'name', 'status', 'launched_at', 'validation_days', 'validation_target_sales']
+  });
+  
+  // 2. Obtener eventos de tracking del módulo
   const events = await TrackingEvent.findAll({
     where: {
       module: moduleKey,
@@ -354,8 +391,78 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
     order: [['timestamp', 'ASC']]
   });
   
+  // ✅ 3. Si no hay eventos, retornar métricas en 0 (no null)
   if (events.length === 0) {
-    return null;
+    console.log(`⚠️  Módulo ${moduleKey}: sin tracking events, retornando métricas en 0`);
+    
+    return {
+      moduleKey,
+      moduleName: module?.name || capitalize(moduleKey.replace(/-/g, ' ')),
+      totalSessions: 0,
+      uniqueUsers: 0,
+      wizard_starts: 0,
+      wizard_completions: 0,
+      downloads: 0,
+      returningUsers: 0,
+      total_feedback: 0,
+      helpful_feedback: 0,
+      feedback_rate: 0,
+      helpful_rate: 0,
+      organic_count: 0,
+      ads_count: 0,
+      conversion_rate: 0,
+      download_rate: 0,
+      retention_rate: 0,
+      monetization_intent_count: 0,
+      pro_email_submitted_count: 0,
+      pro_modal_dismissed_count: 0,
+      preview_to_intent_rate: 0,
+      intent_to_email_rate: 0,
+      healthScore: 0,
+      insufficient_data: true,
+      recommendation: {
+        action: 'continue',
+        confidence: 'low',
+        reason: 'Sin datos de tracking. Necesita actividad para evaluar.',
+        next_steps: [
+          'Generar tráfico al wizard/preview',
+          'Compartir en redes sociales',
+          'Pedir feedback a usuarios beta',
+          'Verificar que tracking esté implementado correctamente'
+        ]
+      },
+      alerts: [],
+      trends: {
+        sessions_change: 0,
+        completions_change: 0,
+        downloads_change: 0,
+        trend_direction: 'down'
+      },
+      actionCriteria: {
+        can_validate: false,
+        can_archive: false,
+        can_continue: true,
+        validation_criteria: {
+          sessions_min: false,
+          completions_min: false,
+          feedback_min: false,
+          days_min: false,
+          signal_positive: false
+        },
+        archive_criteria: {
+          sessions_min: false,
+          signal_negative: false
+        },
+        days_running: 0,
+        blocking_reasons: {
+          validate: ['No hay datos suficientes para decidir'],
+          archive: ['Necesita al menos 15 sesiones para confirmar el patrón']
+        }
+      },
+      period,
+      date_from: dateFrom.toISOString(),
+      date_to: dateTo.toISOString()
+    };
   }
   
   // 2. Calcular métricas básicas
@@ -629,21 +736,21 @@ function generateRecommendation(kpis, healthScore, totalEvents) {
     };
   }
   
-  // Caso 1: Crear módulo formal
+  // Caso 1: Validar y activar módulo (cambiar status a 'live')
   if (
     healthScore >= create_module_score &&
     kpis.downloads >= create_module_downloads &&
     kpis.helpful_rate >= create_module_feedback_rate
   ) {
     return {
-      action: 'create_module',
+      action: 'validate',
       confidence: 'high',
       reason: `Excelente performance: Score ${healthScore}, ${kpis.downloads} descargas, ${kpis.helpful_rate}% feedback positivo`,
       next_steps: [
-        'Crear módulo formal en Gestión de Módulos',
+        'Validar módulo (cambiar status a "live")',
         'Configurar pricing y planes',
         'Preparar documentación',
-        'Lanzar público'
+        'Promocionar públicamente'
       ]
     };
   }
@@ -725,8 +832,8 @@ function generateRecommendation(kpis, healthScore, totalEvents) {
 function validateActionCriteria(kpis, healthScore, events) {
   const daysRunning = calculateDaysRunning(events);
   
-  // 🟢 Criterios para CREAR MÓDULO OFICIAL
-  const promotionCriteria = {
+  // 🟢 Criterios para VALIDAR MÓDULO (cambiar status a 'live')
+  const validationCriteria = {
     sessions_min: kpis.totalSessions >= 20,
     completions_min: kpis.wizard_completions >= 5,
     feedback_min: kpis.total_feedback >= 5,
@@ -739,7 +846,7 @@ function validateActionCriteria(kpis, healthScore, events) {
     )
   };
   
-  const canPromote = Object.values(promotionCriteria).every(v => v === true);
+  const canValidate = Object.values(validationCriteria).every(v => v === true);
   
   // 🔴 Criterios para ARCHIVAR
   const archiveCriteria = {
@@ -758,14 +865,14 @@ function validateActionCriteria(kpis, healthScore, events) {
   const canContinue = true;
   
   return {
-    can_promote: canPromote,
+    can_validate: canValidate,
     can_archive: canArchive,
     can_continue: canContinue,
-    promotion_criteria: promotionCriteria,
+    validation_criteria: validationCriteria,
     archive_criteria: archiveCriteria,
     days_running: daysRunning,
     blocking_reasons: {
-      promote: !canPromote ? getBlockingReasons(promotionCriteria, 'promote') : [],
+      validate: !canValidate ? getBlockingReasons(validationCriteria, 'validate') : [],
       archive: !canArchive ? getBlockingReasons(archiveCriteria, 'archive') : []
     }
   };
@@ -791,7 +898,7 @@ function calculateDaysRunning(events) {
 function getBlockingReasons(criteria, actionType) {
   const reasons = [];
   
-  if (actionType === 'promote') {
+  if (actionType === 'validate') {
     if (!criteria.sessions_min) reasons.push('Mínimo 20 sesiones requeridas');
     if (!criteria.completions_min) reasons.push('Mínimo 5 wizard completados requeridos');
     if (!criteria.feedback_min) reasons.push('Mínimo 5 feedbacks requeridos');
@@ -840,7 +947,7 @@ function generateAlerts(kpis, healthScore, events) {
     });
   }
   
-  // ✅ Alert: Listo para módulo
+  // ✅ Alert: Listo para validar (cambiar a 'live')
   if (
     !kpis.insufficient_data &&
     healthScore >= DECISION_THRESHOLDS.create_module_score &&
@@ -849,8 +956,8 @@ function generateAlerts(kpis, healthScore, events) {
     alerts.push({
       type: 'success',
       title: '🎉 MVP Validado',
-      message: `¡Listo para crear módulo formal! Score ${healthScore}, ${kpis.downloads} descargas.`,
-      action: 'create_module',
+      message: `¡Listo para validar y activar! Score ${healthScore}, ${kpis.downloads} descargas.`,
+      action: 'validate',
       priority: 'high'
     });
   }
