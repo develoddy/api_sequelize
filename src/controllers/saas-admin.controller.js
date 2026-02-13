@@ -520,6 +520,7 @@ export const getTrackingEvents = async (req, res) => {
     const {
       module,
       event,
+      source,
       session_id,
       user_id,
       tenant_id,
@@ -538,6 +539,10 @@ export const getTrackingEvents = async (req, res) => {
 
     if (event) {
       where.event = event;
+    }
+
+    if (source) {
+      where.source = source;
     }
 
     if (session_id) {
@@ -669,6 +674,7 @@ export const exportTrackingEventsToCSV = async (req, res) => {
     const {
       module,
       event,
+      source,
       session_id,
       user_id,
       tenant_id,
@@ -681,6 +687,7 @@ export const exportTrackingEventsToCSV = async (req, res) => {
 
     if (module) where.module = module;
     if (event) where.event = event;
+    if (source) where.source = source;
     if (session_id) where.session_id = session_id;
     if (user_id) where.user_id = user_id;
     if (tenant_id) where.tenant_id = parseInt(tenant_id);
@@ -771,6 +778,68 @@ export const exportTrackingEventsToCSV = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al exportar eventos',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete tracking events by source
+ * ⚠️ Solo para desarrollo: eliminar eventos de tests internos (source='admin')
+ * NO afecta eventos públicos (source='preview')
+ * 
+ * @route   DELETE /api/admin/saas/tracking-events/by-source/:source
+ * @desc    Eliminar eventos por source (admin/preview/pro_modal)
+ * @access  Admin only, development only
+ */
+export const deleteEventsBySource = async (req, res) => {
+  try {
+    const { source } = req.params;
+
+    // Validación de seguridad: solo permitir en development o con confirmación especial
+    if (process.env.NODE_ENV === 'production' && source !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Operación no permitida en producción. Solo se puede eliminar source=admin'
+      });
+    }
+
+    // Validar que source sea uno válido
+    const validSources = ['admin', 'preview', 'pro_modal'];
+    if (!validSources.includes(source)) {
+      return res.status(400).json({
+        success: false,
+        message: `Source inválido. Debe ser: ${validSources.join(', ')}`
+      });
+    }
+
+    // Extra protección: avisar si intentan borrar preview
+    if (source === 'preview') {
+      console.warn('⚠️ Warning: Attempting to delete PUBLIC events (source=preview)');
+    }
+
+    // Contar eventos antes de borrar
+    const countBefore = await TrackingEvent.count({ where: { source } });
+
+    // Eliminar eventos con el source especificado
+    const deleted = await TrackingEvent.destroy({
+      where: { source }
+    });
+
+    console.log(`🗑️  Deleted ${deleted} tracking events with source='${source}'`);
+
+    res.json({
+      success: true,
+      deleted,
+      source,
+      message: `Eliminados ${deleted} eventos con source='${source}'`
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting events by source:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar eventos',
       error: error.message
     });
   }
