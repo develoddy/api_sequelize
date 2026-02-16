@@ -29,7 +29,7 @@ const corsOptions = {
       ], // Orígenes específicos en desarrollo
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'token', 'x-guest-data']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'token', 'x-guest-data', 'X-Tenant-Id', 'x-tenant-id']
 };
 
 app.use(cors(corsOptions));

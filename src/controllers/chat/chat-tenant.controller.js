@@ -271,39 +271,32 @@ export const getTenantStats = async (req, res) => {
     const [
       totalConversations,
       openConversations,
+      pendingConversations,
       closedConversations,
       totalMessages
     ] = await Promise.all([
       ChatConversation.count({ where: { tenant_id: tenantId } }),
       ChatConversation.count({ where: { tenant_id: tenantId, status: 'open' } }),
+      ChatConversation.count({ where: { tenant_id: tenantId, status: 'pending' } }),
       ChatConversation.count({ where: { tenant_id: tenantId, status: 'closed' } }),
       ChatMessage.count({ where: { tenant_id: tenantId } })
     ]);
     
-    // Conversaciones de hoy
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Conversaciones activas (open + pending)
+    const activeConversations = openConversations + pendingConversations;
     
-    const todayConversations = await ChatConversation.count({
-      where: {
-        tenant_id: tenantId,
-        created_at: {
-          $gte: today
-        }
-      }
-    });
+    // Calcular tiempo promedio de respuesta (placeholder por ahora)
+    const avgResponseTime = '5 min'; // TODO: Calcular tiempo real basado en timestamps
     
     res.json({
-      success: true,
-      stats: {
-        total_conversations: totalConversations,
-        open_conversations: openConversations,
-        closed_conversations: closedConversations,
-        total_messages: totalMessages,
-        today_conversations: todayConversations,
-        avg_messages_per_conversation: totalConversations > 0 
-          ? Math.round(totalMessages / totalConversations) 
-          : 0
+      total_conversations: totalConversations,
+      active_conversations: activeConversations,
+      total_messages: totalMessages,
+      avg_response_time: avgResponseTime,
+      conversations_by_status: {
+        open: openConversations,
+        pending: pendingConversations,
+        closed: closedConversations
       }
     });
   } catch (error) {
