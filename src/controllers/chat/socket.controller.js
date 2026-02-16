@@ -46,7 +46,9 @@ function setupChatSocketIO(io) {
         console.log(`Usuario identificado - Session: ${session_id}, SocketID: ${socket.id}`);
         
         // Buscar o crear la conversación para esta sesión
+        // 👉 IMPORTANTE: tenant_id = 1 para el ecommerce principal
         const conversation = await chatService.findOrCreateConversation({
+          tenant_id: 1,  // 👉 Ecommerce principal
           session_id,
           user_id: user_id || null,
           guest_id: guest_id || null
@@ -114,8 +116,10 @@ function setupChatSocketIO(io) {
         }
         
         // Guardar el mensaje en la base de datos
+        // 👉 IMPORTANTE: tenant_id = 1 para el ecommerce principal
         const savedMessage = await chatService.saveMessage({
           conversation_id,
+          tenant_id: 1,  // 👉 Ecommerce principal
           sender_type: 'user',
           sender_id: user_id || guest_id || null,
           message
@@ -161,6 +165,7 @@ function setupChatSocketIO(io) {
         // Guardar el mensaje en la base de datos
         const savedMessage = await chatService.saveMessage({
           conversation_id,
+          tenant_id: 1,  // 👉 Ecommerce principal
           sender_type: 'agent',
           sender_id: agent_id,
           message,
@@ -269,6 +274,7 @@ function setupChatSocketIO(io) {
         // Enviar mensaje de sistema
         await chatService.saveMessage({
           conversation_id,
+          tenant_id: 1,  // 👉 Ecommerce principal
           sender_type: 'system',
           message: `El agente ${agent_name} se ha unido a la conversación.`
         });
@@ -310,6 +316,7 @@ function setupChatSocketIO(io) {
         // Guardar mensaje de sistema
         await chatService.saveMessage({
           conversation_id,
+          tenant_id: 1,  // 👉 Ecommerce principal
           sender_type: 'system',
           message: 'La conversación ha sido cerrada.'
         });
@@ -428,6 +435,7 @@ function setupChatSocketIO(io) {
         
         // Buscar o crear la conversación para esta sesión
         const conversation = await chatService.findOrCreateConversation({
+          tenant_id: 1,  // 👉 Ecommerce principal
           session_id,
           user_id: user_id || null,
           guest_id: guest_id || null
@@ -436,6 +444,7 @@ function setupChatSocketIO(io) {
         // Guardar el mensaje de solicitud de soporte
         await chatService.saveMessage({
           conversation_id: conversation.id,
+          tenant_id: 1,  // 👉 Ecommerce principal
           sender_type: 'user',
           sender_id: user_id || guest_id || null,
           message: issue || 'Solicitud de soporte'

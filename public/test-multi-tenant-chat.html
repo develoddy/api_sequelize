@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Socket.IO Multi-Tenant - Smart Chat</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .status {
+      padding: 16px 24px;
+      background: #f7fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .status-dot.connected {
+      background: #10b981;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .tenant-selector {
+      padding: 16px 24px;
+      background: #fef3c7;
+      border-bottom: 1px solid #fbbf24;
+    }
+    .tenant-selector label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .tenant-selector select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #fbbf24;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      background: white;
+      cursor: pointer;
+    }
+    .chat-box {
+      height: 400px;
+      overflow-y: auto;
+      padding: 24px;
+      background: #f9fafb;
+    }
+    .message {
+      margin-bottom: 16px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .message.user {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .message.agent {
+      display: flex;
+      justify-content: flex-start;
+    }
+    .message.system {
+      display: flex;
+      justify-content: center;
+    }
+    .message-content {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .message.user .message-content {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .message.agent .message-content {
+      background: white;
+      color: #1f2937;
+      border: 1px solid #e5e7eb;
+    }
+    .message.system .message-content {
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 12px;
+      font-style: italic;
+      text-align: center;
+      max-width: 90%;
+    }
+    .message-sender {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .input-area {
+      padding: 16px 24px;
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      gap: 12px;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-area input:focus {
+      border-color: #667eea;
+    }
+    .input-area button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .input-area button:hover {
+      transform: scale(1.05);
+    }
+    .input-area button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: scale(1);
+    }
+    .info {
+      padding: 16px 24px;
+      background: #dbeafe;
+      border-top: 1px solid #60a5fa;
+      font-size: 12px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+    .info strong { color: #1e3a8a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 Smart Chat - Multi-Tenant Test</h1>
+      <p>Prueba del sistema de chat con aislamiento por tenant</p>
+    </div>
+    
+    <div class="status">
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Desconectado</span>
+      </div>
+      <div style="font-size: 12px; color: #64748b;">
+        Socket ID: <strong id="socketId">-</strong>
+      </div>
+    </div>
+    
+    <div class="tenant-selector">
+      <label for="tenantSelect">Seleccionar Tenant (Negocio)</label>
+      <select id="tenantSelect" onchange="changeTenant()">
+        <option value="1">Tenant 1 - Ecommerce Principal</option>
+        <option value="2" selected>Tenant 2 - Demo Coffee Shop</option>
+        <option value="3">Tenant 3 - Test Store</option>
+      </select>
+    </div>
+    
+    <div class="chat-box" id="messages">
+      <div class="message system">
+        <div class="message-content">
+          Selecciona un tenant y escribe un mensaje para probar el chat
+        </div>
+      </div>
+    </div>
+    
+    <div class="input-area">
+      <input 
+        type="text" 
+        id="messageInput" 
+        placeholder="Escribe un mensaje..."
+        disabled
+      >
+      <button onclick="sendMessage()" id="sendBtn" disabled>Enviar</button>
+    </div>
+    
+    <div class="info">
+      <strong>💡 Instrucciones:</strong><br>
+      1. Selecciona un tenant arriba<br>
+      2. Espera a que se conecte (indicador verde)<br>
+      3. Escribe un mensaje y envíalo<br>
+      4. Verifica en MySQL que el mensaje tiene el <strong>tenant_id</strong> correcto<br>
+      5. Cambia de tenant y repite para probar el aislamiento
+    </div>
+  </div>
+  
+  <script>
+    let socket;
+    let conversationId = null;
+    let sessionId = 'test_session_' + Date.now();
+    let currentTenantId = 2; // Default: Demo Coffee Shop
+    
+    // Conectar al tenant seleccionado
+    function connectToTenant(tenantId) {
+      // Desconectar socket anterior si existe
+      if (socket) {
+        socket.disconnect();
+      }
+      
+      updateStatus('Conectando...', false);
+      
+      // Conectar al namespace del tenant
+      socket = io(`http://localhost:3500/tenant-${tenantId}`, {
+        transports: ['polling', 'websocket']
+      });
+      
+      socket.on('connect', () => {
+        updateStatus(`Conectado a Tenant ${tenantId}`, true);
+        document.getElementById('socketId').textContent = socket.id.substring(0, 8) + '...';
+        document.getElementById('messageInput').disabled = false;
+        
+        addSystemMessage(`Conectado al Tenant ${tenantId}`);
+        
+        // Identificarse como usuario
+        socket.emit('identify-user', {
+          session_id: sessionId,
+          user_id: null,
+          guest_id: 'test_guest_' + Date.now()
+        });
+      });
+      
+      socket.on('conversation-ready', (data) => {
+        console.log('Conversación lista:', data);
+        conversationId = data.conversation_id;
+        addSystemMessage(`Conversación #${conversationId} iniciada (Tenant ${data.tenant_id})`);
+        document.getElementById('sendBtn').disabled = false;
+      });
+      
+      socket.on('new-message', (msg) => {
+        console.log('Nuevo mensaje:', msg);
+        const type = msg.sender_type === 'user' ? 'user' : 'agent';
+        addMessage(msg.sender_type, msg.message, type);
+      });
+      
+      socket.on('error', (error) => {
+        console.error('Error:', error);
+        addSystemMessage('❌ Error: ' + error.message);
+      });
+      
+      socket.on('disconnect', () => {
+        updateStatus('Desconectado', false);
+        document.getElementById('socketId').textContent = '-';
+        document.getElementById('messageInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+      });
+    }
+    
+    function changeTenant() {
+      const select = document.getElementById('tenantSelect');
+      currentTenantId = parseInt(select.value);
+      
+      // Limpiar chat
+      document.getElementById('messages').innerHTML = '';
+      conversationId = null;
+      sessionId = 'test_session_' + Date.now();
+      
+      // Reconectar
+      connectToTenant(currentTenantId);
+    }
+    
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+      
+      if (!message || !conversationId) {
+        alert('Escribe un mensaje y espera a que se establezca la conversación');
+        return;
+      }
+      
+      socket.emit('user-message', {
+        conversation_id: conversationId,
+        session_id: sessionId,
+        guest_id: 'test_guest_' + Date.now(),
+        message: message
+      });
+      
+      input.value = '';
+    }
+    
+    function updateStatus(text, connected) {
+      document.getElementById('statusText').textContent = text;
+      const dot = document.getElementById('statusDot');
+      if (connected) {
+        dot.classList.add('connected');
+      } else {
+        dot.classList.remove('connected');
+      }
+    }
+    
+    function addMessage(sender, text, type) {
+      const messagesDiv = document.getElementById('messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message ' + type;
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      
+      if (type !== 'system') {
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'message-sender';
+        senderDiv.textContent = sender.charAt(0).toUpperCase() + sender.slice(1);
+        contentDiv.appendChild(senderDiv);
+      }
+      
+      const textDiv = document.createElement('div');
+      textDiv.textContent = text;
+      contentDiv.appendChild(textDiv);
+      
+      messageDiv.appendChild(contentDiv);
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    function addSystemMessage(text) {
+      addMessage('system', text, 'system');
+    }
+    
+    // Enviar mensaje con Enter
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    
+    // Auto-conectar al cargar
+    connectToTenant(currentTenantId);
+  </script>
+</body>
+</html>

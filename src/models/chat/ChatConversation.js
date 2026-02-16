@@ -7,15 +7,20 @@ export const ChatConversation = sequelize.define('ChatConversation', {
     primaryKey: true,
     autoIncrement: true
   },
+  tenant_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    comment: 'ID del tenant (multi-tenancy)'
+  },
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'ID del usuario si está autenticado'
   },
   guest_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
     allowNull: true,
-    comment: 'ID del invitado si no está autenticado'
+    comment: 'ID temporal del invitado (generado por frontend)'
   },
   session_id: {
     type: DataTypes.STRING,

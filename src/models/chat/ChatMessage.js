@@ -8,6 +8,11 @@ export const ChatMessage = sequelize.define('ChatMessage', {
     primaryKey: true,
     autoIncrement: true
   },
+  tenant_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    comment: 'ID del tenant (multi-tenancy)'
+  },
   conversation_id: {
     type: DataTypes.INTEGER,
     allowNull: false

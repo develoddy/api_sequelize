@@ -22,6 +22,7 @@ import shippingratesRoutes from "./shippingrates.route.js";
 import stripeRoutes from "./stripe.routes.js";
 import paypalRoutes from "./paypal.routes.js";
 import chatRoutes from './chat/chat.routes.js';
+import chatTenantRoutes from './chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS
 import saleRoutes  from './sale.routes.js';
 import ReturnRoutes from './returns.routes.js';
 import Inbox from './inbox.routes.js';
@@ -75,6 +76,7 @@ app.use("/shipping", shippingratesRoutes);
 app.use("/stripe", stripeRoutes);
 app.use("/paypal", paypalRoutes);
 app.use("/chat", chatRoutes);
+app.use("/chat/tenant", chatTenantRoutes); // 🚀 Multi-Tenant Chat SaaS endpoints
 app.use("/sales", saleRoutes);
 app.use("/returns", ReturnRoutes);
 app.use("/inbox", Inbox);

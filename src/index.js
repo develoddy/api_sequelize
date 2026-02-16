@@ -180,6 +180,8 @@ import './models/File.js';
 import './models/Option.js';
 import './models/chat/ChatConversation.js';
 import './models/chat/ChatMessage.js';
+import './models/chat/TenantChatConfig.js'; // 🚀 Multi-Tenant Chat Config
+import './models/chat/TenantAgent.js';       // 🚀 Tenant Agents
 import './models/ReturnRequest.js';
 import './models/Notification.js';
 import './models/Module.js';

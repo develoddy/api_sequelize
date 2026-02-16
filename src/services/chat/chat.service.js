@@ -14,7 +14,14 @@ class ChatService {
    */
   async createConversation(data) {
     try {
+      const { tenant_id } = data;
+      
+      if (!tenant_id) {
+        throw new Error('tenant_id es obligatorio para crear conversación');
+      }
+      
       return await ChatConversation.create({
+        tenant_id: tenant_id,
         user_id: data.user_id || null,
         guest_id: data.guest_id || null,
         session_id: data.session_id,
@@ -38,7 +45,20 @@ class ChatService {
    */
   async findOrCreateConversation(data) {
     try {
-      let query = { session_id: data.session_id };
+      const { tenant_id, session_id } = data;
+      
+      if (!tenant_id) {
+        throw new Error('tenant_id es obligatorio');
+      }
+      
+      if (!session_id) {
+        throw new Error('session_id es obligatorio');
+      }
+      
+      let query = { 
+        tenant_id: tenant_id,
+        session_id: session_id 
+      };
       
       // Si hay un usuario autenticado, buscar por user_id
       if (data.user_id) {
@@ -78,9 +98,20 @@ class ChatService {
     const t = await sequelize.transaction();
     
     try {
+      const { tenant_id, conversation_id } = messageData;
+      
+      if (!tenant_id) {
+        throw new Error('tenant_id es obligatorio para guardar mensaje');
+      }
+      
+      if (!conversation_id) {
+        throw new Error('conversation_id es obligatorio');
+      }
+      
       // Crear el mensaje
       const message = await ChatMessage.create({
-        conversation_id: messageData.conversation_id,
+        tenant_id: tenant_id,
+        conversation_id: conversation_id,
         sender_type: messageData.sender_type,
         sender_id: messageData.sender_id || null,
         message: messageData.message,
@@ -99,7 +130,10 @@ class ChatService {
         ),
         updated_at: new Date()
       }, {
-        where: { id: messageData.conversation_id },
+        where: { 
+          id: conversation_id,
+          tenant_id: tenant_id 
+        },
         transaction: t
       });
       
