@@ -257,8 +257,13 @@
       
       updateStatus('Conectando...', false);
       
+      // Detectar URL del servidor según el entorno
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3500' 
+        : window.location.origin;
+      
       // Conectar al namespace del tenant
-      socket = io(`http://localhost:3500/tenant-${tenantId}`, {
+      socket = io(`${serverUrl}/tenant-${tenantId}`, {
         transports: ['polling', 'websocket']
       });
       
