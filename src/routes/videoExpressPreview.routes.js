@@ -7,6 +7,7 @@ import * as VideoExpressService from '../services/videoExpress.service.js';
 import { VideoJob } from '../models/VideoJob.js';
 import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
+import * as FalService from '../services/fal.service.js';
 
 /**
  * RUTAS PÚBLICAS: Video Express Preview
@@ -243,20 +244,45 @@ router.get('/status/:jobId', async (req, res) => {
             });
         }
         
-        console.log(`📊 Status check job ${jobId}: status=${job.status}, output_url=${job.output_video_url}`);
+        console.log(`📊 Status check job ${jobId}: status=${job.status}, fal_request_id=${job.fal_request_id}`);
         
-        // Processing
+        // Processing - Consultar progreso REAL de Fal.ai
         if (job.status === 'pending' || job.status === 'processing') {
-            // Estimar progreso basado en tiempo transcurrido
-            const elapsed = Date.now() - new Date(job.created_at).getTime();
-            const estimatedTotal = 45000; // 45 segundos estimados
-            const progress = Math.min(95, Math.round((elapsed / estimatedTotal) * 100));
+            let realProgress = null;
+            
+            // Si tenemos fal_request_id, consultar progreso real
+            if (job.fal_request_id && !job.fal_request_id.startsWith('sim-') && !job.fal_request_id.startsWith('limit-')) {
+                try {
+                    console.log(`🔍 Consultando progreso real de Fal.ai para: ${job.fal_request_id}`);
+                    const falStatus = await FalService.checkJobStatus(job.fal_request_id);
+                    
+                    // Fal.ai puede devolver progress en el objeto status
+                    if (falStatus.progress !== undefined && falStatus.progress !== null) {
+                        realProgress = falStatus.progress;
+                        console.log(`✅ Progreso real de Fal.ai: ${realProgress}%`);
+                    } else {
+                        console.log(`⚠️ Fal.ai no devolvió campo 'progress', usando estimación local`);
+                    }
+                } catch (error) {
+                    console.error(`⚠️ Error consultando progreso de Fal.ai:`, error.message);
+                    // Continuar con fallback temporal si falla la consulta
+                }
+            }
+            
+            // Fallback: estimar progreso basado en tiempo transcurrido solo si Fal.ai no dio progreso
+            let progress = realProgress;
+            if (progress === null) {
+                const elapsed = Date.now() - new Date(job.created_at).getTime();
+                const estimatedTotal = 45000; // 45 segundos estimados
+                progress = Math.min(85, Math.round((elapsed / estimatedTotal) * 100));
+                console.log(`📊 Usando progreso estimado por tiempo: ${progress}%`);
+            }
             
             return res.json({
                 success: true,
                 status: 'processing',
                 progress: progress,
-                message: 'Generando video...'
+                message: realProgress !== null ? 'Generating video...' : 'Generating video... (estimated progress)'
             });
         }
         
