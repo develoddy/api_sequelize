@@ -179,10 +179,14 @@ async function checkAndUpdateJob(job) {
                 console.log('💰 Motivo: Límite de créditos alcanzado');
             }
             
+            // 🎯 Usar video placeholder más confiable
+            // Big Buck Bunny - 30 seg sample (compatible con todos los navegadores)
+            const placeholderVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+            
             const processingTime = Date.now() - new Date(job.created_at).getTime();
             await job.update({
                 status: 'completed',
-                output_video_url: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                output_video_url: placeholderVideoUrl, // 🎯 URL directa del CDN público
                 output_video_filename: 'simulation-video.mp4',
                 duration_seconds: 5.0,
                 processing_time_ms: processingTime,
@@ -191,7 +195,7 @@ async function checkAndUpdateJob(job) {
                 is_simulated: true
             });
             
-            console.log(`✅ Job simulado ${job.id} completado (sin usar créditos reales)`);
+            console.log(`✅ Job simulado ${job.id} completado con video placeholder (sin usar créditos reales)`);
             return;
         }
 
@@ -231,14 +235,21 @@ async function checkAndUpdateJob(job) {
                 throw new Error('fal.ai no devolvió URL de video en ningún formato conocido');
             }
 
-            const { localPath, filename } = await downloadVideo(videoUrl, job.id);
+            // 🎯 OPTIMIZACIÓN MÓVILES: Usar URL directa del CDN de fal.ai
+            // En lugar de descargar el video, usamos la URL directa del CDN
+            // Esto evita:
+            // - Problemas de códec/formato al descargar
+            // - Consumo de almacenamiento en el servidor
+            // - Latencia adicional del proxy
+            // - Problemas de streaming en móviles
+            console.log('🚀 Usando URL directa del CDN de fal.ai (sin descargar)');
 
-            // Actualizar job como completado
+            // Actualizar job como completado con URL externa
             const processingTime = Date.now() - new Date(job.created_at).getTime();
             await job.update({
                 status: 'completed',
-                output_video_url: localPath,
-                output_video_filename: filename,
+                output_video_url: videoUrl, // 🎯 URL directa del CDN
+                output_video_filename: `video-${job.id}.mp4`,
                 duration_seconds: 5.0, // Aproximado (30 frames @ 6fps = 5s)
                 processing_time_ms: processingTime,
                 fal_processing_time_ms: statusResponse.processingTimeMs,
@@ -246,7 +257,7 @@ async function checkAndUpdateJob(job) {
                 is_simulated: false // Video REAL generado con fal.ai
             });
 
-            console.log(`✅ Job ${job.id} completado y guardado en ${localPath}`);
+            console.log(`✅ Job ${job.id} completado con URL del CDN: ${videoUrl}`);
 
         } else if (statusResponse.status === 'failed') {
             console.error(`❌ Job ${job.id} falló en fal.ai:`, statusResponse.error);

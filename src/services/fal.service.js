@@ -384,13 +384,14 @@ export async function checkJobStatus(requestId) {
             console.log('💰 Video generado con placeholder (límite de créditos alcanzado)');
         }
         
-        // URL de video placeholder público (pequeño, ~1MB, siempre disponible)
-        const exampleVideoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+        // 🎯 Video placeholder confiable (Google Cloud Storage - público)
+        // Big Buck Bunny - Compatible con todos los navegadores y permite CORS
+        const placeholderVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
         
         return {
             status: 'completed',
             output: {
-                video: exampleVideoUrl
+                video: placeholderVideoUrl
             },
             error: null,
             progress: 100,

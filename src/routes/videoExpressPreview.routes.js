@@ -288,7 +288,10 @@ router.get('/status/:jobId', async (req, res) => {
         
         // Completed
         if (job.status === 'completed') {
-            console.log(`✅ Job completado, enviando URL: ${job.output_video_url}`);
+            console.log(`✅ Job completado`);
+            console.log(`   - output_video_url: ${job.output_video_url}`);
+            console.log(`   - is_simulated: ${job.is_simulated}`);
+            console.log(`   - fal_request_id: ${job.fal_request_id}`);
             
             const protocol = req.protocol;
             const host = req.get('host');
@@ -308,7 +311,7 @@ router.get('/status/:jobId', async (req, res) => {
                 downloadUrl = videoUrl;
             }
             
-            console.log(`🔄 Video URL (para reproducción): ${videoUrl}`);
+            console.log(`🎬 Video URL (para reproducción): ${videoUrl}`);
             console.log(`📦 Download URL (para descarga): ${downloadUrl}`);
             
             return res.json({
