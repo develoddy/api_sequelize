@@ -290,15 +290,26 @@ router.get('/status/:jobId', async (req, res) => {
         if (job.status === 'completed') {
             console.log(`✅ Job completado, enviando URL: ${job.output_video_url}`);
             
-            // SIEMPRE usar el endpoint de download para servir el video
-            // Esto funciona tanto para videos externos (proxy) como locales (streaming)
-            const protocol = req.protocol; // http o https
-            const host = req.get('host'); // localhost:3500
-            const videoUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
-            const downloadUrl = videoUrl; // Misma URL para ambos
+            const protocol = req.protocol;
+            const host = req.get('host');
+            let videoUrl, downloadUrl;
             
-            console.log(`🔄 Video URL: ${videoUrl}`);
-            console.log(`📦 Download URL: ${downloadUrl}`);
+            // 🎯 SOLUCIÓN MÓVILES: Para videos externos (CDN), usar URL directa
+            // El navegador se conecta directamente al CDN sin redirects intermedios
+            // Esto evita problemas de CORS y "Video format not supported" en móviles
+            if (job.output_video_url.startsWith('http://') || job.output_video_url.startsWith('https://')) {
+                console.log(`📡 Video externo (CDN): Usando URL directa para reproducción`);
+                videoUrl = job.output_video_url; // URL directa del CDN
+                downloadUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`; // Endpoint para descarga
+            } else {
+                // Para videos locales, usar endpoint de streaming
+                console.log(`📂 Video local: Usando endpoint de streaming`);
+                videoUrl = `${protocol}://${host}/api/video-express/preview/download/${jobId}`;
+                downloadUrl = videoUrl;
+            }
+            
+            console.log(`🔄 Video URL (para reproducción): ${videoUrl}`);
+            console.log(`📦 Download URL (para descarga): ${downloadUrl}`);
             
             return res.json({
                 success: true,
