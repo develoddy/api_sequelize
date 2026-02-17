@@ -375,8 +375,9 @@ router.head('/download/:jobId', async (req, res) => {
                 res.setHeader('Accept-Ranges', 'bytes');
                 res.setHeader('Content-Length', headResponse.headers['content-length'] || '0');
                 res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
-                res.setHeader('Access-Control-Allow-Headers', 'Range');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
                 return res.sendStatus(200);
             } catch (error) {
                 return res.sendStatus(404);
@@ -400,8 +401,9 @@ router.head('/download/:jobId', async (req, res) => {
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', stat.size);
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
-        res.setHeader('Access-Control-Allow-Headers', 'Range');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
         res.sendStatus(200);
         
     } catch (error) {
@@ -482,9 +484,11 @@ router.get('/download/:jobId', async (req, res) => {
                     res.setHeader('Content-Range', videoResponse.headers['content-range']);
                     res.setHeader('Content-Length', videoResponse.headers['content-length']);
                     res.setHeader('Access-Control-Allow-Origin', '*');
-                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
-                    res.setHeader('Access-Control-Allow-Headers', 'Range');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+                    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
                     res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
+                    res.setHeader('Cache-Control', 'public, max-age=3600');
                     
                     videoResponse.data.pipe(res);
                 } else {
@@ -497,9 +501,15 @@ router.get('/download/:jobId', async (req, res) => {
                     res.setHeader('Content-Type', 'video/mp4');
                     res.setHeader('Accept-Ranges', 'bytes');
                     res.setHeader('Access-Control-Allow-Origin', '*');
-                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+                    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
                     res.setHeader('Cache-Control', 'public, max-age=3600');
                     res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
+                    
+                    if (videoResponse.headers['content-length']) {
+                        res.setHeader('Content-Length', videoResponse.headers['content-length']);
+                    }
                     
                     videoResponse.data.pipe(res);
                 }
@@ -560,8 +570,10 @@ router.get('/download/:jobId', async (req, res) => {
             res.setHeader('Content-Length', chunksize);
             res.setHeader('Content-Type', 'video/mp4');
             res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
-            res.setHeader('Access-Control-Allow-Headers', 'Range');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
             res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
             
             // Stream del chunk específico
@@ -576,7 +588,9 @@ router.get('/download/:jobId', async (req, res) => {
             res.setHeader('Content-Length', fileSize);
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
             res.setHeader('Cache-Control', 'public, max-age=3600');
             res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
             
