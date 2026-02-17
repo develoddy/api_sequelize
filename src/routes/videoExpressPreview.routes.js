@@ -348,6 +348,7 @@ router.options('/download/:jobId', (req, res) => {
 /**
  * HEAD /api/video-express/preview/download/:jobId
  * Validación de video (iOS Safari requiere esto antes de GET)
+ * 🎯 OPTIMIZADO: Para URLs externas, redirect directo (mismo comportamiento que GET)
  */
 router.head('/download/:jobId', async (req, res) => {
     try {
@@ -365,23 +366,10 @@ router.head('/download/:jobId', async (req, res) => {
             return res.sendStatus(404);
         }
         
-        // Si es URL externa
+        // 🎯 Para URLs externas, redirect directo (consistente con GET)
         if (job.output_video_url.startsWith('http://') || job.output_video_url.startsWith('https://')) {
-            const axios = (await import('axios')).default;
-            try {
-                const headResponse = await axios.head(job.output_video_url, { timeout: 5000 });
-                
-                res.setHeader('Content-Type', 'video/mp4');
-                res.setHeader('Accept-Ranges', 'bytes');
-                res.setHeader('Content-Length', headResponse.headers['content-length'] || '0');
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
-                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
-                return res.sendStatus(200);
-            } catch (error) {
-                return res.sendStatus(404);
-            }
+            console.log(`🔄 HEAD redirect a URL externa: ${job.output_video_url}`);
+            return res.redirect(302, job.output_video_url);
         }
         
         // Si es archivo local
@@ -455,74 +443,14 @@ router.get('/download/:jobId', async (req, res) => {
             });
         }
         
-        // Si es una URL externa (modo simulación), hacer proxy del video
+        // 🎯 SOLUCIÓN MÓVILES: Para URLs externas, redirect directo (sin proxy)
+        // Los CDNs externos (fal.ai, etc.) ya manejan Range requests correctamente
+        // Evita problemas de chunked encoding y es más eficiente
         if (job.output_video_url.startsWith('http://') || job.output_video_url.startsWith('https://')) {
-            console.log(`📡 Haciendo proxy de URL externa (simulación): ${job.output_video_url}`);
+            console.log(`🔄 Redirigiendo a URL externa (optimizado para móviles): ${job.output_video_url}`);
             
-            try {
-                const axios = (await import('axios')).default;
-                
-                // 🎯 CRÍTICO: Detectar Range request para móviles (iOS Safari)
-                const range = req.headers.range;
-                
-                if (range) {
-                    console.log(`📱 Range request detectado: ${range}`);
-                    
-                    // Hacer request al video externo con Range
-                    const videoResponse = await axios.get(job.output_video_url, {
-                        responseType: 'stream',
-                        headers: {
-                            'Range': range
-                        },
-                        timeout: 30000
-                    });
-                    
-                    // Reenviar headers de Range del upstream
-                    res.status(206); // Partial Content
-                    res.setHeader('Content-Type', 'video/mp4');
-                    res.setHeader('Accept-Ranges', 'bytes');
-                    res.setHeader('Content-Range', videoResponse.headers['content-range']);
-                    res.setHeader('Content-Length', videoResponse.headers['content-length']);
-                    res.setHeader('Access-Control-Allow-Origin', '*');
-                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-                    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
-                    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
-                    res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
-                    res.setHeader('Cache-Control', 'public, max-age=3600');
-                    
-                    videoResponse.data.pipe(res);
-                } else {
-                    // Request completo (sin Range)
-                    const videoResponse = await axios.get(job.output_video_url, {
-                        responseType: 'stream',
-                        timeout: 30000
-                    });
-                    
-                    res.setHeader('Content-Type', 'video/mp4');
-                    res.setHeader('Accept-Ranges', 'bytes');
-                    res.setHeader('Access-Control-Allow-Origin', '*');
-                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-                    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
-                    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type');
-                    res.setHeader('Cache-Control', 'public, max-age=3600');
-                    res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
-                    
-                    if (videoResponse.headers['content-length']) {
-                        res.setHeader('Content-Length', videoResponse.headers['content-length']);
-                    }
-                    
-                    videoResponse.data.pipe(res);
-                }
-                
-                console.log(`✅ Video proxy iniciado correctamente`);
-                return;
-            } catch (proxyError) {
-                console.error(`❌ Error al hacer proxy del video:`, proxyError.message);
-                
-                // Si falla el proxy, intentar redirect como fallback
-                console.log(`🔄 Fallback: intentando redirect...`);
-                return res.redirect(job.output_video_url);
-            }
+            // Redirect 302 temporal (para poder cambiar la URL si cambia el CDN)
+            return res.redirect(302, job.output_video_url);
         }
         
         // Si es un path local, servir el archivo
