@@ -334,8 +334,85 @@ router.get('/status/:jobId', async (req, res) => {
 });
 
 /**
+ * OPTIONS /api/video-express/preview/download/:jobId
+ * CORS preflight para video streaming (requerido por móviles)
+ */
+router.options('/download/:jobId', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    res.sendStatus(204);
+});
+
+/**
+ * HEAD /api/video-express/preview/download/:jobId
+ * Validación de video (iOS Safari requiere esto antes de GET)
+ */
+router.head('/download/:jobId', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        
+        const job = await VideoJob.findOne({
+            where: { 
+                id: jobId,
+                is_preview: true,
+                status: 'completed'
+            }
+        });
+        
+        if (!job || !job.output_video_url) {
+            return res.sendStatus(404);
+        }
+        
+        // Si es URL externa
+        if (job.output_video_url.startsWith('http://') || job.output_video_url.startsWith('https://')) {
+            const axios = (await import('axios')).default;
+            try {
+                const headResponse = await axios.head(job.output_video_url, { timeout: 5000 });
+                
+                res.setHeader('Content-Type', 'video/mp4');
+                res.setHeader('Accept-Ranges', 'bytes');
+                res.setHeader('Content-Length', headResponse.headers['content-length'] || '0');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+                res.setHeader('Access-Control-Allow-Headers', 'Range');
+                return res.sendStatus(200);
+            } catch (error) {
+                return res.sendStatus(404);
+            }
+        }
+        
+        // Si es archivo local
+        let videoPath;
+        if (job.output_video_url.startsWith('/')) {
+            videoPath = path.join('./public', job.output_video_url);
+        } else {
+            videoPath = job.output_video_url;
+        }
+        
+        if (!fs.existsSync(videoPath)) {
+            return res.sendStatus(404);
+        }
+        
+        const stat = fs.statSync(videoPath);
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+        res.setHeader('Access-Control-Allow-Headers', 'Range');
+        res.sendStatus(200);
+        
+    } catch (error) {
+        console.error('❌ Error HEAD request:', error);
+        res.sendStatus(500);
+    }
+});
+
+/**
  * GET /api/video-express/preview/download/:jobId
- * Descargar video generado
+ * Descargar video generado (con soporte Range para móviles)
  */
 router.get('/download/:jobId', async (req, res) => {
     try {
@@ -381,25 +458,51 @@ router.get('/download/:jobId', async (req, res) => {
             console.log(`📡 Haciendo proxy de URL externa (simulación): ${job.output_video_url}`);
             
             try {
-                // Fetch del video externo
                 const axios = (await import('axios')).default;
-                const videoResponse = await axios.get(job.output_video_url, {
-                    responseType: 'stream',
-                    timeout: 30000
-                });
                 
-                // Configurar headers para streaming y reproducción inline
-                res.setHeader('Content-Type', 'video/mp4');
-                res.setHeader('Accept-Ranges', 'bytes');
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET');
-                res.setHeader('Cache-Control', 'public, max-age=3600');
+                // 🎯 CRÍTICO: Detectar Range request para móviles (iOS Safari)
+                const range = req.headers.range;
                 
-                // Usar inline para reproducción en <video> tag, no attachment
-                res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
-                
-                // Pipe del stream al response
-                videoResponse.data.pipe(res);
+                if (range) {
+                    console.log(`📱 Range request detectado: ${range}`);
+                    
+                    // Hacer request al video externo con Range
+                    const videoResponse = await axios.get(job.output_video_url, {
+                        responseType: 'stream',
+                        headers: {
+                            'Range': range
+                        },
+                        timeout: 30000
+                    });
+                    
+                    // Reenviar headers de Range del upstream
+                    res.status(206); // Partial Content
+                    res.setHeader('Content-Type', 'video/mp4');
+                    res.setHeader('Accept-Ranges', 'bytes');
+                    res.setHeader('Content-Range', videoResponse.headers['content-range']);
+                    res.setHeader('Content-Length', videoResponse.headers['content-length']);
+                    res.setHeader('Access-Control-Allow-Origin', '*');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+                    res.setHeader('Access-Control-Allow-Headers', 'Range');
+                    res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
+                    
+                    videoResponse.data.pipe(res);
+                } else {
+                    // Request completo (sin Range)
+                    const videoResponse = await axios.get(job.output_video_url, {
+                        responseType: 'stream',
+                        timeout: 30000
+                    });
+                    
+                    res.setHeader('Content-Type', 'video/mp4');
+                    res.setHeader('Accept-Ranges', 'bytes');
+                    res.setHeader('Access-Control-Allow-Origin', '*');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+                    res.setHeader('Cache-Control', 'public, max-age=3600');
+                    res.setHeader('Content-Disposition', `inline; filename="${job.output_video_filename || 'video.mp4'}"`);
+                    
+                    videoResponse.data.pipe(res);
+                }
                 
                 console.log(`✅ Video proxy iniciado correctamente`);
                 return;
@@ -432,17 +535,54 @@ router.get('/download/:jobId', async (req, res) => {
         }
         
         const filename = `product-video-${Date.now()}.mp4`;
-        console.log(`📤 Sirviendo archivo: ${filename}`);
+        const stat = fs.statSync(videoPath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
         
-        // Headers para reproducción inline en <video> tag
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        console.log(`📤 Sirviendo archivo: ${filename} (${fileSize} bytes)`);
         
-        const stream = fs.createReadStream(videoPath);
-        stream.pipe(res);
+        // 🎯 CRÍTICO: Manejo de Range requests para reproducción en iOS/móviles
+        if (range) {
+            console.log(`📱 Range request detectado: ${range}`);
+            
+            // Parsear range header (formato: "bytes=start-end")
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+            
+            console.log(`📊 Enviando bytes ${start}-${end}/${fileSize}`);
+            
+            // Headers para Partial Content (206)
+            res.status(206);
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Content-Length', chunksize);
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+            res.setHeader('Access-Control-Allow-Headers', 'Range');
+            res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+            
+            // Stream del chunk específico
+            const stream = fs.createReadStream(videoPath, { start, end });
+            stream.pipe(res);
+        } else {
+            // Request completo (sin Range) - para descarga o navegadores desktop
+            console.log(`💻 Request completo (sin Range)`);
+            
+            res.status(200);
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Content-Length', fileSize);
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+            
+            const stream = fs.createReadStream(videoPath);
+            stream.pipe(res);
+        }
         
     } catch (error) {
         console.error('❌ Error downloading preview video:', error);
