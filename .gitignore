@@ -67,3 +67,4 @@ metrics/
 *.key
 *.cert
 *.sql
+*.md

@@ -53,7 +53,12 @@ export const trackEvent = async (req, res) => {
       module,
       source: finalSource,  // ✅ Guardar source distinguido
       user_agent: req.headers['user-agent'],
-      ip_address: req.ip,
+      // ✅ Capturar IP real incluso detrás de proxies/CDN
+      ip_address: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                  req.headers['x-real-ip'] || 
+                  req.connection?.remoteAddress || 
+                  req.socket?.remoteAddress || 
+                  req.ip,
       created_at: new Date()
     });
     
