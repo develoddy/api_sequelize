@@ -521,6 +521,9 @@ export const getTrackingEvents = async (req, res) => {
       module,
       event,
       source,
+      campaign,
+      medium,
+      is_internal_access,
       session_id,
       user_id,
       tenant_id,
@@ -543,6 +546,40 @@ export const getTrackingEvents = async (req, res) => {
 
     if (source) {
       where.source = source;
+    }
+
+    // 🆕 UTM tracking filters (inside properties JSON)
+    // MySQL syntax: JSON_EXTRACT(properties, '$.campo')
+    if (campaign) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.campaign')"),
+          campaign
+        )
+      );
+    }
+
+    if (medium) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.medium')"),
+          medium
+        )
+      );
+    }
+
+    // 🆕 Admin vs Public filter (inside properties JSON)
+    if (is_internal_access !== undefined) {
+      const isInternal = is_internal_access === 'true' || is_internal_access === true;
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.is_internal_access')"),
+          isInternal
+        )
+      );
     }
 
     if (session_id) {
@@ -675,6 +712,9 @@ export const exportTrackingEventsToCSV = async (req, res) => {
       module,
       event,
       source,
+      campaign,
+      medium,
+      is_internal_access,
       session_id,
       user_id,
       tenant_id,
@@ -688,6 +728,41 @@ export const exportTrackingEventsToCSV = async (req, res) => {
     if (module) where.module = module;
     if (event) where.event = event;
     if (source) where.source = source;
+
+    // 🆕 UTM tracking filters (inside properties JSON)
+    // MySQL syntax: JSON_EXTRACT(properties, '$.campo')
+    if (campaign) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.campaign')"),
+          campaign
+        )
+      );
+    }
+
+    if (medium) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.medium')"),
+          medium
+        )
+      );
+    }
+
+    // 🆕 Admin vs Public filter (inside properties JSON)
+    if (is_internal_access !== undefined) {
+      const isInternal = is_internal_access === 'true' || is_internal_access === true;
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.where(
+          sequelize.literal("JSON_EXTRACT(properties, '$.is_internal_access')"),
+          isInternal
+        )
+      );
+    }
+
     if (session_id) where.session_id = session_id;
     if (user_id) where.user_id = user_id;
     if (tenant_id) where.tenant_id = parseInt(tenant_id);
@@ -784,7 +859,7 @@ export const exportTrackingEventsToCSV = async (req, res) => {
 };
 
 /**
- * Delete tracking events by source
+ * Delete tracking events by source (LEGACY - mantener para compatibilidad)
  * ⚠️ Solo para desarrollo: eliminar eventos de tests internos (source='admin')
  * NO afecta eventos públicos (source='preview')
  * 
@@ -840,6 +915,56 @@ export const deleteEventsBySource = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al eliminar eventos',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🆕 Delete internal access events (UTM tracking system)
+ * Elimina eventos con is_internal_access=true (accesos admin con ?internal=true)
+ * PROTEGE eventos públicos (is_internal_access=false)
+ * 
+ * @route   DELETE /api/admin/saas/tracking-events/internal-access
+ * @desc    Eliminar eventos de tests internos (is_internal_access=true)
+ * @access  Admin only, development only
+ */
+export const deleteInternalAccessEvents = async (req, res) => {
+  try {
+    // Validación de seguridad adicional en producción
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️  Production environment: Deleting internal access events (is_internal_access=true)');
+    }
+
+    // 🔧 Buscar eventos con is_internal_access=true en properties JSON
+    // MySQL syntax: JSON_EXTRACT(properties, '$.is_internal_access') = true
+    const where = sequelize.where(
+      sequelize.literal("JSON_EXTRACT(properties, '$.is_internal_access')"),
+      true
+    );
+
+    // Contar eventos antes de borrar
+    const countBefore = await TrackingEvent.count({ where });
+
+    console.log(`📊 Found ${countBefore} internal access events to delete`);
+
+    // Eliminar eventos internos
+    const deleted = await TrackingEvent.destroy({ where });
+
+    console.log(`🗑️  Deleted ${deleted} internal access events (is_internal_access=true)`);
+    console.log(`✅ Public events (is_internal_access=false) remain SAFE`);
+
+    res.json({
+      success: true,
+      deleted,
+      message: `Eliminados ${deleted} eventos de tests internos. Eventos públicos permanecen intactos.`
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting internal access events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar eventos internos',
       error: error.message
     });
   }

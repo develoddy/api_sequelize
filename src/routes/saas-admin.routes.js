@@ -25,8 +25,10 @@ router.get('/tracking-events', saasAdminController.getTrackingEvents);
 router.get('/tracking-events/modules', saasAdminController.getUniqueModules);
 router.get('/tracking-events/event-types', saasAdminController.getUniqueEvents);
 router.get('/tracking-events/export', saasAdminController.exportTrackingEventsToCSV);
-// ⚠️ Delete events by source (dev only - para limpiar tests internos)
+// ⚠️ Delete events by source (LEGACY - mantener para compatibilidad)
 router.delete('/tracking-events/by-source/:source', logAdminAction('DELETE_EVENTS_BY_SOURCE'), saasAdminController.deleteEventsBySource);
+// 🆕 Delete internal access events (UTM tracking system)
+router.delete('/tracking-events/internal-access', logAdminAction('DELETE_INTERNAL_ACCESS_EVENTS'), saasAdminController.deleteInternalAccessEvents);
 
 // 🧠 Micro-SaaS Analytics & Decision Engine
 router.get('/micro-saas/analytics', microSaasAnalyticsController.getAllMicroSaasAnalytics);

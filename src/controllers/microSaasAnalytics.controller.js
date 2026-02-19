@@ -403,6 +403,7 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
     return {
       moduleKey,
       moduleName: module?.name || capitalize(moduleKey.replace(/-/g, ' ')),
+      status: module?.status || 'draft', // 🔧 Status del módulo para lógica inteligente
       totalSessions: 0,
       uniqueUsers: 0,
       wizard_starts: 0,
@@ -491,6 +492,7 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   return {
     moduleKey,
     moduleName: capitalize(moduleKey.replace(/-/g, ' ')),
+    status: module?.status || 'draft', // 🔧 Status del módulo para lógica inteligente en admin panel
     ...kpis,
     healthScore,
     recommendation,
