@@ -12,6 +12,9 @@ import router from './routes/index.js';
 // Las variables de entorno ya están cargadas por index.js
 const app = express();
 
+// 🔧 Trust proxy for nginx reverse proxy (to capture real client IP)
+app.set('trust proxy', true);
+
 // CORS configurado para producción
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
