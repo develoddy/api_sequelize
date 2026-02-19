@@ -503,6 +503,85 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   };
 }
 
+// ==========================================
+// 🔧 FIX #2: FUNCIONES AUXILIARES PARA FILTRADO INTELIGENTE
+// ==========================================
+
+/**
+ * Filtrar abandonos reales (excluir reloads rápidos)
+ * 
+ * Lógica: Si un wizard_abandoned es seguido de wizard_started en <10 seg
+ * de la MISMA sesión, fue un reload (no un abandono real).
+ * 
+ * @param {Array} events - Array de tracking events ordenados por timestamp
+ * @returns {Array} - Array de eventos wizard_abandoned REALES (sin reloads)
+ */
+function getRealAbandonments(events) {
+  const abandonedEvents = events.filter(e => e.event === 'wizard_abandoned');
+  
+  return abandonedEvents.filter(abandonEvent => {
+    // Buscar eventos posteriores de la misma sesión
+    const sessionEvents = events.filter(e => 
+      e.session_id === abandonEvent.session_id &&
+      new Date(e.timestamp) > new Date(abandonEvent.timestamp)
+    );
+    
+    // Verificar si hay wizard_started dentro de los siguientes 10 segundos
+    const hasReloadAfter = sessionEvents.some(e => {
+      const isWizardStart = e.event.includes('wizard_started');
+      const timeDiff = new Date(e.timestamp) - new Date(abandonEvent.timestamp);
+      const isWithin10Sec = timeDiff < 10000; // 10 segundos en ms
+      
+      return isWizardStart && isWithin10Sec;
+    });
+    
+    // Solo contar como abandono real si NO hubo reload inmediato
+    return !hasReloadAfter;
+  });
+}
+
+/**
+ * Detectar sesiones con múltiples wizard_starts (UX issue indicator)
+ * 
+ * Si un usuario reload el wizard 3+ veces, puede indicar:
+ * - Confusión con la UX
+ * - Errores técnicos
+ * - Expectativas no cumplidas
+ * 
+ * @param {Array} events - Array de tracking events
+ * @returns {Object} - { count: número de sesiones afectadas, maxReloads: máximo de reloads }
+ */
+function detectMultipleStarts(events) {
+  const wizardStartEvents = events.filter(e => 
+    e.event.includes('wizard_started') || e.event.includes('preview_started')
+  );
+  
+  // Agrupar por sesión
+  const startsBySession = {};
+  wizardStartEvents.forEach(e => {
+    if (e.session_id) {
+      startsBySession[e.session_id] = (startsBySession[e.session_id] || 0) + 1;
+    }
+  });
+  
+  // Contar sesiones con 3+ starts (threshold para UX issue)
+  const sessionsWithMultipleStarts = Object.entries(startsBySession)
+    .filter(([sessionId, count]) => count >= 3);
+  
+  const maxReloads = sessionsWithMultipleStarts.length > 0
+    ? Math.max(...sessionsWithMultipleStarts.map(([_, count]) => count))
+    : 0;
+  
+  return {
+    count: sessionsWithMultipleStarts.length,
+    maxReloads,
+    sessions: sessionsWithMultipleStarts.map(([sessionId, count]) => ({
+      session_id: sessionId,
+      reload_count: count
+    }))
+  };
+}
+
 /**
  * Calcular KPIs de eventos
  */
@@ -515,10 +594,15 @@ function calculateKPIs(events, moduleKey) {
   const userIds = events.map(e => e.user_id).filter(Boolean);
   const uniqueUsers = userIds.length > 0 ? new Set(userIds).size : 0;
   
-  // Eventos específicos por tipo
-  const wizardStarts = events.filter(e => 
+  // 🔧 FIX #1: Deduplicar wizard_starts por sesión (eliminar reloads)
+  // En vez de contar eventos, contar sesiones únicas que iniciaron wizard
+  const wizardStartEvents = events.filter(e => 
     e.event.includes('wizard_started') || e.event.includes('preview_started')
-  ).length;
+  );
+  const uniqueWizardStarts = new Set(
+    wizardStartEvents.map(e => e.session_id).filter(Boolean)
+  ).size;
+  const wizardStarts = uniqueWizardStarts || wizardStartEvents.length; // Fallback si no hay session_id
   
   const wizardCompletions = events.filter(e => {
     try {
@@ -636,6 +720,12 @@ function calculateKPIs(events, moduleKey) {
     ? Math.round((returningUsers / uniqueSessions) * 100) 
     : 0;
   
+  // 🔧 FIX #2: Filtrar wizard_abandoned con reload inmediato (<10 seg)
+  const realAbandonments = getRealAbandonments(events);
+  
+  // 🔧 FIX #3: Detectar sesiones con múltiples wizard_starts (UX issue)
+  const sessionsWithMultipleStarts = detectMultipleStarts(events);
+  
   // Flag de datos insuficientes
   const insufficient_data = (
     uniqueSessions < 5 || 
@@ -672,8 +762,21 @@ function calculateKPIs(events, moduleKey) {
       total_events: events.length,
       events_with_session_id: sessionIds.length,
       events_with_user_id: userIds.length,
-      unique_identifiers: Object.keys(sessionsByUser).length
-    }
+      unique_identifiers: Object.keys(sessionsByUser).length,
+      // 🔧 FIX #3: Métricas de calidad de datos
+      raw_wizard_starts: wizardStartEvents.length,
+      unique_wizard_starts: uniqueWizardStarts,
+      reload_events_filtered: wizardStartEvents.length - uniqueWizardStarts,
+      total_abandonments: events.filter(e => e.event === 'wizard_abandoned').length,
+      real_abandonments: realAbandonments.length,
+      false_positive_abandonments: events.filter(e => e.event === 'wizard_abandoned').length - realAbandonments.length,
+      sessions_with_multiple_starts: sessionsWithMultipleStarts.count,
+      confused_user_rate: uniqueSessions > 0 ? Math.round((sessionsWithMultipleStarts.count / uniqueSessions) * 100) : 0,
+      data_confidence: uniqueSessions >= 30 ? 'high' : uniqueSessions >= 10 ? 'medium' : 'low'
+    },
+    // Exponer abandonos reales para uso en alerts
+    _abandonments: realAbandonments,
+    _sessions_multiple_starts: sessionsWithMultipleStarts
   };
 }
 
@@ -939,6 +1042,28 @@ function generateAlerts(kpis, healthScore, events) {
       action: 'collect_more_data',
       priority: 'high'
     });
+  }
+  
+  // 🔧 FIX #4: Alert UX Issue - Usuarios reloading wizard múltiples veces
+  if (kpis._sessions_multiple_starts && kpis._sessions_multiple_starts.count > 0) {
+    const confusedRate = kpis._meta.confused_user_rate;
+    if (confusedRate >= 15) { // >15% usuarios confundidos
+      alerts.push({
+        type: 'warning',
+        title: '🔄 UX Issue Detected',
+        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded wizard ${kpis._sessions_multiple_starts.maxReloads}+ times. Possible UX confusion or technical errors.`,
+        action: 'review_wizard_ux',
+        priority: 'high'
+      });
+    } else if (confusedRate >= 5) {
+      alerts.push({
+        type: 'info',
+        title: '🔄 Multiple Reloads Detected',
+        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded wizard multiple times. Monitor UX.`,
+        action: 'monitor_ux',
+        priority: 'medium'
+      });
+    }
   }
   
   // ⚠️ Alert: Métricas inconsistentes (wizard starts > sesiones)
