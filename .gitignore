@@ -68,3 +68,4 @@ metrics/
 *.cert
 *.sql
 *.md
+*.sh
