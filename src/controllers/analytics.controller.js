@@ -42,6 +42,19 @@ export const trackEvent = async (req, res) => {
     // Esto permite que Analytics excluya tracking de pruebas internas
     const finalSource = source || 'preview'; // Default: preview (público)
     
+    // 🔍 DEBUG: Log temporal para verificar headers de IP
+    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_IP === 'true') {
+      console.log('🔍 IP Debug:', {
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+        'req.ip': req.ip,
+        'remoteAddress': req.connection?.remoteAddress,
+        'socketAddress': req.socket?.remoteAddress,
+        module,
+        sessionId
+      });
+    }
+    
     // Guardar evento en DB
     const trackingEvent = await TrackingEvent.create({
       event,
