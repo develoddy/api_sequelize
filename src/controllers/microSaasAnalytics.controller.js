@@ -510,15 +510,53 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
 // ==========================================
 
 /**
+ * Helper: Determinar si un evento es un "inicio" según el tipo de módulo
+ * 
+ * @param {Object} event - Evento de tracking
+ * @param {String} moduleKey - Identificador del módulo
+ * @returns {Boolean}
+ */
+function isStartEvent(event, moduleKey) {
+  if (moduleKey === 'inbox-zero-prevention') {
+    return event.event === 'prevention_demo_viewed';
+  }
+  return event.event.includes('wizard_started') || event.event.includes('preview_started');
+}
+
+/**
+ * Helper: Determinar si un evento es una "completion" según el tipo de módulo
+ * 
+ * @param {Object} event - Evento de tracking
+ * @param {String} moduleKey - Identificador del módulo
+ * @returns {Boolean}
+ */
+function isCompletionEvent(event, moduleKey) {
+  if (moduleKey === 'inbox-zero-prevention') {
+    return event.event === 'waitlist_success';
+  }
+  
+  try {
+    const props = JSON.parse(event.properties || '{}');
+    return (
+      event.event.includes('completed') && 
+      (props.step === 4 || props.completed === true)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Filtrar abandonos reales (excluir reloads rápidos)
  * 
  * Lógica: Si un wizard_abandoned es seguido de wizard_started en <10 seg
  * de la MISMA sesión, fue un reload (no un abandono real).
  * 
  * @param {Array} events - Array de tracking events ordenados por timestamp
+ * @param {String} moduleKey - Identificador del módulo
  * @returns {Array} - Array de eventos wizard_abandoned REALES (sin reloads)
  */
-function getRealAbandonments(events) {
+function getRealAbandonments(events, moduleKey) {
   const abandonedEvents = events.filter(e => e.event === 'wizard_abandoned');
   
   return abandonedEvents.filter(abandonEvent => {
@@ -528,13 +566,13 @@ function getRealAbandonments(events) {
       new Date(e.timestamp) > new Date(abandonEvent.timestamp)
     );
     
-    // Verificar si hay wizard_started dentro de los siguientes 10 segundos
+    // Verificar si hay wizard_started dentro de los siguientes 10 segundos usando helper
     const hasReloadAfter = sessionEvents.some(e => {
-      const isWizardStart = e.event.includes('wizard_started');
+      const isStart = isStartEvent(e, moduleKey);
       const timeDiff = new Date(e.timestamp) - new Date(abandonEvent.timestamp);
       const isWithin10Sec = timeDiff < 10000; // 10 segundos en ms
       
-      return isWizardStart && isWithin10Sec;
+      return isStart && isWithin10Sec;
     });
     
     // Solo contar como abandono real si NO hubo reload inmediato
@@ -551,12 +589,11 @@ function getRealAbandonments(events) {
  * - Expectativas no cumplidas
  * 
  * @param {Array} events - Array de tracking events
+ * @param {String} moduleKey - Identificador del módulo
  * @returns {Object} - { count: número de sesiones afectadas, maxReloads: máximo de reloads }
  */
-function detectMultipleStarts(events) {
-  const wizardStartEvents = events.filter(e => 
-    e.event.includes('wizard_started') || e.event.includes('preview_started')
-  );
+function detectMultipleStarts(events, moduleKey) {
+  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleKey));
   
   // Agrupar por sesión
   const startsBySession = {};
@@ -598,25 +635,15 @@ function calculateKPIs(events, moduleKey) {
   
   // 🔧 FIX #1: Deduplicar wizard_starts por sesión (eliminar reloads)
   // En vez de contar eventos, contar sesiones únicas que iniciaron wizard
-  const wizardStartEvents = events.filter(e => 
-    e.event.includes('wizard_started') || e.event.includes('preview_started')
-  );
+  // Usar helper isStartEvent para reconocer diferentes tipos de módulos
+  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleKey));
   const uniqueWizardStarts = new Set(
     wizardStartEvents.map(e => e.session_id).filter(Boolean)
   ).size;
   const wizardStarts = uniqueWizardStarts || wizardStartEvents.length; // Fallback si no hay session_id
   
-  const wizardCompletions = events.filter(e => {
-    try {
-      const props = JSON.parse(e.properties || '{}');
-      return (
-        e.event.includes('completed') && 
-        (props.step === 4 || props.completed === true)
-      );
-    } catch {
-      return false;
-    }
-  }).length;
+  // Usar helper isCompletionEvent para reconocer diferentes tipos de módulos
+  const wizardCompletions = events.filter(e => isCompletionEvent(e, moduleKey)).length;
   
   // ✅ Downloads: solo eventos explícitos de descarga (NO contar 'generated')
   const downloads = events.filter(e => 
@@ -723,10 +750,10 @@ function calculateKPIs(events, moduleKey) {
     : 0;
   
   // 🔧 FIX #2: Filtrar wizard_abandoned con reload inmediato (<10 seg)
-  const realAbandonments = getRealAbandonments(events);
+  const realAbandonments = getRealAbandonments(events, moduleKey);
   
   // 🔧 FIX #3: Detectar sesiones con múltiples wizard_starts (UX issue)
-  const sessionsWithMultipleStarts = detectMultipleStarts(events);
+  const sessionsWithMultipleStarts = detectMultipleStarts(events, moduleKey);
   
   // Flag de datos insuficientes
   const insufficient_data = (

@@ -30,12 +30,19 @@ export const getAllMvps = async (req, res) => {
 
     // Query SQL para agregar eventos por módulo
     // 🎯 FASE 2: Solo contar eventos públicos (source='preview'), excluir tests internos (source='admin')
+    // 🎯 FASE 3: Reconocer eventos de prevention-demo como equivalentes a wizard
     const query = `
       SELECT 
         module,
         COUNT(DISTINCT session_id) as total_sessions,
-        COUNT(CASE WHEN event LIKE '%wizard_started%' THEN 1 END) as wizard_starts,
-        COUNT(CASE WHEN event = 'wizard_completed' THEN 1 END) as wizard_completions,
+        COUNT(CASE 
+          WHEN module = 'inbox-zero-prevention' AND event = 'prevention_demo_viewed' THEN 1
+          WHEN module != 'inbox-zero-prevention' AND event LIKE '%wizard_started%' THEN 1
+        END) as wizard_starts,
+        COUNT(CASE 
+          WHEN module = 'inbox-zero-prevention' AND event = 'waitlist_success' THEN 1
+          WHEN module != 'inbox-zero-prevention' AND event = 'wizard_completed' THEN 1
+        END) as wizard_completions,
         COUNT(CASE WHEN event = 'preview_generated' THEN 1 END) as preview_generated,
         COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,
         COUNT(CASE WHEN event LIKE '%feedback%' AND JSON_EXTRACT(properties, '$.answer') = 'yes' THEN 1 END) as positive_feedback,
@@ -174,12 +181,19 @@ export const getMvpDetail = async (req, res) => {
 
     // Query detallado para un módulo específico
     // 🎯 FASE 2: Solo analizar eventos públicos (source='preview'), excluir tests internos del admin
+    // 🎯 FASE 3: Reconocer eventos de prevention-demo como equivalentes a wizard
     const query = `
       SELECT 
         COUNT(DISTINCT session_id) as total_sessions,
         COUNT(DISTINCT user_id) as unique_users,
-        COUNT(CASE WHEN event LIKE '%wizard_started%' THEN 1 END) as wizard_starts,
-        COUNT(CASE WHEN event = 'wizard_completed' THEN 1 END) as wizard_completions,
+        COUNT(CASE 
+          WHEN module = 'inbox-zero-prevention' AND event = 'prevention_demo_viewed' THEN 1
+          WHEN module != 'inbox-zero-prevention' AND event LIKE '%wizard_started%' THEN 1
+        END) as wizard_starts,
+        COUNT(CASE 
+          WHEN module = 'inbox-zero-prevention' AND event = 'waitlist_success' THEN 1
+          WHEN module != 'inbox-zero-prevention' AND event = 'wizard_completed' THEN 1
+        END) as wizard_completions,
         COUNT(CASE WHEN event LIKE '%download%' THEN 1 END) as downloads,
         COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,
         COUNT(CASE WHEN event LIKE '%feedback%' AND JSON_EXTRACT(properties, '$.answer') = 'yes' THEN 1 END) as positive_feedback,
