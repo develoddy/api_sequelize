@@ -48,7 +48,19 @@ const EXCLUDED_MVP_KEYS = [
 /**
  * Calcular métricas de un MVP específico
  * 
- * @param {string} moduleKey - Key del módulo (ej: 'video-express')
+ * Reconoce diferentes patrones de eventos según el tipo de MVP:
+ * 
+ * Landing Pages (inbox-zero-prevention):
+ *   - prevention_demo_viewed → previewUses
+ *   - waitlist_success → wizardCompletions
+ *   - waitlist_submitted → positiveFeedback
+ * 
+ * Wizards (inbox-zero, productclip):
+ *   - *preview* events → previewUses
+ *   - wizard_completed → wizardCompletions
+ *   - feedback_submitted → positiveFeedback
+ * 
+ * @param {string} moduleKey - Key del módulo (ej: 'inbox-zero-prevention', 'productclip')
  * @returns {Object} - Métricas calculadas
  */
 async function calculateMvpMetrics(moduleKey) {
@@ -69,35 +81,80 @@ async function calculateMvpMetrics(moduleKey) {
     });
 
     // 2. Usos de preview (tracking events)
-    const previewUses = await TrackingEvent.count({
-      where: {
-        module: moduleKey,
-        event: { [Op.like]: '%preview%' },
-        timestamp: { [Op.gte]: thirtyDaysAgo },
-        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
-      }
-    });
+    // ✅ FASE 3: Reconocer eventos de inbox-zero-prevention
+    let previewUses;
+    if (moduleKey === 'inbox-zero-prevention') {
+      // Landing page: prevention_demo_viewed = equivalente a preview_started
+      previewUses = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: 'prevention_demo_viewed',
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    } else {
+      // Wizards normales: eventos que contienen 'preview'
+      previewUses = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: { [Op.like]: '%preview%' },
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    }
 
     // 3. Completions del wizard
-    const wizardCompletions = await TrackingEvent.count({
-      where: {
-        module: moduleKey,
-        event: 'wizard_completed',
-        timestamp: { [Op.gte]: thirtyDaysAgo },
-        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
-      }
-    });
+    // ✅ FASE 3: Reconocer waitlist_success como completion en inbox-zero-prevention
+    let wizardCompletions;
+    if (moduleKey === 'inbox-zero-prevention') {
+      // Landing page: waitlist_success = equivalente a wizard_completed
+      wizardCompletions = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: 'waitlist_success',
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    } else {
+      // Wizards normales: wizard_completed
+      wizardCompletions = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: 'wizard_completed',
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    }
 
     // 4. Feedback positivo
-    const positiveFeedback = await TrackingEvent.count({
-      where: {
-        module: moduleKey,
-        event: 'feedback_submitted',
-        properties: { [Op.like]: '%"positive":true%' },
-        timestamp: { [Op.gte]: thirtyDaysAgo },
-        source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
-      }
-    });
+    // ✅ FASE 3: Feedback tiene diferentes formatos según el MVP
+    let positiveFeedback;
+    if (moduleKey === 'inbox-zero-prevention') {
+      // Landing page: waitlist_submitted como engagement positivo
+      positiveFeedback = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: 'waitlist_submitted',
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    } else {
+      // Wizards normales: feedback_submitted con positive:true
+      positiveFeedback = await TrackingEvent.count({
+        where: {
+          module: moduleKey,
+          event: 'feedback_submitted',
+          properties: { [Op.like]: '%"positive":true%' },
+          timestamp: { [Op.gte]: thirtyDaysAgo },
+          source: { [Op.notIn]: ['admin', 'internal'] }  // Solo público
+        }
+      });
+    }
 
     // 5. Tenants activos (DESHABILITADO - Ya no se usa modules/tenants en fase MVP)
     // Solo se activa después de validar y promocionar a módulo oficial
@@ -109,7 +166,33 @@ async function calculateMvpMetrics(moduleKey) {
     // 6. Métricas específicas por MVP
     let specificMetrics = {};
     
-    if (moduleKey === 'video-express') {
+    if (moduleKey === 'inbox-zero-prevention') {
+      // Landing page: métricas de waitlist y sources
+      const [waitlistStats] = await sequelize.query(`
+        SELECT 
+          COUNT(DISTINCT CASE WHEN event = 'prevention_demo_viewed' THEN session_id END) as total_views,
+          COUNT(CASE WHEN event = 'waitlist_submitted' THEN 1 END) as waitlist_submissions,
+          COUNT(CASE WHEN event = 'waitlist_success' THEN 1 END) as waitlist_success,
+          COUNT(DISTINCT JSON_EXTRACT(properties, '$.source')) as unique_sources
+        FROM tracking_events
+        WHERE module = :moduleKey
+          AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+          AND source != 'admin' AND source != 'internal'
+      `, {
+        replacements: { 
+          moduleKey: moduleKey,
+          days: MVP_HEALTH_SIGNALS.DAYS_LOOKBACK 
+        }
+      });
+      
+      specificMetrics = {
+        totalViews: waitlistStats[0]?.total_views || 0,
+        waitlistSubmissions: waitlistStats[0]?.waitlist_submissions || 0,
+        waitlistSuccess: waitlistStats[0]?.waitlist_success || 0,
+        uniqueSources: waitlistStats[0]?.unique_sources || 0
+      };
+      
+    } else if (moduleKey === 'video-express' || moduleKey === 'productclip') {
       // Videos generados recientemente
       const [videoStats] = await sequelize.query(`
         SELECT 
