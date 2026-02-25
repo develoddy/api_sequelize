@@ -37,30 +37,40 @@ echo -e "\n${CYAN}2️⃣ PASO 2: Actualizar en el servidor remoto${NC}"
 ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 << 'EOF'
   cd /var/www/api_sequelize
   
-  # Guardar TODOS los cambios locales (backups, logs, scripts modificados)
-  echo "📦 Guardando cambios locales del servidor..."
-  if ! git diff --quiet HEAD || ! git diff --cached --quiet; then
-    echo "  ⚠️  Detectados cambios locales, guardando en stash..."
-    git status --short
-    git stash push -m "auto-stash: server changes $(date '+%Y-%m-%d %H:%M:%S')"
-    echo "  ✅ Cambios guardados en stash"
+  # Stash SOLO archivos generados (backups, logs) si existen
+  echo "📦 Guardando archivos generados localmente (backups, logs)..."
+  git stash push -m "auto-stash: generated files $(date '+%Y-%m-%d %H:%M:%S')" -- \
+    "backups/**" \
+    "logs/**" \
+    "metrics/**" \
+    2>/dev/null || echo "  ℹ️  No hay archivos generados para stash"
+  
+  # Verificar si hay cambios en código/scripts
+  if git diff --quiet HEAD; then
+    echo "  ✅ No hay cambios en código"
   else
-    echo "  ✅ No hay cambios locales"
+    echo "⚠️  Detectados cambios en código/scripts en servidor"
+    git status --short
+    
+    # Commit automático de cambios legítimos (scripts, etc)
+    git add scripts/ src/ *.js *.json 2>/dev/null || true
+    git commit -m "💾 Auto-save server code changes $(date '+%Y-%m-%d %H:%M:%S')" 2>/dev/null || true
   fi
   
-  # Pull con estrategia de forzar remote
+  # Pull con rebase
   echo "⬇️  Descargando cambios desde GitHub..."
-  git fetch origin main
+  git pull --rebase origin main
   
-  # Resetear al estado del repositorio remoto (forzar actualización)
-  echo "🔄 Actualizando al último commit de GitHub..."
-  git reset --hard origin/main
-  
-  # Restaurar cambios guardados en stash (si los había)
-  if git stash list | grep -q "auto-stash: server changes"; then
-    echo "📦 Restaurando cambios locales del servidor..."
-    git stash pop 2>/dev/null || echo "  ⚠️  Algunos cambios del servidor fueron sobrescritos (normal)"
+  # Si hay conflictos, resolver automáticamente
+  if [ $? -ne 0 ]; then
+    echo "⚠️  Conflictos detectados, resolviendo automáticamente..."
+    git rebase --abort || true
+    git reset --hard origin/main
   fi
+  
+  # Restaurar archivos generados (backups, logs) si se guardaron
+  echo "📦 Restaurando archivos generados..."
+  git stash pop 2>/dev/null || echo "  ℹ️  No había archivos stasheados"
   
   echo "✅ Actualización completada"
 EOF
