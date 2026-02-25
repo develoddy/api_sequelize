@@ -69,6 +69,34 @@ export const Module = sequelize.define('Module', {
     defaultValue: 'draft',
     allowNull: false
   },
+  module_type: {
+    type: DataTypes.ENUM('landing', 'wizard', 'live'),
+    defaultValue: 'wizard',
+    allowNull: false,
+    comment: 'Validation stage: landing (pain/demand validation), wizard (solution validation), or live (full product)'
+  },
+  
+  // Phase tracking and relationships
+  parent_module_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'modules',
+      key: 'id'
+    },
+    comment: 'Parent module for phase progression (landing → wizard → live)'
+  },
+  concept_name: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Base concept name without phase suffix (e.g., "inbox-zero-prevention")'
+  },
+  phase_order: {
+    type: DataTypes.TINYINT,
+    defaultValue: 0,
+    allowNull: false,
+    comment: 'Phase order: 0=landing, 1=wizard, 2=live'
+  },
   
   // Métricas de validación Levels-style
   validation_days: {
@@ -396,6 +424,104 @@ Module.prototype.getPreviewRateLimiting = function() {
     return { max_requests: 10, window_minutes: 15 };
   }
   return this.preview_config.rate_limiting;
+};
+
+// ========================================
+// RELATIONSHIPS: Phase Progression
+// ========================================
+
+// Self-referential relationship for parent module
+Module.belongsTo(Module, {
+  as: 'parent',
+  foreignKey: 'parent_module_id',
+  constraints: false
+});
+
+// Self-referential relationship for child modules
+Module.hasMany(Module, {
+  as: 'children',
+  foreignKey: 'parent_module_id',
+  constraints: false
+});
+
+/**
+ * Get all phases of this concept (parent + siblings + children)
+ * @returns {Promise<Module[]>}
+ */
+Module.prototype.getConceptFamily = async function() {
+  if (!this.concept_name) return [this];
+  
+  return await Module.findAll({
+    where: { concept_name: this.concept_name },
+    order: [['phase_order', 'ASC']]
+  });
+};
+
+/**
+ * Get the next phase in the progression
+ * @returns {Promise<Module|null>}
+ */
+Module.prototype.getNextPhase = async function() {
+  return await Module.findOne({
+    where: {
+      parent_module_id: this.id
+    },
+    order: [['phase_order', 'ASC']]
+  });
+};
+
+/**
+ * Check if this module can progress to the next phase
+ * @param {Object} analytics - Current analytics data
+ * @returns {Object} { canProgress: boolean, reason: string }
+ */
+Module.prototype.canProgressToNextPhase = function(analytics) {
+  const progressionRules = {
+    landing: {
+      minHealthScore: 60,
+      minSessions: 20,
+      minWaitlist: 10,
+      nextPhase: 'wizard'
+    },
+    wizard: {
+      minHealthScore: 70,
+      minCompletions: 50,
+      minConversionRate: 40,
+      nextPhase: 'live'
+    },
+    live: {
+      nextPhase: null // No next phase
+    }
+  };
+
+  const rules = progressionRules[this.module_type];
+  if (!rules || !rules.nextPhase) {
+    return { canProgress: false, reason: 'Already at final phase' };
+  }
+
+  if (this.module_type === 'landing') {
+    if (analytics.health_score < rules.minHealthScore) {
+      return { canProgress: false, reason: `Health score must be ≥ ${rules.minHealthScore} (current: ${analytics.health_score})` };
+    }
+    if (analytics.totalSessions < rules.minSessions) {
+      return { canProgress: false, reason: `Need ≥ ${rules.minSessions} sessions (current: ${analytics.totalSessions})` };
+    }
+    if ((analytics.landing_metrics?.waitlist_signups || 0) < rules.minWaitlist) {
+      return { canProgress: false, reason: `Need ≥ ${rules.minWaitlist} waitlist signups (current: ${analytics.landing_metrics?.waitlist_signups || 0})` };
+    }
+  } else if (this.module_type === 'wizard') {
+    if (analytics.health_score < rules.minHealthScore) {
+      return { canProgress: false, reason: `Health score must be ≥ ${rules.minHealthScore} (current: ${analytics.health_score})` };
+    }
+    if (analytics.wizard_completions < rules.minCompletions) {
+      return { canProgress: false, reason: `Need ≥ ${rules.minCompletions} completions (current: ${analytics.wizard_completions})` };
+    }
+    if (analytics.conversion_rate < rules.minConversionRate) {
+      return { canProgress: false, reason: `Conversion rate must be ≥ ${rules.minConversionRate}% (current: ${analytics.conversion_rate}%)` };
+    }
+  }
+
+  return { canProgress: true, reason: 'All criteria met', nextPhase: rules.nextPhase };
 };
 
 export default Module;

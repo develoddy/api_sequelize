@@ -145,6 +145,33 @@ export const createModule = async (req, res) => {
       });
     }
 
+    // 🎯 Auto-generar concept_name (base concept sin sufijos de fase)
+    // Si key termina en '-landing' o '-wizard', remover el sufijo
+    // Esto asegura que todas las fases del mismo MVP compartan el mismo concept_name
+    let conceptName = key;
+    if (key.endsWith('-landing')) {
+      conceptName = key.replace('-landing', '');
+    } else if (key.endsWith('-wizard')) {
+      conceptName = key.replace('-wizard', '');
+    }
+    // Si no tiene sufijo, usar el key completo como concept_name
+
+    // 🎯 Auto-detectar module_type basándose en el sufijo del key
+    // Lógica:
+    // - Si key termina en '-landing' → module_type = 'landing' (fase 0)
+    // - Si key termina en '-wizard' → module_type = 'wizard' (fase 1)
+    // - Si no tiene sufijo → module_type = 'live' (fase 2)
+    let moduleType = 'live'; // Default para keys sin sufijo
+    let phaseOrder = 2; // Default para live
+    
+    if (key.endsWith('-landing')) {
+      moduleType = 'landing';
+      phaseOrder = 0;
+    } else if (key.endsWith('-wizard')) {
+      moduleType = 'wizard';
+      phaseOrder = 1;
+    }
+
     // 🎯 Auto-generar preview_config básico
     const defaultPreviewConfig = {
       enabled: true,
@@ -161,12 +188,22 @@ export const createModule = async (req, res) => {
       }
     };
 
+    // 📊 Log de valores auto-detectados
+    console.log('🎯 Auto-detection results:');
+    console.log(`   key: ${key}`);
+    console.log(`   concept_name: ${conceptName} (base without suffix)`);
+    console.log(`   module_type: ${moduleType} (detected from key suffix)`);
+    console.log(`   phase_order: ${phaseOrder} (0=landing, 1=wizard, 2=live)`);
+
     // Crear módulo
     const module = await Module.create({
       key,
       name,
       description: description || '',
       type,
+      module_type: moduleType, // 🆕 Auto-detectado basándose en key
+      concept_name: conceptName, // 🆕 Auto-asignado basándose en key
+      phase_order: phaseOrder, // 🆕 Auto-asignado basándose en module_type
       is_active: false,
       status: 'draft',
       validation_days: validation_days || 14,
@@ -904,6 +941,268 @@ export const configurePreview = async (req, res) => {
   }
 };
 
+/**
+ * 🆕 Create Next Phase Module
+ * Creates the next phase in MVP validation progression (landing → wizard → live)
+ * POST /api/admin/modules/create-next-phase
+ */
+export const createNextPhase = async (req, res) => {
+  try {
+    const { parent_module_id, reason, name_override, description_override } = req.body;
+
+    // 🔍 DEBUG: Log received data
+    console.log('🔍 [createNextPhase] Received request:');
+    console.log('   parent_module_id:', parent_module_id, '(type:', typeof parent_module_id, ')');
+    console.log('   reason:', reason);
+    console.log('   name_override:', name_override);
+
+    // 1. Validate parent module exists
+    const parentModule = await Module.findByPk(parent_module_id);
+    
+    console.log('🔍 [createNextPhase] Query result:');
+    console.log('   parentModule found:', !!parentModule);
+    if (parentModule) {
+      console.log('   parentModule.id:', parentModule.id);
+      console.log('   parentModule.key:', parentModule.key);
+      console.log('   parentModule.module_type:', parentModule.module_type);
+    }
+    
+    if (!parentModule) {
+      console.log('❌ [createNextPhase] Parent module NOT found with ID:', parent_module_id);
+      return res.status(404).json({
+        success: false,
+        error: 'Parent module not found'
+      });
+    }
+
+    // 2. Check if next phase already exists
+    const existingNextPhase = await parentModule.getNextPhase();
+    if (existingNextPhase) {
+      return res.status(400).json({
+        success: false,
+        error: `Next phase already exists: ${existingNextPhase.key}`,
+        existing_module: existingNextPhase
+      });
+    }
+
+    // 3. Get parent module analytics (we'll do a simplified validation)
+    // For now, we'll use soft validation (show warning but allow creation)
+    const phaseTypeMap = {
+      landing: 'wizard',
+      wizard: 'live',
+      live: null
+    };
+
+    console.log('🔍 [createNextPhase] Phase progression:');
+    console.log('   parentModule.module_type:', parentModule.module_type, '(type:', typeof parentModule.module_type, ')');
+    console.log('   parentModule.module_type length:', parentModule.module_type?.length);
+    console.log('   parentModule.module_type bytes:', Buffer.from(parentModule.module_type || '').toString('hex'));
+    
+    // 🔧 Limpiar el module_type de espacios en blanco y caracteres invisibles
+    const cleanModuleType = (parentModule.module_type || '').toString().trim();
+    console.log('   cleanModuleType:', cleanModuleType, '(trimmed)');
+    
+    const nextPhaseType = phaseTypeMap[cleanModuleType];
+    console.log('   nextPhaseType:', nextPhaseType, '(type:', typeof nextPhaseType, ')');
+    console.log('   nextPhaseType length:', nextPhaseType?.length);
+    
+    if (!nextPhaseType) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parent module is already at final phase (live)'
+      });
+    }
+
+    // 4. Generate next phase key
+    // Extract base concept name (remove phase suffixes if present)
+    let baseConcept = parentModule.concept_name || parentModule.key;
+    
+    // Remove any phase suffixes from concept_name to get clean base
+    baseConcept = baseConcept.replace(/-landing$/, '').replace(/-wizard$/, '');
+    
+    let nextPhaseKey;
+    if (cleanModuleType === 'landing') {
+      // inbox-zero-prevention-landing → inbox-zero-prevention-wizard
+      nextPhaseKey = `${baseConcept}-wizard`;
+    } else if (cleanModuleType === 'wizard') {
+      // inbox-zero-prevention-wizard → inbox-zero-prevention (live doesn't have suffix)
+      nextPhaseKey = baseConcept;
+    }
+
+    // Check if key already exists
+    const existingModule = await Module.findOne({ where: { key: nextPhaseKey } });
+    if (existingModule) {
+      return res.status(400).json({
+        success: false,
+        error: `Module with key '${nextPhaseKey}' already exists`,
+        existing_module: existingModule
+      });
+    }
+
+    // 5. Create next phase module with inherited data
+    const nextPhaseName = name_override || `${parentModule.name} - ${nextPhaseType.charAt(0).toUpperCase() + nextPhaseType.slice(1)}`;
+    const nextPhaseDescription = description_override || parentModule.description;
+
+    console.log('🔍 [createNextPhase] About to create module with data:');
+    
+    // 🔧 Asegurar que module_type sea un string limpio
+    const cleanNextPhaseType = nextPhaseType.toString().trim();
+    
+    // 🔧 Asegurar que config sea un objeto válido
+    let parentConfig = {};
+    if (parentModule.config) {
+      if (typeof parentModule.config === 'string') {
+        try {
+          parentConfig = JSON.parse(parentModule.config);
+        } catch (e) {
+          console.warn('⚠️ Parent config is string but not valid JSON, using empty object');
+          parentConfig = {};
+        }
+      } else if (typeof parentModule.config === 'object') {
+        parentConfig = parentModule.config;
+      }
+    }
+    
+    const moduleData = {
+      key: nextPhaseKey,
+      name: nextPhaseName,
+      description: nextPhaseDescription,
+      tagline: parentModule.tagline,
+      detailed_description: parentModule.detailed_description,
+      type: parentModule.type,
+      module_type: cleanNextPhaseType, // 🔧 Usar valor limpio
+      status: 'draft',
+      is_active: false,
+      show_in_store: false,
+      parent_module_id: parent_module_id,
+      concept_name: baseConcept,
+      phase_order: parentModule.phase_order + 1,
+      icon: parentModule.icon,
+      color: parentModule.color,
+      validation_days: parentModule.validation_days,
+      validation_target_sales: parentModule.validation_target_sales,
+      config: {
+        ...parentConfig, // 🔧 Usar objeto parseado correctamente
+        created_from_parent: true,
+        progression_reason: reason || 'Created from parent module'
+      }
+    };
+    
+    console.log('   module_type value:', JSON.stringify(moduleData.module_type));
+    console.log('   module_type is string:', typeof moduleData.module_type === 'string');
+    console.log('   module_type length:', moduleData.module_type.length);
+    console.log('   module_type bytes:', Buffer.from(moduleData.module_type).toString('hex'));
+    console.log('   Full data:', JSON.stringify(moduleData, null, 2));
+
+    // 🔍 Validar que module_type sea uno de los valores permitidos
+    const validModuleTypes = ['landing', 'wizard', 'live'];
+    if (!validModuleTypes.includes(moduleData.module_type)) {
+      console.error('❌ INVALID module_type:', moduleData.module_type);
+      console.error('   Expected one of:', validModuleTypes);
+      console.error('   Received type:', typeof moduleData.module_type);
+      console.error('   Received bytes:', Buffer.from(moduleData.module_type).toString('hex'));
+      
+      return res.status(400).json({
+        success: false,
+        error: `Invalid module_type: "${moduleData.module_type}". Must be one of: ${validModuleTypes.join(', ')}`,
+        debug: {
+          received: moduleData.module_type,
+          valid_values: validModuleTypes,
+          parent_module_type: parentModule.module_type
+        }
+      });
+    }
+
+    console.log('✅ module_type is valid:', moduleData.module_type);
+
+    const newModule = await Module.create(moduleData);
+
+    // 6. Return success with parent and child data
+    res.status(201).json({
+      success: true,
+      message: `Successfully created ${cleanNextPhaseType} phase for concept '${parentModule.concept_name}'`,
+      module: newModule,
+      parent: {
+        id: parentModule.id,
+        key: parentModule.key,
+        name: parentModule.name,
+        module_type: parentModule.module_type,
+        phase_order: parentModule.phase_order
+      },
+      next_steps: cleanNextPhaseType === 'wizard' 
+        ? [
+          'Configure wizard flow in module settings',
+          'Set up tracking events for wizard_started and wizard_completed',
+          'Test wizard flow before moving to testing status',
+          'Validate with 50+ completions before creating live product'
+        ]
+        : [
+          'Configure full product features',
+          'Set up pricing and monetization',
+          'Prepare for production deployment',
+          'Launch to live when ready'
+        ]
+    });
+
+  } catch (error) {
+    console.error('[createNextPhase] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🆕 Get Concept Phases
+ * Returns all modules for a given concept (landing, wizard, live)
+ * GET /api/admin/modules/concepts/:conceptName/phases
+ */
+export const getConceptPhases = async (req, res) => {
+  try {
+    const { conceptName } = req.params;
+
+    const phases = await Module.findAll({
+      where: { concept_name: conceptName },
+      order: [['phase_order', 'ASC']],
+      include: [
+        {
+          model: Module,
+          as: 'parent',
+          attributes: ['id', 'key', 'name', 'module_type', 'phase_order']
+        },
+        {
+          model: Module,
+          as: 'children',
+          attributes: ['id', 'key', 'name', 'module_type', 'phase_order', 'status']
+        }
+      ]
+    });
+
+    if (phases.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: `No modules found for concept '${conceptName}'`
+      });
+    }
+
+    res.json({
+      success: true,
+      concept_name: conceptName,
+      total_phases: phases.length,
+      current_phase: phases.find(p => p.status === 'live' || p.status === 'testing')?.module_type || phases[phases.length - 1].module_type,
+      phases: phases
+    });
+
+  } catch (error) {
+    console.error('[getConceptPhases] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 export default {
   listModules,
   getModuleByKey,
@@ -913,6 +1212,8 @@ export default {
   markAsValidated,
   getModulesSummary,
   configurePreview,
+  createNextPhase, // 🆕
+  getConceptPhases, // 🆕
   // Public endpoints
   listPublicModules,
   getPublicModuleByKey,

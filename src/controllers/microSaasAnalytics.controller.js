@@ -210,12 +210,21 @@ export const createModuleFromMVP = async (req, res) => {
       }
     } : null;
     
+    // 🎯 Auto-calcular concept_name (remover sufijos de fase)
+    let conceptName = moduleKey;
+    if (moduleKey.endsWith('-landing')) {
+      conceptName = moduleKey.replace('-landing', '');
+    } else if (moduleKey.endsWith('-wizard')) {
+      conceptName = moduleKey.replace('-wizard', '');
+    }
+    
     // 4. Crear módulo con datos del MVP
     const module = await Module.create({
       key: moduleKey,
       name: capitalize(moduleKey.replace(/-/g, ' ')),
       description: `Validated MVP - ${analytics.totalSessions} sessions, ${analytics.healthScore} score`,
       type: 'saas',
+      concept_name: conceptName, // 🆕 Auto-asignado
       status: initial_status,
       is_active: auto_activate,
       validation_days: 14,
@@ -381,8 +390,11 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   // 1. Buscar información del módulo en la DB
   const module = await Module.findOne({
     where: { key: moduleKey },
-    attributes: ['key', 'name', 'status', 'launched_at', 'validation_days', 'validation_target_sales']
+    attributes: ['id', 'key', 'name', 'status', 'module_type', 'concept_name', 'phase_order', 'parent_module_id', 'launched_at', 'validation_days', 'validation_target_sales']
   });
+
+  // Determinar tipo de validación: 'landing' (dolor/demanda) o 'wizard' (solución)
+  const moduleType = module?.module_type || 'wizard';
   
   // 2. Obtener eventos de tracking del módulo
   // ✅ FILTRO CRÍTICO: Excluir tracking interno (admin, internal)
@@ -402,8 +414,14 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
     
     return {
       moduleKey,
+      moduleId: module?.id || null,                      // 🆕 Module ID for API calls
       moduleName: module?.name || capitalize(moduleKey.replace(/-/g, ' ')),
-      status: module?.status || 'draft', // 🔧 Status del módulo para lógica inteligente
+      status: module?.status || 'draft',
+      moduleType,                        // 🏗️ 'landing' | 'wizard'
+      conceptName: module?.concept_name || moduleKey,  // 🆕 Concept grouping
+      phaseOrder: module?.phase_order || 0,             // 🆕 Phase order (0=landing, 1=wizard, 2=live)
+      parentModuleId: module?.parent_module_id || null, // 🆕 Parent module reference
+      landing_metrics: null,
       totalSessions: 0,
       uniqueUsers: 0,
       wizard_starts: 0,
@@ -472,33 +490,38 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   }
   
   // 2. Calcular métricas básicas
-  const kpis = calculateKPIs(events, moduleKey);
+  const kpis = calculateKPIs(events, moduleType);
   
   // 3. Calcular health score
-  const healthScore = calculateHealthScore(kpis);
+  const healthScore = calculateHealthScore(kpis, moduleType);
   
   // 4. Generar recomendación
-  const recommendation = generateRecommendation(kpis, healthScore, events.length);
+  const recommendation = generateRecommendation(kpis, healthScore, events.length, moduleType);
   
   // 5. Generar alertas
-  const alerts = generateAlerts(kpis, healthScore, events);
+  const alerts = generateAlerts(kpis, healthScore, events, moduleType);
   
   // 6. Calcular tendencias
   const trends = calculateTrends(events, period);
   
   // 7. Validar criterios de acciones (nuevo)
-  const actionCriteria = validateActionCriteria(kpis, healthScore, events);
+  const actionCriteria = validateActionCriteria(kpis, healthScore, events, moduleType);
   
   return {
     moduleKey,
+    moduleId: module?.id || null,                      // 🆕 Module ID for API calls
     moduleName: capitalize(moduleKey.replace(/-/g, ' ')),
-    status: module?.status || 'draft', // 🔧 Status del módulo para lógica inteligente en admin panel
+    status: module?.status || 'draft',
+    moduleType,                        // 🏗️ 'landing' | 'wizard' | 'live'
+    conceptName: module?.concept_name || moduleKey,  // 🆕 Concept grouping
+    phaseOrder: module?.phase_order || 0,             // 🆕 Phase order (0=landing, 1=wizard, 2=live)
+    parentModuleId: module?.parent_module_id || null, // 🆕 Parent module reference
     ...kpis,
     healthScore,
     recommendation,
     alerts,
     trends,
-    actionCriteria, // Nuevo campo
+    actionCriteria,
     period,
     date_from: dateFrom.toISOString(),
     date_to: dateTo.toISOString()
@@ -513,11 +536,11 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
  * Helper: Determinar si un evento es un "inicio" según el tipo de módulo
  * 
  * @param {Object} event - Evento de tracking
- * @param {String} moduleKey - Identificador del módulo
+ * @param {String} moduleType - 'landing' | 'wizard'
  * @returns {Boolean}
  */
-function isStartEvent(event, moduleKey) {
-  if (moduleKey === 'inbox-zero-prevention') {
+function isStartEvent(event, moduleType) {
+  if (moduleType === 'landing') {
     return event.event === 'prevention_demo_viewed';
   }
   return event.event.includes('wizard_started') || event.event.includes('preview_started');
@@ -527,11 +550,11 @@ function isStartEvent(event, moduleKey) {
  * Helper: Determinar si un evento es una "completion" según el tipo de módulo
  * 
  * @param {Object} event - Evento de tracking
- * @param {String} moduleKey - Identificador del módulo
+ * @param {String} moduleType - 'landing' | 'wizard'
  * @returns {Boolean}
  */
-function isCompletionEvent(event, moduleKey) {
-  if (moduleKey === 'inbox-zero-prevention') {
+function isCompletionEvent(event, moduleType) {
+  if (moduleType === 'landing') {
     return event.event === 'waitlist_success';
   }
   
@@ -556,7 +579,7 @@ function isCompletionEvent(event, moduleKey) {
  * @param {String} moduleKey - Identificador del módulo
  * @returns {Array} - Array de eventos wizard_abandoned REALES (sin reloads)
  */
-function getRealAbandonments(events, moduleKey) {
+function getRealAbandonments(events, moduleType) {
   const abandonedEvents = events.filter(e => e.event === 'wizard_abandoned');
   
   return abandonedEvents.filter(abandonEvent => {
@@ -568,7 +591,7 @@ function getRealAbandonments(events, moduleKey) {
     
     // Verificar si hay wizard_started dentro de los siguientes 10 segundos usando helper
     const hasReloadAfter = sessionEvents.some(e => {
-      const isStart = isStartEvent(e, moduleKey);
+      const isStart = isStartEvent(e, moduleType);
       const timeDiff = new Date(e.timestamp) - new Date(abandonEvent.timestamp);
       const isWithin10Sec = timeDiff < 10000; // 10 segundos en ms
       
@@ -592,8 +615,8 @@ function getRealAbandonments(events, moduleKey) {
  * @param {String} moduleKey - Identificador del módulo
  * @returns {Object} - { count: número de sesiones afectadas, maxReloads: máximo de reloads }
  */
-function detectMultipleStarts(events, moduleKey) {
-  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleKey));
+function detectMultipleStarts(events, moduleType) {
+  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleType));
   
   // Agrupar por sesión
   const startsBySession = {};
@@ -624,7 +647,7 @@ function detectMultipleStarts(events, moduleKey) {
 /**
  * Calcular KPIs de eventos
  */
-function calculateKPIs(events, moduleKey) {
+function calculateKPIs(events, moduleType) {
   // Sesiones únicas (filtrar nulls/undefined)
   const sessionIds = events.map(e => e.session_id).filter(Boolean);
   const uniqueSessions = sessionIds.length > 0 ? new Set(sessionIds).size : 0;
@@ -636,14 +659,14 @@ function calculateKPIs(events, moduleKey) {
   // 🔧 FIX #1: Deduplicar wizard_starts por sesión (eliminar reloads)
   // En vez de contar eventos, contar sesiones únicas que iniciaron wizard
   // Usar helper isStartEvent para reconocer diferentes tipos de módulos
-  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleKey));
+  const wizardStartEvents = events.filter(e => isStartEvent(e, moduleType));
   const uniqueWizardStarts = new Set(
     wizardStartEvents.map(e => e.session_id).filter(Boolean)
   ).size;
   const wizardStarts = uniqueWizardStarts || wizardStartEvents.length; // Fallback si no hay session_id
   
   // Usar helper isCompletionEvent para reconocer diferentes tipos de módulos
-  const wizardCompletions = events.filter(e => isCompletionEvent(e, moduleKey)).length;
+  const wizardCompletions = events.filter(e => isCompletionEvent(e, moduleType)).length;
   
   // ✅ Downloads: solo eventos explícitos de descarga (NO contar 'generated')
   const downloads = events.filter(e => 
@@ -750,18 +773,59 @@ function calculateKPIs(events, moduleKey) {
     : 0;
   
   // 🔧 FIX #2: Filtrar wizard_abandoned con reload inmediato (<10 seg)
-  const realAbandonments = getRealAbandonments(events, moduleKey);
+  const realAbandonments = getRealAbandonments(events, moduleType);
   
   // 🔧 FIX #3: Detectar sesiones con múltiples wizard_starts (UX issue)
-  const sessionsWithMultipleStarts = detectMultipleStarts(events, moduleKey);
+  const sessionsWithMultipleStarts = detectMultipleStarts(events, moduleType);
   
   // Flag de datos insuficientes
-  const insufficient_data = (
-    uniqueSessions < 5 || 
-    wizardStarts < 3 || 
-    feedbackEvents.length < 3
-  );
+  // ✅ FIX: Module-aware — landing pages no tienen feedback_submitted,
+  // no castigar por ausencia de una métrica que no aplica al flujo.
+  let insufficient_data;
+  if (moduleType === 'landing') {
+    // Landing page: solo validar sesiones y vistas (no feedback)
+    insufficient_data = uniqueSessions < 5 || wizardStarts < 3;
+  } else {
+    // Wizards normales: requieren feedback
+    insufficient_data = (
+      uniqueSessions < 5 ||
+      wizardStarts < 3 ||
+      feedbackEvents.length < 3
+    );
+  }
   
+  // === LANDING METRICS (only for module_type='landing') ===
+  // Extraer métricas especializadas para prototipos/landing de validación de dolor
+  let landing_metrics = null;
+  if (moduleType === 'landing') {
+    const metricClickEvents = events.filter(e => e.event === 'metric_clicked');
+    const waitlistSignups = events.filter(e => e.event === 'waitlist_success').length;
+    const demoViews = wizardStartEvents.length; // prevention_demo_viewed
+
+    // Mapa de puntos de dolor: cuáles métricas resonaron más
+    const painPointMap = {};
+    metricClickEvents.forEach(e => {
+      try {
+        const props = typeof e.properties === 'string' ? JSON.parse(e.properties) : e.properties;
+        const metric = props?.metric;
+        if (metric) painPointMap[metric] = (painPointMap[metric] || 0) + 1;
+      } catch {}
+    });
+
+    const top_pain_points = Object.entries(painPointMap)
+      .map(([metric, clicks]) => ({ metric, clicks }))
+      .sort((a, b) => b.clicks - a.clicks);
+
+    landing_metrics = {
+      demo_views:          demoViews,
+      engagement_clicks:   metricClickEvents.length,
+      engagement_rate:     demoViews > 0 ? Math.round((metricClickEvents.length / demoViews) * 100) : 0,
+      waitlist_signups:    waitlistSignups,
+      waitlist_conversion: demoViews > 0 ? Math.round((waitlistSignups / demoViews) * 100) : 0,
+      top_pain_points
+    };
+  }
+
   return {
     totalSessions: uniqueSessions,
     uniqueUsers,
@@ -805,15 +869,42 @@ function calculateKPIs(events, moduleKey) {
     },
     // Exponer abandonos reales para uso en alerts
     _abandonments: realAbandonments,
-    _sessions_multiple_starts: sessionsWithMultipleStarts
+    _sessions_multiple_starts: sessionsWithMultipleStarts,
+    // 🏗️ Landing-specific metrics (null para wizard modules)
+    landing_metrics
   };
 }
 
 /**
  * Calcular Health Score (0-100)
  * Con penalización por datos insuficientes
+ *
+ * ✅ FIX: Fórmula separada para landing pages (inbox-zero-prevention)
+ * Las landing pages no tienen wizard completions ni feedback_submitted.
+ * Se evalúan por: volumen de visitas + tasa de conversión a waitlist.
  */
-function calculateHealthScore(kpis) {
+function calculateHealthScore(kpis, moduleType = 'wizard') {
+
+  // Landing page formula
+  if (moduleType === 'landing') {
+    // volume_score: 100 pts cuando hay 20+ sesiones reales
+    const volume_score = Math.min((kpis.totalSessions / 20) * 100, 100);
+    // conversion_score: tasa waitlist_success / prevention_demo_viewed (0-100)
+    const conversion_score = kpis.conversion_rate;
+
+    const rawScore = Math.round(
+      (volume_score    * 0.60) +   // 60% — cantidad de visitantes
+      (conversion_score * 0.40)    // 40% — conversión a waitlist
+    );
+
+    if (kpis.insufficient_data) {
+      // Cap 50 hasta tener suficientes datos
+      return Math.max(0, Math.min(50, rawScore));
+    }
+    return Math.max(0, Math.min(100, rawScore));
+  }
+
+  // ── Generic wizard formula (unchanged) ───────────────────────────────────
   // Si hay datos insuficientes, penalizar el score
   if (kpis.insufficient_data) {
     // Score basado solo en lo que tenemos, pero con cap máximo de 50
@@ -848,7 +939,7 @@ function calculateHealthScore(kpis) {
 /**
  * Generar recomendación automatizada
  */
-function generateRecommendation(kpis, healthScore, totalEvents) {
+function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wizard') {
   const { 
     create_module_score,
     create_module_downloads,
@@ -857,6 +948,45 @@ function generateRecommendation(kpis, healthScore, totalEvents) {
     archive_min_sessions,
     min_sessions_to_analyze
   } = DECISION_THRESHOLDS;
+
+  // Landing page (pain/demand validation)
+  if (moduleType === 'landing') {
+    if (kpis.insufficient_data) {
+      return {
+        action: 'continue',
+        confidence: 'low',
+        reason: `Pocas visitas aún (${kpis.totalSessions} sesiones). Score: ${healthScore}. Necesita más tráfico real para evaluar.`,
+        next_steps: [
+          'Compartir la landing en Discord, Reddit y Twitter',
+          'Pedir al menos 20 visitas reales antes de evaluar',
+          'Verificar que el tracking se dispara en cada visita'
+        ]
+      };
+    }
+    // Con datos suficientes: evaluar por conversión a waitlist
+    if (kpis.wizard_completions > 0) {
+      return {
+        action: 'validate',
+        confidence: 'high',
+        reason: `${kpis.wizard_completions} registro(s) al waitlist de ${kpis.totalSessions} visitas. Señal positiva de demanda real.`,
+        next_steps: [
+          'Hacer onboarding de los primeros usuarios',
+          'Validar disposición a pagar',
+          'Escalar distribución'
+        ]
+      };
+    }
+    return {
+      action: 'continue',
+      confidence: 'low',
+      reason: `${kpis.totalSessions} visitas, 0 conversiones al waitlist. Score ${healthScore}. Optimizar CTA y checkout.`,
+      next_steps: [
+        'Revisar si el botón "Join Waitlist" está visible en móvil',
+        'Añadir más fuerza al CTA (urgencia / beneficio concreto)',
+        'Aumentar volumen de tráfico orgánico'
+      ]
+    };
+  }
   
   // CASO PRIORITARIO: Datos insuficientes
   if (kpis.insufficient_data) {
@@ -966,8 +1096,40 @@ function generateRecommendation(kpis, healthScore, totalEvents) {
  * Validar criterios de acciones del motor
  * Determina qué acciones están habilitadas y por qué
  */
-function validateActionCriteria(kpis, healthScore, events) {
+function validateActionCriteria(kpis, healthScore, events, moduleType = 'wizard') {
   const daysRunning = calculateDaysRunning(events);
+
+  // Landing page (pain/demand validation)
+  if (moduleType === 'landing') {
+    const validationCriteria = {
+      sessions_min:    kpis.totalSessions >= 20,
+      completions_min: kpis.wizard_completions >= 1,   // waitlist_success
+      feedback_min:    true,                            // no aplica — siempre OK
+      days_min:        daysRunning >= 3,
+      signal_positive: kpis.wizard_completions >= 1 || kpis.conversion_rate >= 5
+    };
+
+    const archiveCriteria = {
+      sessions_min:     kpis.totalSessions >= 20,
+      signal_negative:  kpis.wizard_completions === 0 && kpis.totalSessions >= 20
+    };
+
+    const canValidate = Object.values(validationCriteria).every(v => v === true);
+    const canArchive  = Object.values(archiveCriteria).every(v => v === true);
+
+    return {
+      can_validate: canValidate,
+      can_archive:  canArchive,
+      can_continue: true,
+      validation_criteria: validationCriteria,
+      archive_criteria:    archiveCriteria,
+      days_running:        daysRunning,
+      blocking_reasons: {
+        validate: !canValidate ? getBlockingReasons(validationCriteria, 'validate') : [],
+        archive:  !canArchive  ? getBlockingReasons(archiveCriteria, 'archive')  : []
+      }
+    };
+  }
   
   // 🟢 Criterios para VALIDAR MÓDULO (cambiar status a 'live')
   const validationCriteria = {
@@ -1054,7 +1216,7 @@ function getBlockingReasons(criteria, actionType) {
 /**
  * Generar alertas inteligentes
  */
-function generateAlerts(kpis, healthScore, events) {
+function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
   const alerts = [];
   
   // 🚨 Alert PRIORITARIO: Datos insuficientes
@@ -1062,7 +1224,13 @@ function generateAlerts(kpis, healthScore, events) {
     const missingData = [];
     if (kpis.totalSessions < 5) missingData.push(`${kpis.totalSessions} sesiones (mín: 5)`);
     if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} wizard starts (mín: 3)`);
-    if (kpis.total_feedback < 3) missingData.push(`${kpis.total_feedback} feedbacks (mín: 3)`);
+    // Para landing: validar waitlist signups en lugar de feedbacks
+    if (moduleType === 'landing') {
+      const signups = kpis.landing_metrics?.waitlist_signups ?? 0;
+      if (signups < 3) missingData.push(`${signups} waitlist signups (mín: 3)`);
+    } else {
+      if (kpis.total_feedback < 3) missingData.push(`${kpis.total_feedback} feedbacks (mín: 3)`);
+    }
     
     alerts.push({
       type: 'warning',

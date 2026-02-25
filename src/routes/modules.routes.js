@@ -83,4 +83,11 @@ router.patch('/modules/:key/validate', auth.verifyAdmin, modulesController.markA
 // 🎬 Configurar preview mode
 router.post('/modules/:key/configure-preview', auth.verifyAdmin, modulesController.configurePreview);
 
+// 🆕 Phase progression endpoints
+// Create next phase in MVP validation (landing → wizard → live)
+router.post('/modules/create-next-phase', auth.verifyAdmin, modulesController.createNextPhase);
+
+// Get all phases for a concept
+router.get('/modules/concepts/:conceptName/phases', auth.verifyAdmin, modulesController.getConceptPhases);
+
 export default router;
