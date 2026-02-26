@@ -405,24 +405,21 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
       module: moduleKey,
       timestamp: { [Op.gte]: dateFrom },
       source: { [Op.notIn]: ['admin', 'internal'] },  // ✅ Solo tracking público
-      // 🔧 FIX #3: Filtrar bots por user_agent
-      [Op.or]: [
-        { user_agent: null },  // Mantener eventos sin user_agent (casos edge)
-        {
-          [Op.and]: [
-            { user_agent: { [Op.notLike]: '%bot%' } },
-            { user_agent: { [Op.notLike]: '%Bot%' } },
-            { user_agent: { [Op.notLike]: '%crawler%' } },
-            { user_agent: { [Op.notLike]: '%Crawler%' } },
-            { user_agent: { [Op.notLike]: '%spider%' } },
-            { user_agent: { [Op.notLike]: '%Spider%' } },
-            { user_agent: { [Op.notLike]: '%Googlebot%' } },
-            { user_agent: { [Op.notLike]: '%bingbot%' } },
-            { user_agent: { [Op.notLike]: '%slurp%' } },
-            { user_agent: { [Op.notLike]: '%crawl%' } }
-          ]
-        }
-      ]
+      // 🔧 FIX #3: Filtrar bots por user_agent (simplificado y más efectivo)
+      user_agent: {
+        [Op.and]: [
+          { [Op.notLike]: '%Googlebot%' },
+          { [Op.notLike]: '%googlebot%' },
+          { [Op.notLike]: '%bingbot%' },
+          { [Op.notLike]: '%bot/%' },         // bot/ (común en user agents de bots)
+          { [Op.notLike]: '%crawler%' },
+          { [Op.notLike]: '%Crawler%' },
+          { [Op.notLike]: '%spider%' },
+          { [Op.notLike]: '%Spider%' },
+          { [Op.notLike]: '%slurp%' },
+          { [Op.notLike]: '%crawl%' }
+        ]
+      }
     },
     order: [['timestamp', 'ASC']]
   });
