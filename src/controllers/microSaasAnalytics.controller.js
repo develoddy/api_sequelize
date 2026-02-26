@@ -405,24 +405,38 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
       module: moduleKey,
       timestamp: { [Op.gte]: dateFrom },
       source: { [Op.notIn]: ['admin', 'internal'] },  // ✅ Solo tracking público
-      // 🔧 FIX #3: Filtrar bots por user_agent (simplificado y más efectivo)
-      user_agent: {
-        [Op.and]: [
-          { [Op.notLike]: '%Googlebot%' },
-          { [Op.notLike]: '%googlebot%' },
-          { [Op.notLike]: '%bingbot%' },
-          { [Op.notLike]: '%bot/%' },         // bot/ (común en user agents de bots)
-          { [Op.notLike]: '%crawler%' },
-          { [Op.notLike]: '%Crawler%' },
-          { [Op.notLike]: '%spider%' },
-          { [Op.notLike]: '%Spider%' },
-          { [Op.notLike]: '%slurp%' },
-          { [Op.notLike]: '%crawl%' }
-        ]
-      }
+      // 🔧 FIX #3: Filtrar bots por user_agent
+      // IMPORTANTE: Incluir eventos con user_agent NULL (usuarios legítimos sin UA)
+      // SQL: (user_agent IS NULL) OR (user_agent NOT LIKE bot patterns)
+      [Op.or]: [
+        { user_agent: null },  // Incluir NULL = usuarios legítimos
+        { 
+          user_agent: {
+            [Op.and]: [
+              { [Op.notLike]: '%Googlebot%' },
+              { [Op.notLike]: '%googlebot%' },
+              { [Op.notLike]: '%bingbot%' },
+              { [Op.notLike]: '%bot/%' },
+              { [Op.notLike]: '%crawler%' },
+              { [Op.notLike]: '%Crawler%' },
+              { [Op.notLike]: '%spider%' },
+              { [Op.notLike]: '%Spider%' },
+              { [Op.notLike]: '%slurp%' },
+              { [Op.notLike]: '%crawl%' }
+            ]
+          }
+        }
+      ]
     },
     order: [['timestamp', 'ASC']]
   });
+  
+  // 🐛 DEBUG: Log bot filter results
+  const uniqueSessionsInEvents = new Set(events.map(e => e.session_id).filter(Boolean)).size;
+  console.log(`🔍 Bot Filter Debug for ${moduleKey}:`);
+  console.log(`   - Total events after filter: ${events.length}`);
+  console.log(`   - Unique sessions after filter: ${uniqueSessionsInEvents}`);
+  console.log(`   - Event types: ${[...new Set(events.map(e => e.event))].join(', ')}`);
   
   // ✅ 3. Si no hay eventos públicos, retornar métricas en 0 (no null)
   if (events.length === 0) {
@@ -668,7 +682,12 @@ function calculateKPIs(events, moduleType) {
   const sessionIds = events.map(e => e.session_id).filter(Boolean);
   const uniqueSessions = sessionIds.length > 0 ? new Set(sessionIds).size : 0;
   
-  // 🔧 FIX #1: Usuarios únicos = sesiones únicas para tráfico anónimo
+  // � DEBUG: Log KPIs calculation
+  console.log(`📊 KPIs Calculation (${moduleType}):`);
+  console.log(`   - Total events received: ${events.length}`);
+  console.log(`   - Unique sessions calculated: ${uniqueSessions}`);
+  
+  // �🔧 FIX #1: Usuarios únicos = sesiones únicas para tráfico anónimo
   // IMPORTANTE: user_id solo se llena cuando hay login (usuarios autenticados)
   // Para MVPs con tráfico público/anónimo, session_id es el identificador correcto
   // Cada session_id = 1 usuario único (aunque no esté autenticado)
