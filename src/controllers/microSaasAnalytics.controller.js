@@ -384,6 +384,14 @@ export const getTrendingMVPs = async (req, res) => {
  * ✅ FASE 2: Filtra eventos internos (source='admin') para métricas públicas limpias
  */
 async function calculateModuleAnalytics(moduleKey, period = '30d') {
+  // 🐛 DEBUG: Verificar que este código se está ejecutando
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('🔍 BOT FILTER ACTIVE - calculateModuleAnalytics()');
+  console.log(`   Module: ${moduleKey}`);
+  console.log(`   Period: ${period}`);
+  console.log('═══════════════════════════════════════════════════════');
+  
   const dateFrom = getDateFromPeriod(period);
   const dateTo = new Date();
   
@@ -433,10 +441,21 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   
   // 🐛 DEBUG: Log bot filter results
   const uniqueSessionsInEvents = new Set(events.map(e => e.session_id).filter(Boolean)).size;
-  console.log(`🔍 Bot Filter Debug for ${moduleKey}:`);
-  console.log(`   - Total events after filter: ${events.length}`);
-  console.log(`   - Unique sessions after filter: ${uniqueSessionsInEvents}`);
+  console.log('');
+  console.log('📊 Query Results:');
+  console.log(`   - Total events returned: ${events.length}`);
+  console.log(`   - Unique sessions: ${uniqueSessionsInEvents}`);
   console.log(`   - Event types: ${[...new Set(events.map(e => e.event))].join(', ')}`);
+  
+  // Show first 3 user agents that passed the filter
+  const sampleUserAgents = events.slice(0, 3).map(e => ({
+    session: e.session_id,
+    ua: e.user_agent ? e.user_agent.substring(0, 80) : 'NULL'
+  }));
+  console.log(`   - Sample user_agents (first 3):`);
+  sampleUserAgents.forEach(s => console.log(`     * ${s.session}: ${s.ua}`));
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('');
   
   // ✅ 3. Si no hay eventos públicos, retornar métricas en 0 (no null)
   if (events.length === 0) {
