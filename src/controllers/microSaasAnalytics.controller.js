@@ -1260,14 +1260,14 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
   // 🚨 Alert PRIORITARIO: Datos insuficientes
   if (kpis.insufficient_data) {
     const missingData = [];
-    if (kpis.totalSessions < 5) missingData.push(`${kpis.totalSessions} sesiones (mín: 5)`);
-    if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} wizard starts (mín: 3)`);
+    if (kpis.totalSessions < 5) missingData.push(`${kpis.totalSessions} sessions (min: 5)`);
+    if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} wizard starts (min: 3)`);
     // Para landing: validar waitlist signups en lugar de feedbacks
     if (moduleType === 'landing') {
       const signups = kpis.landing_metrics?.waitlist_signups ?? 0;
-      if (signups < 3) missingData.push(`${signups} waitlist signups (mín: 3)`);
+      if (signups < 3) missingData.push(`${signups} waitlist signups (min: 3)`);
     } else {
-      if (kpis.total_feedback < 3) missingData.push(`${kpis.total_feedback} feedbacks (mín: 3)`);
+      if (kpis.total_feedback < 3) missingData.push(`${kpis.total_feedback} feedbacks (min: 3)`);
     }
     
     alerts.push({
