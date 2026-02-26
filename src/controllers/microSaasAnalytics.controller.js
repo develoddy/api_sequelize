@@ -79,7 +79,7 @@ export const getAllMicroSaasAnalytics = async (req, res) => {
       return res.json({
         success: true,
         analytics: [],
-        message: 'No hay módulos activos en testing o live',
+        message: 'No active modules in testing or live',
         summary: {
           total_modules: 0,
           avg_score: 0,
@@ -398,12 +398,31 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   
   // 2. Obtener eventos de tracking del módulo
   // ✅ FILTRO CRÍTICO: Excluir tracking interno (admin, internal)
-  // Solo contar eventos públicos para métricas reales
+  // ✅ FILTRO CRÍTICO: Excluir bots/crawlers por user_agent
+  // Solo contar eventos públicos de usuarios reales para métricas limpias
   const events = await TrackingEvent.findAll({
     where: {
       module: moduleKey,
       timestamp: { [Op.gte]: dateFrom },
-      source: { [Op.notIn]: ['admin', 'internal'] }  // ✅ Solo tracking público
+      source: { [Op.notIn]: ['admin', 'internal'] },  // ✅ Solo tracking público
+      // 🔧 FIX #3: Filtrar bots por user_agent
+      [Op.or]: [
+        { user_agent: null },  // Mantener eventos sin user_agent (casos edge)
+        {
+          [Op.and]: [
+            { user_agent: { [Op.notLike]: '%bot%' } },
+            { user_agent: { [Op.notLike]: '%Bot%' } },
+            { user_agent: { [Op.notLike]: '%crawler%' } },
+            { user_agent: { [Op.notLike]: '%Crawler%' } },
+            { user_agent: { [Op.notLike]: '%spider%' } },
+            { user_agent: { [Op.notLike]: '%Spider%' } },
+            { user_agent: { [Op.notLike]: '%Googlebot%' } },
+            { user_agent: { [Op.notLike]: '%bingbot%' } },
+            { user_agent: { [Op.notLike]: '%slurp%' } },
+            { user_agent: { [Op.notLike]: '%crawl%' } }
+          ]
+        }
+      ]
     },
     order: [['timestamp', 'ASC']]
   });
@@ -447,12 +466,12 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
       recommendation: {
         action: 'continue',
         confidence: 'low',
-        reason: 'Sin datos de tracking. Necesita actividad para evaluar.',
+        reason: 'No tracking data. Needs activity to evaluate.',
         next_steps: [
-          'Generar tráfico al wizard/preview',
-          'Compartir en redes sociales',
-          'Pedir feedback a usuarios beta',
-          'Verificar que tracking esté implementado correctamente'
+          'Generate traffic to wizard/preview',
+          'Share on social media',
+          'Request feedback from beta users',
+          'Verify that tracking is correctly implemented'
         ]
       },
       alerts: [],
@@ -479,8 +498,8 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
         },
         days_running: 0,
         blocking_reasons: {
-          validate: ['No hay datos suficientes para decidir'],
-          archive: ['Necesita al menos 15 sesiones para confirmar el patrón']
+          validate: ['Not enough data to decide'],
+          archive: ['Needs at least 15 sessions to confirm the pattern']
         }
       },
       period,
@@ -652,9 +671,12 @@ function calculateKPIs(events, moduleType) {
   const sessionIds = events.map(e => e.session_id).filter(Boolean);
   const uniqueSessions = sessionIds.length > 0 ? new Set(sessionIds).size : 0;
   
-  // Usuarios únicos (filtrar nulls/undefined)
+  // 🔧 FIX #1: Usuarios únicos = sesiones únicas para tráfico anónimo
+  // IMPORTANTE: user_id solo se llena cuando hay login (usuarios autenticados)
+  // Para MVPs con tráfico público/anónimo, session_id es el identificador correcto
+  // Cada session_id = 1 usuario único (aunque no esté autenticado)
   const userIds = events.map(e => e.user_id).filter(Boolean);
-  const uniqueUsers = userIds.length > 0 ? new Set(userIds).size : 0;
+  const uniqueUsers = uniqueSessions;
   
   // 🔧 FIX #1: Deduplicar wizard_starts por sesión (eliminar reloads)
   // En vez de contar eventos, contar sesiones únicas que iniciaron wizard
@@ -802,6 +824,21 @@ function calculateKPIs(events, moduleType) {
     const waitlistSignups = events.filter(e => e.event === 'waitlist_success').length;
     const demoViews = wizardStartEvents.length; // prevention_demo_viewed
 
+    // 🔧 FIX: Engagement Rate = % de usuarios que hicieron al menos 1 click (max 100%)
+    // No debe ser total_clicks/views porque eso puede superar 100%
+    const uniqueSessionsWithClicks = new Set(
+      metricClickEvents.map(e => e.session_id).filter(Boolean)
+    ).size;
+    
+    const engagement_rate = demoViews > 0 
+      ? Math.round((uniqueSessionsWithClicks / demoViews) * 100) 
+      : 0;
+    
+    // Métrica adicional: promedio de clicks por usuario (puede ser > 1)
+    const avg_clicks_per_view = demoViews > 0 
+      ? Math.round((metricClickEvents.length / demoViews) * 10) / 10 // 1 decimal
+      : 0;
+
     // Mapa de puntos de dolor: cuáles métricas resonaron más
     const painPointMap = {};
     metricClickEvents.forEach(e => {
@@ -819,7 +856,8 @@ function calculateKPIs(events, moduleType) {
     landing_metrics = {
       demo_views:          demoViews,
       engagement_clicks:   metricClickEvents.length,
-      engagement_rate:     demoViews > 0 ? Math.round((metricClickEvents.length / demoViews) * 100) : 0,
+      engagement_rate,     // % de usuarios que hicieron al menos 1 click (max 100%)
+      avg_clicks_per_view, // Promedio de pain points explorados por usuario
       waitlist_signups:    waitlistSignups,
       waitlist_conversion: demoViews > 0 ? Math.round((waitlistSignups / demoViews) * 100) : 0,
       top_pain_points
@@ -955,55 +993,55 @@ function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wi
       return {
         action: 'continue',
         confidence: 'low',
-        reason: `Pocas visitas aún (${kpis.totalSessions} sesiones). Score: ${healthScore}. Necesita más tráfico real para evaluar.`,
+        reason: `Few visits yet (${kpis.totalSessions} sessions). Score: ${healthScore}. Needs more real traffic to evaluate.`,
         next_steps: [
-          'Compartir la landing en Discord, Reddit y Twitter',
-          'Pedir al menos 20 visitas reales antes de evaluar',
-          'Verificar que el tracking se dispara en cada visita'
+          'Share the landing on Discord, Reddit and Twitter',
+          'Request at least 20 real visits before evaluating',
+          'Verify that tracking fires on every visit'
         ]
       };
     }
-    // Con datos suficientes: evaluar por conversión a waitlist
+    // With sufficient data: evaluate by waitlist conversion
     if (kpis.wizard_completions > 0) {
       return {
         action: 'validate',
         confidence: 'high',
-        reason: `${kpis.wizard_completions} registro(s) al waitlist de ${kpis.totalSessions} visitas. Señal positiva de demanda real.`,
+        reason: `${kpis.wizard_completions} waitlist signup(s) from ${kpis.totalSessions} visits. Positive signal of real demand.`,
         next_steps: [
-          'Hacer onboarding de los primeros usuarios',
-          'Validar disposición a pagar',
-          'Escalar distribución'
+          'Onboard first users',
+          'Validate willingness to pay',
+          'Scale distribution'
         ]
       };
     }
     return {
       action: 'continue',
       confidence: 'low',
-      reason: `${kpis.totalSessions} visitas, 0 conversiones al waitlist. Score ${healthScore}. Optimizar CTA y checkout.`,
+      reason: `${kpis.totalSessions} visits, 0 waitlist conversions. Score ${healthScore}. Optimize CTA and checkout.`,
       next_steps: [
-        'Revisar si el botón "Join Waitlist" está visible en móvil',
-        'Añadir más fuerza al CTA (urgencia / beneficio concreto)',
-        'Aumentar volumen de tráfico orgánico'
+        'Check if "Join Waitlist" button is visible on mobile',
+        'Add more strength to CTA (urgency / concrete benefit)',
+        'Increase organic traffic volume'
       ]
     };
   }
   
-  // CASO PRIORITARIO: Datos insuficientes
+  // PRIORITY CASE: Insufficient data
   if (kpis.insufficient_data) {
     return {
       action: 'continue',
       confidence: 'low',
-      reason: `Datos insuficientes para decidir. Solo ${kpis.totalSessions} sesiones, ${kpis.total_feedback} feedbacks. Score: ${healthScore} (con penalización por poca data).`,
+      reason: `Insufficient data to decide. Only ${kpis.totalSessions} sessions, ${kpis.total_feedback} feedbacks. Score: ${healthScore} (penalized by low data).`,
       next_steps: [
-        'Continuar recolectando datos (mín: 5 sesiones, 3 feedbacks)',
-        'Promocionar MVP en redes sociales',
-        'Solicitar feedback directo a usuarios',
-        'Revisar tracking de session_id'
+        'Continue collecting data (min: 5 sessions, 3 feedbacks)',
+        'Promote MVP on social media',
+        'Request direct user feedback',
+        'Review session_id tracking'
       ]
     };
   }
   
-  // Caso 1: Validar y activar módulo (cambiar status a 'live')
+  // Case 1: Validate and activate module (change status to 'live')
   if (
     healthScore >= create_module_score &&
     kpis.downloads >= create_module_downloads &&
@@ -1012,17 +1050,17 @@ function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wi
     return {
       action: 'validate',
       confidence: 'high',
-      reason: `Excelente performance: Score ${healthScore}, ${kpis.downloads} descargas, ${kpis.helpful_rate}% feedback positivo`,
+      reason: `Excellent performance: Score ${healthScore}, ${kpis.downloads} downloads, ${kpis.helpful_rate}% positive feedback`,
       next_steps: [
-        'Validar módulo (cambiar status a "live")',
-        'Configurar pricing y planes',
-        'Preparar documentación',
-        'Promocionar públicamente'
+        'Validate module (change status to "live")',
+        'Configure pricing and plans',
+        'Prepare documentation',
+        'Promote publicly'
       ]
     };
   }
   
-  // Caso 2: Archivar
+  // Case 2: Archive
   if (
     kpis.totalSessions >= archive_min_sessions &&
     healthScore < archive_score
@@ -1030,25 +1068,25 @@ function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wi
     return {
       action: 'archive',
       confidence: 'medium',
-      reason: `Score bajo (${healthScore}) después de ${kpis.totalSessions} sesiones. No validó el dolor de usuario.`,
+      reason: `Low score (${healthScore}) after ${kpis.totalSessions} sessions. Did not validate user pain.`,
       next_steps: [
-        'Archivar MVP',
-        'Analizar feedback negativo',
-        'Considerar pivot o nuevo MVP'
+        'Archive MVP',
+        'Analyze negative feedback',
+        'Consider pivot or new MVP'
       ]
     };
   }
   
-  // Caso 3: Necesita mejoras específicas
+  // Case 3: Needs specific improvements
   if (kpis.conversion_rate < 50) {
     return {
       action: 'continue',
       confidence: 'low',
-      reason: `Baja conversión (${kpis.conversion_rate}%). Mejorar UX del wizard.`,
+      reason: `Low conversion (${kpis.conversion_rate}%). Improve wizard UX.`,
       next_steps: [
-        'Analizar abandono por paso',
-        'Simplificar formularios',
-        'Agregar ayuda contextual'
+        'Analyze abandonment by step',
+        'Simplify forms',
+        'Add contextual help'
       ]
     };
   }
@@ -1057,25 +1095,25 @@ function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wi
     return {
       action: 'continue',
       confidence: 'low',
-      reason: `Feedback negativo alto (${100 - kpis.helpful_rate}%). Mejorar calidad del output.`,
+      reason: `High negative feedback (${100 - kpis.helpful_rate}%). Improve output quality.`,
       next_steps: [
-        'Revisar feedback negativo',
-        'Mejorar algoritmo generador',
-        'Ajustar expectativas del usuario'
+        'Review negative feedback',
+        'Improve generator algorithm',
+        'Adjust user expectations'
       ]
     };
   }
   
-  // Caso 4: Continuar validando (default)
+  // Case 4: Continue validating (default)
   if (kpis.totalSessions < min_sessions_to_analyze) {
     return {
       action: 'continue',
       confidence: 'low',
-      reason: `Pocas sesiones (${kpis.totalSessions}). Necesita más datos para decidir.`,
+      reason: `Few sessions (${kpis.totalSessions}). Needs more data to decide.`,
       next_steps: [
-        'Continuar validando',
-        'Promocionar en redes',
-        'Pedir feedback directo'
+        'Continue validating',
+        'Promote on social media',
+        'Request direct feedback'
       ]
     };
   }
@@ -1083,11 +1121,11 @@ function generateRecommendation(kpis, healthScore, totalEvents, moduleType = 'wi
   return {
     action: 'continue',
     confidence: 'medium',
-    reason: `En validación. Score: ${healthScore}. Mejorar métricas antes de decidir.`,
+    reason: `In validation. Score: ${healthScore}. Improve metrics before deciding.`,
     next_steps: [
-      'Incrementar volumen',
-      'Mejorar feedback rate',
-      'Optimizar conversión'
+      'Increase volume',
+      'Improve feedback rate',
+      'Optimize conversion'
     ]
   };
 }
@@ -1198,16 +1236,16 @@ function getBlockingReasons(criteria, actionType) {
   const reasons = [];
   
   if (actionType === 'validate') {
-    if (!criteria.sessions_min) reasons.push('Mínimo 20 sesiones requeridas');
-    if (!criteria.completions_min) reasons.push('Mínimo 5 wizard completados requeridos');
-    if (!criteria.feedback_min) reasons.push('Mínimo 5 feedbacks requeridos');
-    if (!criteria.days_min) reasons.push('Mínimo 3 días de validación requeridos');
-    if (!criteria.signal_positive) reasons.push('Necesita al menos una señal positiva fuerte (conversión ≥15% o feedback ≥60% o retención ≥20%)');
+    if (!criteria.sessions_min) reasons.push('Minimum 20 sessions required');
+    if (!criteria.completions_min) reasons.push('Minimum 5 wizard completions required');
+    if (!criteria.feedback_min) reasons.push('Minimum 5 feedbacks required');
+    if (!criteria.days_min) reasons.push('Minimum 3 validation days required');
+    if (!criteria.signal_positive) reasons.push('Needs at least one strong positive signal (conversion ≥15% or feedback ≥60% or retention ≥20%)');
   }
   
   if (actionType === 'archive') {
-    if (!criteria.sessions_min) reasons.push('Necesita al menos 15 sesiones para confirmar el patrón');
-    if (!criteria.signal_negative) reasons.push('No hay señal negativa clara suficiente para archivar');
+    if (!criteria.sessions_min) reasons.push('Needs at least 15 sessions to confirm the pattern');
+    if (!criteria.signal_negative) reasons.push('No clear negative signal strong enough to archive');
   }
   
   return reasons;
@@ -1234,8 +1272,8 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
     
     alerts.push({
       type: 'warning',
-      title: '📊 Datos Insuficientes',
-      message: `MVP con poca data: ${missingData.join(', ')}. Los KPIs pueden no ser representativos.`,
+      title: '📊 Insufficient Data',
+      message: `MVP with low data: ${missingData.join(', ')}. KPIs may not be representative.`,
       action: 'collect_more_data',
       priority: 'high'
     });
@@ -1263,18 +1301,18 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
     }
   }
   
-  // ⚠️ Alert: Métricas inconsistentes (wizard starts > sesiones)
+  // ⚠️ Alert: Inconsistent metrics (wizard starts > sessions)
   if (kpis.wizard_starts > kpis.totalSessions * 3) {
     alerts.push({
       type: 'info',
-      title: '⚠️ Métrica Inconsistente',
-      message: `${kpis.wizard_starts} wizard starts vs ${kpis.totalSessions} sesiones. Revisar tracking de session_id.`,
+      title: '⚠️ Inconsistent Metric',
+      message: `${kpis.wizard_starts} wizard starts vs ${kpis.totalSessions} sessions. Check session_id tracking.`,
       action: 'check_tracking',
       priority: 'medium'
     });
   }
   
-  // ✅ Alert: Listo para validar (cambiar a 'live')
+  // ✅ Alert: Ready to validate (change to 'live')
   if (
     !kpis.insufficient_data &&
     healthScore >= DECISION_THRESHOLDS.create_module_score &&
@@ -1282,63 +1320,63 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
   ) {
     alerts.push({
       type: 'success',
-      title: '🎉 MVP Validado',
-      message: `¡Listo para validar y activar! Score ${healthScore}, ${kpis.downloads} descargas.`,
+      title: '🎉 MVP Validated',
+      message: `Ready to validate and activate! Score ${healthScore}, ${kpis.downloads} downloads.`,
       action: 'validate',
       priority: 'high'
     });
   }
   
-  // ⚠️ Alert: Baja conversión
+  // ⚠️ Alert: Low conversion
   if (kpis.conversion_rate < 50 && kpis.wizard_starts >= 20) {
     alerts.push({
       type: 'warning',
-      title: '⚠️ Baja Conversión',
-      message: `Solo ${kpis.conversion_rate}% completa el wizard. Revisar UX.`,
+      title: '⚠️ Low Conversion',
+      message: `Only ${kpis.conversion_rate}% complete the wizard. Review UX.`,
       action: 'improve_ux',
       priority: 'medium'
     });
   }
   
-  // ⚠️ Alert: Feedback negativo alto
+  // ⚠️ Alert: High negative feedback
   if (kpis.helpful_rate < 60 && kpis.total_feedback >= 10) {
     alerts.push({
       type: 'warning',
-      title: '😞 Feedback Negativo Alto',
-      message: `${100 - kpis.helpful_rate}% feedback negativo. Mejorar calidad.`,
+      title: '😞 High Negative Feedback',
+      message: `${100 - kpis.helpful_rate}% negative feedback. Improve quality.`,
       action: 'improve_quality',
       priority: 'high'
     });
   }
   
-  // 🔥 Alert: Alta demanda
+  // 🔥 Alert: High demand
   if (kpis.totalSessions > 100 && events.length > 500) {
     alerts.push({
       type: 'info',
-      title: '🔥 Alta Demanda',
-      message: `${kpis.totalSessions} sesiones. Gran interés del mercado.`,
+      title: '🔥 High Demand',
+      message: `${kpis.totalSessions} sessions. Big market interest.`,
       action: 'scale_up',
       priority: 'low'
     });
   }
   
-  // ℹ️ Alert: Pocas descargas
+  // ℹ️ Alert: Low downloads
   if (kpis.download_rate < 50 && kpis.wizard_completions >= 20) {
     alerts.push({
       type: 'info',
-      title: 'ℹ️ Pocas Descargas',
-      message: `Solo ${kpis.download_rate}% descarga. Agregar CTA más visible.`,
+      title: 'ℹ️ Low Downloads',
+      message: `Only ${kpis.download_rate}% download. Add more visible CTA.`,
       action: 'improve_cta',
       priority: 'low'
     });
   }
   
-  // ❌ Alert: Pocas sesiones (solo si no hay alert de insufficient_data)
+  // ❌ Alert: Few sessions (only if no insufficient_data alert)
   if (!kpis.insufficient_data && kpis.totalSessions < DECISION_THRESHOLDS.min_sessions_to_analyze) {
     alerts.push({
       type: 'info',
-      title: '📊 Necesita Más Datos',
-      message: `Solo ${kpis.totalSessions} sesiones. Promocionar más.`,
+      title: '📊 Needs More Data',
+      message: `Only ${kpis.totalSessions} sessions. Promote more.`,
       action: 'promote',
       priority: 'low'
     });
