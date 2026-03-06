@@ -167,3 +167,145 @@ Guest.hasMany(ChatConversation, {
   as: 'conversations',
   constraints: false
 });
+
+/*
+ * FINANCIAL MODULE
+ * RELACIONES BANK_ACCOUNT -> USER
+ * RELACIONES INCOME -> USER, BANK_ACCOUNT
+ * RELACIONES EXPENSE -> USER, BANK_ACCOUNT  
+ * RELACIONES DEBT -> USER
+ * RELACIONES ASSET -> USER, BANK_ACCOUNT (patrimonio)
+ * RELACIONES LIABILITY -> USER (patrimonio)
+ */
+import { BankAccount } from './BankAccount.js';
+import { Income } from './Income.js';
+import { Expense } from './Expense.js';
+import { Debt } from './Debt.js';
+import { Asset } from './Asset.js';
+import { Liability } from './Liability.js';
+
+// BankAccount relationships
+User.hasMany(BankAccount, { 
+  foreignKey: 'user_id', 
+  as: 'bankAccounts',
+  onDelete: 'CASCADE'
+});
+BankAccount.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+
+// Income relationships
+User.hasMany(Income, { 
+  foreignKey: 'user_id', 
+  as: 'incomes',
+  onDelete: 'CASCADE'
+});
+Income.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+Income.belongsTo(BankAccount, { 
+  foreignKey: 'bank_account_id', 
+  as: 'bankAccount',
+  constraints: false
+});
+BankAccount.hasMany(Income, { 
+  foreignKey: 'bank_account_id', 
+  as: 'incomes'
+});
+
+// Expense relationships
+User.hasMany(Expense, { 
+  foreignKey: 'user_id', 
+  as: 'expenses',
+  onDelete: 'CASCADE'
+});
+Expense.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+Expense.belongsTo(BankAccount, { 
+  foreignKey: 'bank_account_id', 
+  as: 'bankAccount',
+  constraints: false
+});
+BankAccount.hasMany(Expense, { 
+  foreignKey: 'bank_account_id', 
+  as: 'expenses'
+});
+
+// Expense - BankAccount relationship for internal transfers (target account)
+Expense.belongsTo(BankAccount, { 
+  foreignKey: 'target_account_id', 
+  as: 'targetAccount',
+  constraints: false
+});
+BankAccount.hasMany(Expense, { 
+  foreignKey: 'target_account_id', 
+  as: 'incomingTransfers'
+});
+
+// Income - BankAccount relationship for internal transfers (source account)
+Income.belongsTo(BankAccount, { 
+  foreignKey: 'source_account_id', 
+  as: 'sourceAccount',
+  constraints: false
+});
+BankAccount.hasMany(Income, { 
+  foreignKey: 'source_account_id', 
+  as: 'outgoingTransfers'
+});
+
+// Debt relationships
+User.hasMany(Debt, { 
+  foreignKey: 'user_id', 
+  as: 'debts',
+  onDelete: 'CASCADE'
+});
+Debt.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+
+// Debt - BankAccount relationship (cuenta desde la que se paga)
+BankAccount.hasMany(Debt, {
+  foreignKey: 'bank_account_id',
+  as: 'debts',
+  onDelete: 'SET NULL'
+});
+Debt.belongsTo(BankAccount, {
+  foreignKey: 'bank_account_id',
+  as: 'bankAccount'
+});
+
+// Asset relationships (patrimonio)
+User.hasMany(Asset, { 
+  foreignKey: 'user_id', 
+  as: 'assets',
+  onDelete: 'CASCADE'
+});
+Asset.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+Asset.belongsTo(BankAccount, { 
+  foreignKey: 'bank_account_id', 
+  as: 'bankAccount',
+  constraints: false
+});
+BankAccount.hasMany(Asset, { 
+  foreignKey: 'bank_account_id', 
+  as: 'assets'
+});
+
+// Liability relationships (patrimonio)
+User.hasMany(Liability, { 
+  foreignKey: 'user_id', 
+  as: 'liabilities',
+  onDelete: 'CASCADE'
+});
+Liability.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});

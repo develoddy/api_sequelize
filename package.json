@@ -10,7 +10,11 @@
     "db:migrate:dev": "NODE_ENV=development sequelize db:migrate --config config/config.cjs",
     "db:migrate:prod": "NODE_ENV=production sequelize db:migrate --config config/config.cjs",
     "db:migrate:undo:dev": "NODE_ENV=development sequelize db:migrate:undo --config config/config.cjs",
-    "db:migrate:undo:prod": "NODE_ENV=production sequelize db:migrate:undo --config config/config.cjs"
+    "db:migrate:undo:prod": "NODE_ENV=production sequelize db:migrate:undo --config config/config.cjs",
+    "db:seed:dev": "NODE_ENV=development sequelize db:seed:all --config config/config.cjs",
+    "db:seed:prod": "NODE_ENV=production sequelize db:seed:all --config config/config.cjs",
+    "db:seed:undo:dev": "NODE_ENV=development sequelize db:seed:undo:all --config config/config.cjs",
+    "db:seed:undo:prod": "NODE_ENV=production sequelize db:seed:undo:all --config config/config.cjs"
   },
   "keywords": [],
   "author": "",
