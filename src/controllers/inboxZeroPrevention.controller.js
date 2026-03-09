@@ -56,11 +56,11 @@ export const createSetupRequest = async (req, res) => {
   try {
     const { email, storeUrl, printfulApiKey, platform } = req.body;
     
-    // 1️⃣ Validaciones
-    if (!email || !storeUrl || !printfulApiKey || !platform) {
+    // 1️⃣ Validaciones (solo email es obligatorio)
+    if (!email) {
       return res.status(400).json({
         success: false,
-        error: 'All fields are required'
+        error: 'Email is required'
       });
     }
     
@@ -71,7 +71,8 @@ export const createSetupRequest = async (req, res) => {
       });
     }
     
-    if (!isValidUrl(storeUrl)) {
+    // Validar URL solo si viene
+    if (storeUrl && !isValidUrl(storeUrl)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid URL format'
@@ -79,7 +80,7 @@ export const createSetupRequest = async (req, res) => {
     }
     
     // Normalizar URL antes de guardar (agregar https:// si falta)
-    const normalizedStoreUrl = normalizeUrl(storeUrl);
+    const normalizedStoreUrl = storeUrl ? normalizeUrl(storeUrl) : null;
     
     const moduleKey = 'inbox-zero-prevention';
     
@@ -98,8 +99,8 @@ export const createSetupRequest = async (req, res) => {
     // 3️⃣ Generar password aleatorio (requerido por el modelo)
     const randomPassword = generateRandomPassword();
     
-    // 4️⃣ Extraer nombre de dominio para el campo name
-    const storeName = new URL(normalizedStoreUrl).hostname.replace('www.', '');
+    // 4️⃣ Extraer nombre de dominio para el campo name (o usar email si no hay store URL)
+    const storeName = normalizedStoreUrl ? new URL(normalizedStoreUrl).hostname.replace('www.', '') : email.split('@')[0];
     
     // 5️⃣ Crear tenant en la base de datos
     const tenant = await Tenant.create({
@@ -110,9 +111,9 @@ export const createSetupRequest = async (req, res) => {
       plan: 'trial',
       status: 'trial',
       metadata: {
-        storeUrl: normalizedStoreUrl,
-        printfulApiKey: printfulApiKey,
-        platform: platform,
+        storeUrl: normalizedStoreUrl || null,
+        printfulApiKey: printfulApiKey || null,
+        platform: platform || null,
         submittedAt: new Date().toISOString(),
         source: 'landing-page-form'
       }
@@ -169,15 +170,15 @@ export const createSetupRequest = async (req, res) => {
                   </div>
                   <div class="info-row">
                     <span class="label">🏪 Store URL:</span>
-                    <span class="value">${normalizedStoreUrl}</span>
+                    <span class="value">${normalizedStoreUrl || '<strong>Pending</strong>'}</span>
                   </div>
                   <div class="info-row">
                     <span class="label">🛠️ Platform:</span>
-                    <span class="value">${platform}</span>
+                    <span class="value">${platform || '<strong>Pending</strong>'}</span>
                   </div>
                   <div class="info-row">
                     <span class="label">🔑 API Key:</span>
-                    <span class="value">${printfulApiKey.substring(0, 10)}...</span>
+                    <span class="value">${printfulApiKey ? printfulApiKey.substring(0, 10) + '...' : '<strong>Pending — request via email</strong>'}</span>
                   </div>
                 </div>
                 
