@@ -1,4 +1,5 @@
 import chatService from '../../services/chat/chat.service.js';
+import emailService from '../../services/emailNotification.service.js';
 import moment from 'moment';
 
 /**
@@ -129,6 +130,53 @@ function setupChatSocketIO(io) {
           sender_id: user_id || guest_id || null,
           message
         });
+
+        // 📧 EMAIL NOTIFICATION: First guest message
+        // Send email to admin when a guest starts a new chat conversation
+        try {
+          // Reload conversation to get updated unread_count
+          const updatedConversation = await chatService.getConversationById(conversation_id);
+          
+          // Conditions: guest only (no user_id) + first message (unread_count === 1)
+          const isGuest = !user_id && guest_id;
+          const isFirstMessage = updatedConversation && updatedConversation.unread_count === 1;
+          
+          if (isGuest && isFirstMessage && process.env.ADMIN_EMAIL) {
+            const adminUrl = process.env.URL_ADMIN || 'http://localhost:4200';
+            const timestamp = moment(savedMessage.created_at).format('DD/MM/YYYY HH:mm:ss');
+            
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2 style="color: #2563eb;">💬 New Chat Message — Inbox Zero Landing</h2>
+                <p>Someone just started a chat on the Inbox Zero landing page.</p>
+                
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Guest ID:</strong> ${guest_id}</p>
+                  <p><strong>Message:</strong></p>
+                  <p style="margin-left: 10px; font-style: italic;">"${message}"</p>
+                  <p><strong>Time:</strong> ${timestamp}</p>
+                </div>
+                
+                <p>View all conversations in Admin:</p>
+                <a href="${adminUrl}/auth/login?returnUrl=/support" 
+                   style="display: inline-block; background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">
+                  Open Admin Panel
+                </a>
+              </div>
+            `;
+            
+            await emailService.sendEmail(
+              process.env.ADMIN_EMAIL,
+              '💬 New Chat Message — Inbox Zero Landing',
+              emailHtml
+            );
+            
+            console.log(`✅ Admin notification sent for guest ${guest_id}`);
+          }
+        } catch (emailError) {
+          // Don't block the chat flow if email fails
+          console.error('❌ Error sending admin notification email:', emailError);
+        }
         
         const messageData = {
           id: savedMessage.id,
