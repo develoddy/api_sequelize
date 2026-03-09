@@ -321,6 +321,7 @@ export async function sendAdminDailyReport(statsData) {
 }
 
 export default {
+    sendEmail,
     sendOrderShippedEmail,
     sendOrderPrintingEmail,
     sendOrderDeliveredEmail,

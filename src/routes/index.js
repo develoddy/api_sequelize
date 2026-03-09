@@ -52,6 +52,7 @@ import videoExpressPreviewRoutes from './videoExpressPreview.routes.js'; // 🎬
 import mvpHubRoutes from './mvpHub.routes.js'; // 🏠 MVP Hub - Dynamic listing of available MVPs
 import mvpAnalyticsRoutes from './mvpAnalytics.routes.js'; // 📊 MVP Analytics - Dynamic analytics from tracking_events
 import financeRoutes from './finance.routes.js'; // 💰 Finance Module - Personal financial management
+import inboxZeroPreventionRoutes from './inboxZeroPrevention.routes.js'; // 📬 Inbox Zero Prevention - Public setup requests
 
 const app = express();
 
@@ -108,5 +109,6 @@ app.use("/video-express/preview", videoExpressPreviewRoutes); // 🎬 Video Expr
 app.use("/", mvpHubRoutes); // 🏠 MVP Hub - Dynamic MVP listing (Public)
 app.use("/mvp-analytics", mvpAnalyticsRoutes); // 📊 MVP Analytics - Aggregated stats from tracking_events
 app.use("/finance", financeRoutes); // 💰 Finance Module - Personal financial management (Admin)
+app.use("/public/inbox-zero", inboxZeroPreventionRoutes); // 📬 Inbox Zero Prevention - Public setup requests (No auth)
 
 export default app;
