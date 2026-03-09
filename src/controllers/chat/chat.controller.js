@@ -9,7 +9,7 @@ const chatController = {
    */
   async initChat(req, res) {
     try {
-      const { user_id, guest_id } = req.body;
+      const { user_id, guest_id, tenant_id } = req.body;
       
       // Generar un ID de sesión único si no existe
       const session_id = req.body.session_id || uuidv4();
@@ -25,7 +25,8 @@ const chatController = {
       const conversation = await chatService.findOrCreateConversation({
         user_id,
         guest_id,
-        session_id
+        session_id,
+        tenant_id: tenant_id !== undefined ? tenant_id : 0  // Default to 0 for non-tenant guests (app-saas)
       });
       
       return res.status(200).json({

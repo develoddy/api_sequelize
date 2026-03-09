@@ -46,9 +46,8 @@ function setupChatSocketIO(io) {
         console.log(`Usuario identificado - Session: ${session_id}, SocketID: ${socket.id}`);
         
         // Buscar o crear la conversación para esta sesión
-        // 👉 IMPORTANTE: tenant_id = 1 para el ecommerce principal
+        // tenant_id will be obtained from existing conversation or default to 0
         const conversation = await chatService.findOrCreateConversation({
-          tenant_id: 1,  // 👉 Ecommerce principal
           session_id,
           user_id: user_id || null,
           guest_id: guest_id || null
@@ -115,11 +114,17 @@ function setupChatSocketIO(io) {
           return;
         }
         
+        // Get tenant_id from the conversation
+        const conversation = await chatService.getConversationById(conversation_id);
+        if (!conversation) {
+          socket.emit('error', { message: 'Conversación no encontrada' });
+          return;
+        }
+        
         // Guardar el mensaje en la base de datos
-        // 👉 IMPORTANTE: tenant_id = 1 para el ecommerce principal
         const savedMessage = await chatService.saveMessage({
           conversation_id,
-          tenant_id: 1,  // 👉 Ecommerce principal
+          tenant_id: conversation.tenant_id,
           sender_type: 'user',
           sender_id: user_id || guest_id || null,
           message
@@ -162,10 +167,17 @@ function setupChatSocketIO(io) {
           return;
         }
         
+        // Get tenant_id from the conversation
+        const conversation = await chatService.getConversationById(conversation_id);
+        if (!conversation) {
+          socket.emit('error', { message: 'Conversación no encontrada' });
+          return;
+        }
+        
         // Guardar el mensaje en la base de datos
         const savedMessage = await chatService.saveMessage({
           conversation_id,
-          tenant_id: 1,  // 👉 Ecommerce principal
+          tenant_id: conversation.tenant_id,
           sender_type: 'agent',
           sender_id: agent_id,
           message,
@@ -251,6 +263,13 @@ function setupChatSocketIO(io) {
         // Asignar agente a la conversación
         await chatService.assignAgentToConversation(conversation_id, agent_id);
         
+        // Get tenant_id from the conversation
+        const conversation = await chatService.getConversationById(conversation_id);
+        if (!conversation) {
+          socket.emit('error', { message: 'Conversación no encontrada' });
+          return;
+        }
+        
         // Notificar al cliente
         const userSocketId = userSockets.get(session_id);
         if (userSocketId) {
@@ -274,7 +293,7 @@ function setupChatSocketIO(io) {
         // Enviar mensaje de sistema
         await chatService.saveMessage({
           conversation_id,
-          tenant_id: 1,  // 👉 Ecommerce principal
+          tenant_id: conversation.tenant_id,
           sender_type: 'system',
           message: `El agente ${agent_name} se ha unido a la conversación.`
         });
@@ -314,12 +333,16 @@ function setupChatSocketIO(io) {
         });
         
         // Guardar mensaje de sistema
-        await chatService.saveMessage({
-          conversation_id,
-          tenant_id: 1,  // 👉 Ecommerce principal
-          sender_type: 'system',
-          message: 'La conversación ha sido cerrada.'
-        });
+        // Get tenant_id from the conversation
+        const convForClose = await chatService.getConversationById(conversation_id);
+        if (convForClose) {
+          await chatService.saveMessage({
+            conversation_id,
+            tenant_id: convForClose.tenant_id,
+            sender_type: 'system',
+            message: 'La conversación ha sido cerrada.'
+          });
+        }
         
         console.log(`Conversación cerrada - ID: ${conversation_id}`);
       } catch (error) {
@@ -426,7 +449,7 @@ function setupChatSocketIO(io) {
     // Cliente solicita soporte
     socket.on('request-support', async (data) => {
       try {
-        const { session_id, user_id, guest_id, name, email, issue } = data;
+        const { session_id, user_id, guest_id, name, email, issue, tenant_id } = data;
         
         if (!session_id) {
           socket.emit('error', { message: 'Se requiere session_id' });
@@ -435,7 +458,7 @@ function setupChatSocketIO(io) {
         
         // Buscar o crear la conversación para esta sesión
         const conversation = await chatService.findOrCreateConversation({
-          tenant_id: 1,  // 👉 Ecommerce principal
+          tenant_id: tenant_id !== undefined ? tenant_id : 0,
           session_id,
           user_id: user_id || null,
           guest_id: guest_id || null
@@ -444,7 +467,7 @@ function setupChatSocketIO(io) {
         // Guardar el mensaje de solicitud de soporte
         await chatService.saveMessage({
           conversation_id: conversation.id,
-          tenant_id: 1,  // 👉 Ecommerce principal
+          tenant_id: conversation.tenant_id,
           sender_type: 'user',
           sender_id: user_id || guest_id || null,
           message: issue || 'Solicitud de soporte'

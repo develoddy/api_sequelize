@@ -14,11 +14,9 @@ class ChatService {
    */
   async createConversation(data) {
     try {
-      const { tenant_id } = data;
-      
-      if (!tenant_id) {
-        throw new Error('tenant_id es obligatorio para crear conversación');
-      }
+      // Allow tenant_id to be null/undefined for guest-only apps (app-saas)
+      // Use 0 as default for non-tenant guests
+      const tenant_id = data.tenant_id !== undefined ? data.tenant_id : 0;
       
       return await ChatConversation.create({
         tenant_id: tenant_id,
@@ -45,11 +43,10 @@ class ChatService {
    */
   async findOrCreateConversation(data) {
     try {
-      const { tenant_id, session_id } = data;
-      
-      if (!tenant_id) {
-        throw new Error('tenant_id es obligatorio');
-      }
+      // Allow tenant_id to be null/undefined for guest-only apps (app-saas)
+      // Use 0 as default for non-tenant guests
+      const tenant_id = data.tenant_id !== undefined ? data.tenant_id : 0;
+      const { session_id } = data;
       
       if (!session_id) {
         throw new Error('session_id es obligatorio');
@@ -82,7 +79,10 @@ class ChatService {
       }
       
       // Si no hay una conversación activa, crear una nueva
-      return await this.createConversation(data);
+      return await this.createConversation({
+        ...data,
+        tenant_id: tenant_id
+      });
     } catch (error) {
       console.error("Error en findOrCreateConversation:", error);
       throw error;
@@ -98,11 +98,9 @@ class ChatService {
     const t = await sequelize.transaction();
     
     try {
-      const { tenant_id, conversation_id } = messageData;
-      
-      if (!tenant_id) {
-        throw new Error('tenant_id es obligatorio para guardar mensaje');
-      }
+      // Allow tenant_id to be optional, default to 0 for non-tenant guests
+      const tenant_id = messageData.tenant_id !== undefined ? messageData.tenant_id : 0;
+      const { conversation_id } = messageData;
       
       if (!conversation_id) {
         throw new Error('conversation_id es obligatorio');
