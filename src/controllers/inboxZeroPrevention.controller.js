@@ -17,11 +17,24 @@ const isValidEmail = (email) => {
 };
 
 /**
+ * Normalizar URL - Agregar https:// si falta el protocolo
+ */
+const normalizeUrl = (url) => {
+  // Si ya tiene protocolo, retornar como está
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // Agregar https:// por defecto
+  return `https://${url}`;
+};
+
+/**
  * Validar formato de URL
  */
 const isValidUrl = (url) => {
   try {
-    const urlObj = new URL(url);
+    const normalizedUrl = normalizeUrl(url);
+    const urlObj = new URL(normalizedUrl);
     return ['http:', 'https:'].includes(urlObj.protocol);
   } catch {
     return false;
@@ -47,23 +60,26 @@ export const createSetupRequest = async (req, res) => {
     if (!email || !storeUrl || !printfulApiKey || !platform) {
       return res.status(400).json({
         success: false,
-        error: 'Todos los campos son requeridos'
+        error: 'All fields are required'
       });
     }
     
     if (!isValidEmail(email)) {
       return res.status(400).json({
         success: false,
-        error: 'Formato de email inválido'
+        error: 'Invalid email format'
       });
     }
     
     if (!isValidUrl(storeUrl)) {
       return res.status(400).json({
         success: false,
-        error: 'Formato de URL inválido'
+        error: 'Invalid URL format'
       });
     }
+    
+    // Normalizar URL antes de guardar (agregar https:// si falta)
+    const normalizedStoreUrl = normalizeUrl(storeUrl);
     
     const moduleKey = 'inbox-zero-prevention';
     
@@ -75,7 +91,7 @@ export const createSetupRequest = async (req, res) => {
     if (existingTenant) {
       return res.status(409).json({
         success: false,
-        error: 'Ya existe una solicitud con este email'
+        error: 'A request already exists with this email'
       });
     }
     
@@ -83,7 +99,7 @@ export const createSetupRequest = async (req, res) => {
     const randomPassword = generateRandomPassword();
     
     // 4️⃣ Extraer nombre de dominio para el campo name
-    const storeName = new URL(storeUrl).hostname.replace('www.', '');
+    const storeName = new URL(normalizedStoreUrl).hostname.replace('www.', '');
     
     // 5️⃣ Crear tenant en la base de datos
     const tenant = await Tenant.create({
@@ -94,7 +110,7 @@ export const createSetupRequest = async (req, res) => {
       plan: 'trial',
       status: 'trial',
       metadata: {
-        storeUrl: storeUrl,
+        storeUrl: normalizedStoreUrl,
         printfulApiKey: printfulApiKey,
         platform: platform,
         submittedAt: new Date().toISOString(),
@@ -106,7 +122,7 @@ export const createSetupRequest = async (req, res) => {
     console.log('✅ [Inbox Zero Prevention] Tenant creado:', {
       id: tenant.id,
       email: tenant.email,
-      storeUrl: storeUrl,
+      storeUrl: normalizedStoreUrl,
       platform: platform
     });
     
@@ -153,7 +169,7 @@ export const createSetupRequest = async (req, res) => {
                   </div>
                   <div class="info-row">
                     <span class="label">🏪 Store URL:</span>
-                    <span class="value">${storeUrl}</span>
+                    <span class="value">${normalizedStoreUrl}</span>
                   </div>
                   <div class="info-row">
                     <span class="label">🛠️ Platform:</span>
@@ -216,7 +232,7 @@ export const createSetupRequest = async (req, res) => {
     res.status(201).json({
       success: true,
       tenantId: tenant.id,
-      message: 'Setup request recibido exitosamente'
+      message: 'Setup request received successfully'
     });
     
   } catch (error) {
@@ -224,7 +240,7 @@ export const createSetupRequest = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      error: 'Error procesando la solicitud. Por favor intenta nuevamente.'
+      error: 'Error processing request. Please try again.'
     });
   }
 };
