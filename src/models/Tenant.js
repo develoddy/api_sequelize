@@ -54,9 +54,10 @@ export const Tenant = sequelize.define('Tenant', {
     comment: 'Plan actual: trial, starter, pro, business, etc.'
   },
   status: {
-    type: DataTypes.ENUM('trial', 'active', 'cancelled', 'suspended', 'expired'),
-    defaultValue: 'trial',
-    allowNull: false
+    type: DataTypes.ENUM('pending_setup', 'trial', 'active', 'cancelled', 'suspended', 'expired'),
+    defaultValue: 'pending_setup',
+    allowNull: false,
+    comment: 'Estado del tenant: pending_setup (requiere configuración) → trial (periodo prueba) → active (cliente pagando)'
   },
   
   // Trial
