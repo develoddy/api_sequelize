@@ -190,11 +190,11 @@ export const createSetupRequest = async (req, res) => {
                   </div>
                   <div class="info-row">
                     <span class="label">Status:</span>
-                    <span class="value">${tenant.status}</span>
+                    <span class="value"><strong>${tenant.status}</strong> (requiere configuración manual)</span>
                   </div>
                   <div class="info-row">
                     <span class="label">Trial termina:</span>
-                    <span class="value">${new Date(tenant.trial_ends_at).toLocaleDateString('es-ES')}</span>
+                    <span class="value">${tenant.trial_ends_at ? new Date(tenant.trial_ends_at).toLocaleDateString('es-ES') : '<strong>Pending — se configurará al activar</strong>'}</span>
                   </div>
                   <div class="info-row">
                     <span class="label">Fecha de solicitud:</span>
@@ -210,7 +210,7 @@ export const createSetupRequest = async (req, res) => {
                 
                 <div class="footer">
                   <p>Este es un email automático del sistema Inbox Zero Prevention.</p>
-                  <p>Tenant creado automáticamente con trial de ${process.env.TRIAL_DAYS || 14} días.</p>
+                  <p><strong>Próximos pasos:</strong> Configura las credenciales de Printful del cliente para activar su trial de ${process.env.TRIAL_DAYS || 14} días.</p>
                 </div>
               </div>
             </div>
