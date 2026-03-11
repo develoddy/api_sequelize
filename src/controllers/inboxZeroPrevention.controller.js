@@ -109,7 +109,7 @@ export const createSetupRequest = async (req, res) => {
       password: randomPassword, // Se auto-hashea con bcrypt en beforeCreate hook
       module_key: moduleKey,
       plan: 'trial',
-      status: 'trial',
+      status: 'pending_setup', // Requiere configuración manual de credenciales Printful
       metadata: {
         storeUrl: normalizedStoreUrl || null,
         printfulApiKey: printfulApiKey || null,
@@ -117,7 +117,7 @@ export const createSetupRequest = async (req, res) => {
         submittedAt: new Date().toISOString(),
         source: 'landing-page-form'
       }
-      // trial_ends_at se auto-calcula en el hook beforeCreate
+      // trial_ends_at se configura manualmente cuando se activa el tenant
     });
     
     console.log('✅ [Inbox Zero Prevention] Tenant creado:', {
