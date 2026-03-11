@@ -68,7 +68,7 @@ export const testOrderPrintingEmail = async (req, res) => {
                 currency: 'EUR'
             },
             products: saleDetails.map(detail => ({
-                name: detail.product.title,
+                name: detail.product?.title || detail.code_discount || 'Producto Externo',
                 quantity: detail.cantidad,
                 price: detail.price_unitario
             })),
@@ -155,7 +155,7 @@ export const testOrderShippedEmail = async (req, res) => {
                 shippedDate: new Date()
             },
             products: saleDetails.map(detail => ({
-                name: detail.product.title,
+                name: detail.product?.title || detail.code_discount || 'Producto Externo',
                 quantity: detail.cantidad,
                 price: detail.price_unitario
             })),
@@ -236,7 +236,7 @@ export const testOrderDeliveredEmail = async (req, res) => {
                 deliveryNote: 'Paquete entregado correctamente'
             },
             products: saleDetails.map(detail => ({
-                name: detail.product.title,
+                name: detail.product?.title || detail.code_discount || 'Producto Externo',
                 quantity: detail.cantidad,
                 price: detail.price_unitario
             })),
