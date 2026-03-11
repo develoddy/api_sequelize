@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Tenant } from '../models/Tenant.js';
 import { Module } from '../models/Module.js';
 import emailService from '../services/emailNotification.service.js';
+import { sendTrialWelcomeEmail } from './saas-email.controller.js';
 
 /**
  * 📬 Inbox Zero Prevention - Setup Request Controller
@@ -229,7 +230,16 @@ export const createSetupRequest = async (req, res) => {
       console.warn('⚠️ [Inbox Zero Prevention] ADMIN_EMAIL no configurado, email no enviado');
     }
     
-    // 7️⃣ Responder al cliente
+    // 7️⃣ Enviar email de bienvenida al cliente
+    try {
+      await sendTrialWelcomeEmail(tenant.id);
+      console.log('✅ [Inbox Zero Prevention] Email de bienvenida enviado al cliente:', tenant.email);
+    } catch (emailError) {
+      console.error('❌ [Inbox Zero Prevention] Error enviando email de bienvenida:', emailError.message);
+      // No fallar la request aunque el email falle
+    }
+    
+    // 8️⃣ Responder al cliente
     res.status(201).json({
       success: true,
       tenantId: tenant.id,

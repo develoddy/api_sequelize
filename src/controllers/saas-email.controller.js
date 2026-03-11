@@ -125,9 +125,9 @@ export const sendTrialWelcomeEmail = async (tenantId) => {
             const transporter = getTransporter();
             
             const mailOptions = {
-                from: `"LujanDev SaaS" <${process.env.EMAIL_USER}>`,
+                from: `"Eddy - Inbox Zero Prevention" <${process.env.EMAIL_USER}>`,
                 to: tenant.email,
-                subject: `🎉 Bienvenido a ${module.name} - Tu prueba gratuita ha comenzado`,
+                subject: `Welcome to Inbox Zero Prevention! 🚀`,
                 html: htmlContent
             };
             
