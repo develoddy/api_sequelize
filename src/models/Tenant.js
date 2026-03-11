@@ -106,15 +106,56 @@ export const Tenant = sequelize.define('Tenant', {
   },
   
   // Configuración y metadata
+  /**
+   * settings: Configuraciones específicas del tenant por módulo
+   * 
+   * Para 'ecommerce-fulfillment' (Printful integration):
+   * {
+   *   printful_api_key: "pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",     // API key de la cuenta Printful del tenant
+   *   printful_webhook_secret: "wh_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Secret para validar webhooks
+   *   printful_auto_confirm: true,                                  // Auto-confirmar órdenes después de 24h
+   *   store_name: "Mi Tienda POD",                                  // Nombre de la tienda
+   *   store_url: "https://mi-tienda.com"                            // URL de la tienda
+   * }
+   * 
+   * Para otros módulos:
+   * Cada módulo puede definir su propia estructura en settings
+   */
   settings: {
     type: DataTypes.JSON,
     defaultValue: {},
-    comment: 'Configuraciones específicas del tenant'
+    comment: 'Configuraciones específicas del tenant por módulo (ver JSDoc arriba)',
+    get() {
+      const rawValue = this.getDataValue('settings');
+      // 🔧 MySQL puede devolver JSON como string - parsear automáticamente
+      if (typeof rawValue === 'string') {
+        try {
+          return JSON.parse(rawValue);
+        } catch (e) {
+          console.error(`⚠️ [Tenant] Error parseando settings del tenant ${this.id}:`, e.message);
+          return {};
+        }
+      }
+      return rawValue || {};
+    }
   },
   metadata: {
     type: DataTypes.JSON,
     defaultValue: {},
-    comment: 'Metadata adicional (utm, referrer, etc.)'
+    comment: 'Metadata adicional (utm, referrer, etc.)',
+    get() {
+      const rawValue = this.getDataValue('metadata');
+      // 🔧 MySQL puede devolver JSON como string - parsear automáticamente
+      if (typeof rawValue === 'string') {
+        try {
+          return JSON.parse(rawValue);
+        } catch (e) {
+          console.error(`⚠️ [Tenant] Error parseando metadata del tenant ${this.id}:`, e.message);
+          return {};
+        }
+      }
+      return rawValue || {};
+    }
   },
   
   // Notas admin

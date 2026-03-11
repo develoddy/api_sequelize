@@ -8,11 +8,13 @@ import { Variedad } from "../../../models/Variedad.js";
 import { User } from "../../../models/User.js";
 import { Guest } from "../../../models/Guest.js";
 import { Receipt } from "../../../models/Receipt.js";
+import { Tenant } from "../../../models/Tenant.js";
 import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
 
 /**
  * 🔔 Recibir y procesar webhooks de Printful
- * Endpoint público: POST /api/printful/webhook
+ * Endpoint público: POST /api/printful/webhook (legacy - tienda principal)
+ * Endpoint multi-tenant: POST /api/printful/webhook/:tenantId (para tenants SaaS)
  */
 export const handleWebhook = async (req, res) => {
   try {
@@ -20,9 +22,41 @@ export const handleWebhook = async (req, res) => {
     
     const webhookData = req.body;
     const signature = req.headers['x-printful-signature'];
+    const tenantId = req.params.tenantId; // 🏢 Multi-tenant support
+    
+    // 🏢 0️⃣ Determinar credenciales a usar (tenant o principal)
+    let webhookSecret = process.env.PRINTFUL_WEBHOOK_SECRET;
+    let tenant = null;
+    
+    if (tenantId) {
+      console.log(`🏢 [WEBHOOK] Buscando tenant ID: ${tenantId}`);
+      tenant = await Tenant.findByPk(tenantId);
+      
+      if (!tenant) {
+        console.error(`❌ [WEBHOOK] Tenant no encontrado: ${tenantId}`);
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+      
+      if (tenant.status !== 'active' && tenant.status !== 'trial') {
+        console.error(`❌ [WEBHOOK] Tenant inactivo: ${tenantId} (status: ${tenant.status})`);
+        return res.status(403).json({ error: 'Tenant is not active' });
+      }
+      
+      // Usar credenciales del tenant
+      webhookSecret = tenant.settings?.printful_webhook_secret || null;
+      
+      if (!webhookSecret) {
+        console.error(`❌ [WEBHOOK] Tenant ${tenantId} no tiene webhook secret configurado`);
+        return res.status(400).json({ error: 'Tenant Printful credentials not configured' });
+      }
+      
+      console.log(`✅ [WEBHOOK] Usando credenciales del tenant: ${tenant.name}`);
+    } else {
+      console.log('🔄 [WEBHOOK] Usando credenciales de la tienda principal (legacy)');
+    }
     
     // 1️⃣ Verificar firma (opcional pero recomendado en producción)
-    if (process.env.PRINTFUL_WEBHOOK_SECRET && !verifyWebhookSignature(req, signature)) {
+    if (webhookSecret && !verifyWebhookSignature(req, signature, webhookSecret)) {
       console.error('❌ [WEBHOOK] Firma inválida');
       return res.status(401).json({ error: 'Invalid signature' });
     }
@@ -770,17 +804,15 @@ async function handleProductSynced(data, webhookLog) {
 /**
  * 🔐 Verificar firma del webhook (seguridad)
  */
-function verifyWebhookSignature(req, signature) {
-  const WEBHOOK_SECRET = process.env.PRINTFUL_WEBHOOK_SECRET;
-  
-  if (!WEBHOOK_SECRET || !signature) {
+function verifyWebhookSignature(req, signature, webhookSecret) {
+  if (!webhookSecret || !signature) {
     return true; // Skip verification si no está configurado
   }
 
   // Usar rawBody en lugar de JSON.stringify para verificación correcta
   const payload = req.rawBody || Buffer.from(JSON.stringify(req.body));
   const hash = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
+    .createHmac('sha256', webhookSecret)
     .update(payload)
     .digest('hex');
 

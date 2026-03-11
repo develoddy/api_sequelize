@@ -83,6 +83,12 @@ export const Sale = sequelize.define('sales', {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'ID del módulo comprado (null para productos físicos de Printful)'
+  },
+  // 🏢 Multi-tenant support
+  tenant_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID del tenant (cliente SaaS) - NULL para la tienda principal'
   }
 }, {
   timestamps: true,
