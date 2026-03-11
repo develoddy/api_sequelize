@@ -855,14 +855,21 @@ function calculateKPIs(events, moduleType) {
   // Extraer métricas especializadas para prototipos/landing de validación de dolor
   let landing_metrics = null;
   if (moduleType === 'landing') {
-    const metricClickEvents = events.filter(e => e.event === 'metric_clicked');
+    // 🔧 FIX: Engagement incluye múltiples tipos de interacción, no solo metric_clicked
+    const engagementEvents = events.filter(e => 
+      e.event === 'metric_clicked' ||           // Click en tarjetas de métricas
+      e.event === 'cta_clicked' ||              // Click en CTAs de pricing
+      e.event === 'faq_expanded' ||             // Expansión de FAQ
+      e.event === 'chat_opened' ||              // Apertura de chat widget
+      e.event === 'setup_request_submitted'     // Envío de formulario setup
+    );
     const waitlistSignups = events.filter(e => e.event === 'waitlist_success').length;
     const demoViews = wizardStartEvents.length; // prevention_demo_viewed
 
     // 🔧 FIX: Engagement Rate = % de usuarios que hicieron al menos 1 click (max 100%)
     // No debe ser total_clicks/views porque eso puede superar 100%
     const uniqueSessionsWithClicks = new Set(
-      metricClickEvents.map(e => e.session_id).filter(Boolean)
+      engagementEvents.map(e => e.session_id).filter(Boolean)
     ).size;
     
     const engagement_rate = demoViews > 0 
@@ -871,12 +878,12 @@ function calculateKPIs(events, moduleType) {
     
     // Métrica adicional: promedio de clicks por usuario (puede ser > 1)
     const avg_clicks_per_view = demoViews > 0 
-      ? Math.round((metricClickEvents.length / demoViews) * 10) / 10 // 1 decimal
+      ? Math.round((engagementEvents.length / demoViews) * 10) / 10 // 1 decimal
       : 0;
 
     // Mapa de puntos de dolor: cuáles métricas resonaron más
     const painPointMap = {};
-    metricClickEvents.forEach(e => {
+    engagementEvents.forEach(e => {
       try {
         const props = typeof e.properties === 'string' ? JSON.parse(e.properties) : e.properties;
         const metric = props?.metric;
@@ -890,7 +897,7 @@ function calculateKPIs(events, moduleType) {
 
     landing_metrics = {
       demo_views:          demoViews,
-      engagement_clicks:   metricClickEvents.length,
+      engagement_clicks:   engagementEvents.length,
       engagement_rate,     // % de usuarios que hicieron al menos 1 click (max 100%)
       avg_clicks_per_view, // Promedio de pain points explorados por usuario
       waitlist_signups:    waitlistSignups,
