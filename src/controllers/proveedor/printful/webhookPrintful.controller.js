@@ -25,7 +25,7 @@ export const handleWebhook = async (req, res) => {
     const tenantId = req.params.tenantId; // 🏢 Multi-tenant support
     
     // 🏢 0️⃣ Determinar credenciales a usar (tenant o principal)
-    let webhookSecret = process.env.PRINTFUL_WEBHOOK_SECRET;
+    let webhookToken = process.env.PRINTFUL_WEBHOOK_TOKEN || null;
     let tenant = null;
     
     if (tenantId) {
@@ -42,21 +42,20 @@ export const handleWebhook = async (req, res) => {
         return res.status(403).json({ error: 'Tenant is not active' });
       }
       
-      // Usar credenciales del tenant
-      webhookSecret = tenant.settings?.printful_webhook_secret || null;
+      // Buscar webhook token (opcional - si no existe, se acepta sin verificación)
+      webhookToken = tenant.settings?.printful_webhook_token || null;
       
-      if (!webhookSecret) {
-        console.error(`❌ [WEBHOOK] Tenant ${tenantId} no tiene webhook secret configurado`);
-        return res.status(400).json({ error: 'Tenant Printful credentials not configured' });
+      if (webhookToken) {
+        console.log(`✅ [WEBHOOK] Usando verificación de firma para tenant: ${tenant.name}`);
+      } else {
+        console.log(`⚠️ [WEBHOOK] Sin verificación de firma para tenant: ${tenant.name} (webhook token no configurado)`);
       }
-      
-      console.log(`✅ [WEBHOOK] Usando credenciales del tenant: ${tenant.name}`);
     } else {
       console.log('🔄 [WEBHOOK] Usando credenciales de la tienda principal (legacy)');
     }
     
-    // 1️⃣ Verificar firma (opcional pero recomendado en producción)
-    if (webhookSecret && !verifyWebhookSignature(req, signature, webhookSecret)) {
+    // 1️⃣ Verificar firma (solo si webhookToken está configurado)
+    if (webhookToken && !verifyWebhookSignature(req, signature, webhookToken)) {
       console.error('❌ [WEBHOOK] Firma inválida');
       return res.status(401).json({ error: 'Invalid signature' });
     }

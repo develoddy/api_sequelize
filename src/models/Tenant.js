@@ -113,11 +113,13 @@ export const Tenant = sequelize.define('Tenant', {
    * Para 'ecommerce-fulfillment' (Printful integration):
    * {
    *   printful_api_key: "pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",     // API key de la cuenta Printful del tenant
-   *   printful_webhook_secret: "wh_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Secret para validar webhooks
    *   printful_auto_confirm: true,                                  // Auto-confirmar órdenes después de 24h
    *   store_name: "Mi Tienda POD",                                  // Nombre de la tienda
    *   store_url: "https://mi-tienda.com"                            // URL de la tienda
    * }
+   * 
+   * NOTA: printful_webhook_token ya NO se usa. Printful no genera webhook secret.
+   *       Los webhooks se aceptan sin verificación de firma.
    * 
    * Para otros módulos:
    * Cada módulo puede definir su propia estructura en settings

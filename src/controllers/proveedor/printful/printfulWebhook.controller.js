@@ -6,7 +6,7 @@ import { handleOrderFailed } from './handlers/orderFailed.js';
 import { handleOrderCanceled } from './handlers/orderCanceled.js';
 import crypto from 'crypto';
 
-const SECRET = process.env.PRINTFUL_WEBHOOK_SECRET;
+const SECRET = process.env.PRINTFUL_WEBHOOK_TOKEN;
 
 /**
  * Verifica la firma del webhook de Printful
