@@ -5,6 +5,7 @@ import { SaleDetail } from "../models/SaleDetail.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
 import { File } from "../models/File.js";
+import { Tenant } from "../models/Tenant.js";
 
 const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN;
 const PRINTFUL_API_URL = 'https://api.printful.com';
@@ -60,6 +61,11 @@ export const getTrackingStatus = async (req, res) => {
             { model: Product },
             { model: Variedad, include: { model: File } }
           ]
+        },
+        {
+          model: Tenant,
+          as: 'tenant',
+          attributes: ['id', 'name', 'settings']
         }
       ]
     });
@@ -73,6 +79,18 @@ export const getTrackingStatus = async (req, res) => {
     }
 
     console.log(`✅ [TRACKING] Orden encontrada: Sale ID ${sale.id} | Printful ID ${sale.printfulOrderId || 'N/A'}`);
+    console.log(`📊 [TRACKING] Items encontrados: ${sale.sale_details?.length || 0} items`);
+    
+    // DEBUG: Mostrar estructura de sale_details
+    if (sale.sale_details && sale.sale_details.length > 0) {
+      console.log(`📦 [TRACKING] Primer item:`, JSON.stringify({
+        id: sale.sale_details[0].id,
+        cantidad: sale.sale_details[0].cantidad,
+        code_discount: sale.sale_details[0].code_discount,
+        productId: sale.sale_details[0].productId,
+        hasProduct: !!sale.sale_details[0].product
+      }, null, 2));
+    }
 
     // 2️⃣ Consultar Printful API directamente (igual que módulo Printful)
     let printfulOrder = null;
@@ -109,7 +127,7 @@ export const getTrackingStatus = async (req, res) => {
       progress: calculateProgress(finalStatus),
       
       // Items (desde Printful si existe, sino desde BD)
-      items: printfulOrder?.items || formatLocalItems(sale.saleDetails),
+      items: printfulOrder?.items || formatLocalItems(sale.sale_details),
       
       // Información de envío (combinar ambas fuentes)
       trackingNumber: printfulOrder?.shipments?.[0]?.tracking_number || sale.trackingNumber,
@@ -135,7 +153,15 @@ export const getTrackingStatus = async (req, res) => {
       printfulRaw: printfulOrder || null,
       
       // Timeline de eventos
-      timeline: generateTimeline(finalStatus, sale, printfulOrder)
+      timeline: generateTimeline(finalStatus, sale, printfulOrder),
+      
+      // 🏢 Información del Tenant (multi-tenant branding)
+      tenant: sale.tenant ? {
+        id: sale.tenant.id,
+        name: sale.tenant.name,
+        slug: sale.tenant.slug,
+        storeName: sale.tenant.settings?.store_name || sale.tenant.name
+      } : null
     };
 
     console.log(`✅ [TRACKING] Respuesta generada para orden ${orderId}`);
@@ -193,12 +219,14 @@ function formatLocalItems(saleDetails) {
     variant_id: detail.variedadId,
     sync_variant_id: detail.variedadId,
     quantity: detail.cantidad,
-    name: detail.product?.title || 'Producto',
-    retail_price: detail.precioUnitario?.toString() || '0',
+    name: detail.product?.title || detail.code_discount || 'Producto',
+    retail_price: detail.price_unitario?.toString() || '0',
     // ✅ Incluir archivos de la variedad (mockups con diseño aplicado)
     files: detail.variedad?.files || [],
     options: [],
     sku: detail.product?.sku || null,
+    // ✅ Campo para productos externos (cuando productId es null)
+    code_discount: detail.code_discount || null,
     // ✅ Incluir datos del producto real para consistencia
     product: detail.product ? {
       id: detail.product.id,

@@ -65,6 +65,19 @@ Module.hasMany(SaleDetail, { foreignKey: 'module_id', as: 'saleDetails' });
 // SaleDetail.belongsTo ya está definido en SaleDetail.js - no duplicar
 
 /*
+ * RELACIÓN TENANT -> SALE
+ * Un tenant puede tener múltiples ventas (SaaS)
+ */
+Tenant.hasMany(Sale, { 
+  foreignKey: 'tenant_id', 
+  as: 'sales' 
+});
+Sale.belongsTo(Tenant, { 
+  foreignKey: 'tenant_id', 
+  as: 'tenant' 
+});
+
+/*
  * RELACIÓN PRODUCT -> CATEGORIE
  * RELACIÇON CATEGORIE -> PRODUCT
  * RELACIÇON CATEGORIE -> GALERIA
