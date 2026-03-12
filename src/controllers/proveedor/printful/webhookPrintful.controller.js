@@ -85,7 +85,7 @@ export const handleWebhook = async (req, res) => {
           break;
 
         case 'package_delivered':
-          processed = await handlePackageDelivered(webhookData, webhookLog);
+          processed = await handlePackageDelivered(webhookData, webhookLog, tenantId);
           break;
 
         case 'order_failed':
@@ -465,7 +465,7 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
 /**
  * ✅ Paquete entregado - HANDLER PROFESIONAL
  */
-async function handlePackageDelivered(data, webhookLog) {
+async function handlePackageDelivered(data, webhookLog, tenantId = null) {
   console.log('✅ [WEBHOOK] Procesando package_delivered...');
   
   const order = data.data.order;
@@ -477,7 +477,7 @@ async function handlePackageDelivered(data, webhookLog) {
   console.log(`✅ External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
 
   // Buscar por external_id con includes para email
-  const sale = await Sale.findOne({
+  let sale = await Sale.findOne({
     where: { id: externalId },
     include: [
       {
@@ -490,6 +490,28 @@ async function handlePackageDelivered(data, webhookLog) {
       }
     ]
   });
+
+  // 🏢 Si no encuentra por external_id, buscar por printfulOrderId (órdenes externas)
+  if (!sale && printfulOrderId) {
+    console.log(`🔍 [WEBHOOK] Buscando orden externa por printfulOrderId: ${printfulOrderId}`);
+    sale = await Sale.findOne({
+      where: { printfulOrderId: printfulOrderId },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'surname', 'email']
+        },
+        {
+          model: Guest,
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+    
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Orden externa encontrada: Sale #${sale.id}`);
+    }
+  }
 
   if (sale) {
     // ✅ Actualización: marcar como entregado
@@ -534,16 +556,34 @@ async function handlePackageDelivered(data, webhookLog) {
       } else if (sale.guest) {
         customerEmail = sale.guest.email;
         customerName = sale.guest.name || 'Cliente';
+      } else if (saleAddress) {
+        // Orden externa - obtener email de SaleAddress
+        customerEmail = saleAddress.email;
+        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
+        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
       }
 
       if (customerEmail) {
         // Preparar productos para el email
-        const products = saleDetails.map(detail => ({
-          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
-          title: detail.product.title,
-          quantity: detail.cantidad,
-          variant: detail.variedad ? detail.variedad.valor : null
-        }));
+        const products = saleDetails.map(detail => {
+          // Para órdenes externas, los productos pueden no existir en nuestra DB
+          if (detail.product) {
+            return {
+              image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+              title: detail.product.title,
+              quantity: detail.cantidad,
+              variant: detail.variedad ? detail.variedad.valor : null
+            };
+          } else {
+            // Producto externo - usar nombre guardado en code_discount
+            return {
+              image: null, // Sin imagen para productos externos
+              title: detail.code_discount || 'External Product',
+              quantity: detail.cantidad,
+              variant: null
+            };
+          }
+        });
 
         // Preparar datos para el email
         const emailData = {
