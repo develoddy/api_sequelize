@@ -124,7 +124,8 @@ export async function sendOrderShippedEmail(orderData) {
             tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
-                    URL_FRONTEND: process.env.URL_FRONTEND
+                    URL_FRONTEND: process.env.URL_FRONTEND,
+                    URL_APP_SAAS: process.env.URL_APP_SAAS // 🔗 Para tracking
                 }
             }
         };
@@ -168,7 +169,8 @@ export async function sendOrderPrintingEmail(orderData) {
             tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
-                    URL_FRONTEND: process.env.URL_FRONTEND
+                    URL_FRONTEND: process.env.URL_FRONTEND,
+                    URL_APP_SAAS: process.env.URL_APP_SAAS // 🔗 Para tracking
                 }
             }
         };
@@ -203,7 +205,8 @@ export async function sendOrderDeliveredEmail(orderData) {
             tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
-                    URL_FRONTEND: process.env.URL_FRONTEND
+                    URL_FRONTEND: process.env.URL_FRONTEND,
+                    URL_APP_SAAS: process.env.URL_APP_SAAS // 🔗 Para tracking
                 }
             }
         };
