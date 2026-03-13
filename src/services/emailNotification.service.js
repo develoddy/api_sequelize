@@ -114,6 +114,13 @@ export async function sendOrderShippedEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
         
+        // 🔍 DEBUG: Verificar estructura del tenant
+        console.log('🔍 [DEBUG] Tenant object:', JSON.stringify(orderData.tenant, null, 2));
+        if (orderData.tenant) {
+            console.log('🔍 [DEBUG] Tenant.settings:', orderData.tenant.settings);
+            console.log('🔍 [DEBUG] Tenant.settings.store_name:', orderData.tenant.settings?.store_name);
+        }
+        
         // Preparar datos para el template
         const templateData = {
             customer: orderData.customer,
@@ -161,6 +168,13 @@ export async function sendOrderPrintingEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
         
+        // 🔍 DEBUG: Verificar estructura del tenant
+        console.log('🔍 [DEBUG] Tenant object:', JSON.stringify(orderData.tenant, null, 2));
+        if (orderData.tenant) {
+            console.log('🔍 [DEBUG] Tenant.settings:', orderData.tenant.settings);
+            console.log('🔍 [DEBUG] Tenant.settings.store_name:', orderData.tenant.settings?.store_name);
+        }
+        
         const templateData = {
             customer: orderData.customer,
             order: orderData.order,
@@ -195,6 +209,13 @@ export async function sendOrderDeliveredEmail(orderData) {
             customer: orderData.customer.name,
             printfulOrderId: orderData.order.printfulOrderId
         });
+        
+        // 🔍 DEBUG: Verificar estructura del tenant
+        console.log('🔍 [DEBUG] Tenant object:', JSON.stringify(orderData.tenant, null, 2));
+        if (orderData.tenant) {
+            console.log('🔍 [DEBUG] Tenant.settings:', orderData.tenant.settings);
+            console.log('🔍 [DEBUG] Tenant.settings.store_name:', orderData.tenant.settings?.store_name);
+        }
         
         const templateData = {
             customer: orderData.customer,

@@ -230,6 +230,9 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
           emailTenant = await Tenant.findByPk(sale.tenant_id);
         }
         
+        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
+        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => ({
           image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
@@ -269,7 +272,7 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
             region: saleAddress?.region || '',
             telefono: saleAddress?.telefono || ''
           },
-          tenant: emailTenant // 🏢 Tenant para personalización
+          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
 
         // Enviar email
@@ -581,6 +584,9 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
           emailTenant = await Tenant.findByPk(sale.tenant_id);
         }
         
+        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
+        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => {
           // Para órdenes externas, los productos pueden no existir en nuestra DB
@@ -622,7 +628,7 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
             address: `${saleAddress?.address || ''}, ${saleAddress?.ciudad || ''}, ${saleAddress?.region || ''}`
           },
           products: products,
-          tenant: emailTenant // 🏢 Tenant para personalización
+          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
 
         // Enviar email
@@ -950,6 +956,9 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
           emailTenant = await Tenant.findByPk(sale.tenant_id);
         }
         
+        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
+        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => ({
           image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
@@ -982,7 +991,7 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
             region: saleAddress?.region || '',
             telefono: saleAddress?.telefono || ''
           },
-          tenant: emailTenant // 🏢 Tenant para personalización
+          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
 
         // Enviar email
