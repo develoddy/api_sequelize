@@ -66,28 +66,6 @@
             font-weight: 600;
             color: #1a1a1a;
         }
-        .tracking-box {
-            background-color: #fafafa;
-            border: 1px solid #e5e5e5;
-            border-radius: 4px;
-            padding: 20px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .tracking-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-        .tracking-number {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 1px;
-        }
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -124,7 +102,6 @@
             letter-spacing: 0.3px;
             border-radius: 4px;
             transition: background-color 0.2s;
-            margin-top: 10px;
         }
         .cta-button:hover {
             background-color: #333;
@@ -144,7 +121,6 @@
             body { padding: 10px; }
             .header, .content, .footer { padding: 25px 20px; }
             .title { font-size: 20px; }
-            .tracking-number { font-size: 16px; }
         }
     </style>
 </head>
@@ -153,8 +129,8 @@
         <!-- Header -->
         <div class="header">
             <div class="store-name">
-                <% if (tenant && tenant.store_name) { %>
-                    <%= tenant.store_name %>
+                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
+                    <%= tenant.settings.store_name %>
                 <% } else { %>
                     Tienda
                 <% } %>
@@ -171,32 +147,36 @@
                 <div class="status-value">Enviado</div>
             </div>
 
-            <!-- Tracking Number -->
-            <div class="tracking-box">
-                <div class="tracking-label">Número de Seguimiento</div>
-                <div class="tracking-number"><%= shipment.trackingNumber %></div>
-            </div>
-
-            <!-- Shipping Info -->
+            <!-- Order Info -->
             <div class="info-row">
                 <span class="info-label">Pedido</span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Número de Seguimiento</span>
+                <span class="info-value"><%= shipment.trackingNumber %></span>
             </div>
             <div class="info-row">
                 <span class="info-label">Transportista</span>
                 <span class="info-value"><%= shipment.carrier %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Servicio</span>
-                <span class="info-value"><%= shipment.service %></span>
+                <span class="info-label">Fecha de Envío</span>
+                <span class="info-value">
+                    <%= new Date(shipment.shippedDate).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    }) %>
+                </span>
             </div>
-            <% if (shipment.estimatedDelivery) { %>
+            <% if (shipment.estimatedDeliveryDate) { %>
             <div class="info-row">
                 <span class="info-label">Entrega Estimada</span>
                 <span class="info-value">
-                    <%= new Date(shipment.estimatedDelivery).toLocaleDateString('es-ES', {
+                    <%= new Date(shipment.estimatedDeliveryDate).toLocaleDateString('es-ES', {
                         day: '2-digit',
-                        month: 'short',
+                        month: 'long',
                         year: 'numeric'
                     }) %>
                 </span>
@@ -212,367 +192,11 @@
         <!-- Footer -->
         <div class="footer">
             <p class="footer-text">
-                <% if (tenant && tenant.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.store_name %>. Todos los derechos reservados.
+                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
                 <% } else { %>
                     © <%= new Date().getFullYear() %>. Todos los derechos reservados.
                 <% } %>
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 32px;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        .order-number {
-            background-color: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .shipping-icon {
-            text-align: center;
-            font-size: 80px;
-            margin: 20px 0;
-        }
-        .tracking-section {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            border-radius: 10px;
-            padding: 25px;
-            margin: 30px 0;
-            text-align: center;
-        }
-        .tracking-number {
-            background-color: rgba(255,255,255,0.9);
-            color: #2d3436;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: 700;
-            margin: 15px 0;
-            letter-spacing: 1px;
-        }
-        .track-button {
-            display: inline-block;
-            background-color: white;
-            color: #28a745;
-            padding: 18px 40px;
-            text-decoration: none;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 18px;
-            margin-top: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        .track-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
-        }
-        .info-section {
-            background-color: #f1f2f6;
-            border-radius: 10px;
-            padding: 25px;
-            margin: 25px 0;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #dfe6e9;
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #2d3436;
-        }
-        .info-value {
-            color: #636e72;
-        }
-        .product-item {
-            display: grid;
-            grid-template-columns: 100px 1fr;
-            gap: 15px;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .product-item:last-child {
-            border-bottom: none;
-        }
-        .product-image {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        .product-details h4 {
-            margin: 0 0 8px;
-            color: #2d3436;
-            font-size: 16px;
-        }
-        .product-details p {
-            margin: 3px 0;
-            font-size: 14px;
-            color: #636e72;
-        }
-        .delivery-estimate {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .delivery-estimate h4 {
-            margin: 0 0 5px;
-            color: #856404;
-        }
-        .delivery-estimate p {
-            margin: 0;
-            color: #856404;
-        }
-        .footer {
-            background-color: #2d3436;
-            color: #b2bec3;
-            padding: 25px 30px;
-            text-align: center;
-            font-size: 14px;
-        }
-        .footer a {
-            color: #28a745;
-            text-decoration: none;
-        }
-        .social-icons {
-            margin: 20px 0;
-        }
-        .social-icons img {
-            width: 24px;
-            height: 24px;
-            margin: 0 10px;
-        }
-        .timeline {
-            margin: 30px 0;
-            padding: 0;
-            list-style: none;
-        }
-        .timeline-item {
-            padding: 15px 0 15px 40px;
-            position: relative;
-        }
-        .timeline-item::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            top: 15px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background-color: #28a745;
-            color: white;
-            text-align: center;
-            line-height: 28px;
-            font-weight: bold;
-        }
-        .timeline-item.pending::before {
-            content: '○';
-            background-color: #dfe6e9;
-            color: #636e72;
-        }
-        @media only screen and (max-width: 600px) {
-            body { padding: 10px; }
-            .header, .content, .footer { padding: 20px; }
-            .product-item { grid-template-columns: 1fr; }
-            .product-image { width: 100%; height: auto; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>📦 ¡Tu Pedido Está en Camino!</h1>
-            <div class="order-number">#PF<%= order.printfulOrderId %></div>
-        </div>
-
-        <!-- Content -->
-        <div class="content">
-            <div class="shipping-icon">🚚</div>
-            
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #2d3436; font-size: 24px; margin: 0 0 10px;">¡Hola <%= customer.name %>! 🎉</h2>
-                <p style="font-size: 16px; color: #636e72;">
-                    Tu pedido ha sido enviado y está en camino hacia ti.
-                </p>
-            </div>
-
-            <!-- Tracking Section -->
-            <div class="tracking-section">
-                <h3 style="color: white; margin: 0 0 15px; font-size: 20px;">
-                    📍 Rastrea tu Envío
-                </h3>
-                <p style="color: rgba(255,255,255,0.9); margin: 0 0 10px;">
-                    Número de Seguimiento:
-                </p>
-                <div class="tracking-number">
-                    <%= shipment.trackingNumber %>
-                </div>
-                <a href="<%= shipment.trackingUrl %>" class="track-button" target="_blank">
-                    🔍 Rastrear Pedido
-                </a>
-            </div>
-
-            <!-- Delivery Estimate -->
-            <% if (shipment.estimatedDelivery) { %>
-            <div class="delivery-estimate">
-                <h4>📅 Fecha Estimada de Entrega</h4>
-                <p>
-                    <strong>
-                        <%= new Date(shipment.estimatedDelivery).toLocaleDateString('es-ES', {
-                            weekday: 'long',
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                        }) %>
-                    </strong>
-                </p>
-            </div>
-            <% } %>
-
-            <!-- Shipping Info -->
-            <div class="info-section">
-                <h3 style="color: #2d3436; margin: 0 0 20px;">🚚 Información de Envío</h3>
-                <div class="info-row">
-                    <span class="info-label">Transportista:</span>
-                    <span class="info-value"><%= shipment.carrier %></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Servicio:</span>
-                    <span class="info-value"><%= shipment.service %></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Fecha de Envío:</span>
-                    <span class="info-value">
-                        <%= new Date(shipment.shippedDate).toLocaleDateString('es-ES') %>
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Dirección de Entrega:</span>
-                    <span class="info-value">
-                        <% if (address && address.address) { %>
-                            <%= address.address %>, <%= address.ciudad %>
-                        <% } else { %>
-                            No disponible
-                        <% } %>
-                    </span>
-                </div>
-            </div>
-
-            <!-- Order Timeline -->
-            <div style="margin: 40px 0;">
-                <h3 style="color: #2d3436; margin-bottom: 20px;">📍 Estado de tu Pedido</h3>
-                <ul class="timeline">
-                    <li class="timeline-item">
-                        <strong>Pedido Confirmado</strong><br>
-                        <small style="color: #636e72;">Tu pedido ha sido recibido</small>
-                    </li>
-                    <li class="timeline-item">
-                        <strong>En Producción</strong><br>
-                        <small style="color: #636e72;">Tu producto está siendo impreso</small>
-                    </li>
-                    <li class="timeline-item">
-                        <strong>Enviado</strong><br>
-                        <small style="color: #636e72;">Tu pedido está en camino</small>
-                    </li>
-                    <li class="timeline-item pending">
-                        <strong>En Tránsito</strong><br>
-                        <small style="color: #636e72;">Llegando a tu dirección</small>
-                    </li>
-                    <li class="timeline-item pending">
-                        <strong>Entregado</strong><br>
-                        <small style="color: #636e72;">Te notificaremos cuando llegue</small>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Products -->
-            <div style="margin: 40px 0;">
-                <h3 style="color: #2d3436; margin-bottom: 20px;">📦 Productos en este Envío</h3>
-                <% for(var i=0; i < products.length; i++) { %>
-                <div class="product-item">
-                    <img src="<%= products[i].image %>" alt="<%= products[i].title %>" class="product-image">
-                    <div class="product-details">
-                        <h4><%= products[i].title %></h4>
-                        <p><strong>Cantidad:</strong> <%= products[i].quantity %></p>
-                        <% if(products[i].variant) { %>
-                        <p><strong>Talla:</strong> <%= products[i].variant %></p>
-                        <% } %>
-                    </div>
-                </div>
-                <% } %>
-            </div>
-
-            <!-- Help Section -->
-            <div style="background-color: #f1f2f6; border-radius: 10px; padding: 25px; margin: 30px 0;">
-                <h3 style="color: #2d3436; margin: 0 0 15px;">📧 ¿Necesitas Ayuda?</h3>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">
-                    Si tienes alguna pregunta sobre tu envío, no dudes en contactarnos.
-                </p>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">
-                    Te enviaremos otro email cuando tu pedido sea entregado. 📬
-                </p>
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" style="display: inline-block; background-color: #2d3436; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600;">
-                        📦 Rastrear mi Pedido
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p style="margin: 0 0 15px;">🎉 ¡Gracias por tu compra!</p>
-            <div class="social-icons">
-                <a href="https://www.instagram.com/tienda.lujandev/" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/instagram-logo-white.png" alt="Instagram"></a>
-                <a href="https://twitter.com/Lujandev" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/twitter-logo-white.png" alt="Twitter"></a>
-                <a href="https://www.tiktok.com/@tienda.lujandev" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/tiktok-logo-white.png" alt="TikTok"></a>
-                <!-- <a href="#"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/x-logo-white.png" alt="X"></a> -->
-            </div>
-            <p style="margin: 0 0 20px;">© <%= new Date().getFullYear() %> Lujandev. Todos los derechos reservados.</p>
-            <p style="margin: 0; font-size: 12px;">
-                <a href="<%= process.env.URL_FRONTEND %>">Visitar tienda</a> | 
-                <a href="#">Ayuda</a> | 
-                <a href="#">Devoluciones</a>
             </p>
         </div>
     </div>

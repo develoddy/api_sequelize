@@ -129,14 +129,14 @@
         <!-- Header -->
         <div class="header">
             <div class="store-name">
-                <% if (tenant && tenant.store_name) { %>
-                    <%= tenant.store_name %>
+                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
+                    <%= tenant.settings.store_name %>
                 <% } else { %>
                     Tienda
                 <% } %>
             </div>
             <h1 class="title">Pedido en Producción</h1>
-            <p class="subtitle">Hemos recibido tu pedido y está siendo preparado.</p>
+            <p class="subtitle">Tu pedido está siendo preparado.</p>
         </div>
 
         <!-- Content -->
@@ -149,18 +149,12 @@
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Número de Pedido</span>
+                <span class="info-label">Pedido</span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Fecha</span>
-                <span class="info-value">
-                    <%= new Date(order.created).toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                    }) %>
-                </span>
+                <span class="info-label">Transacción</span>
+                <span class="info-value"><%= order.n_transaction %></span>
             </div>
             <div class="info-row">
                 <span class="info-label">Total</span>
@@ -169,411 +163,18 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="<%= process.env.URL_FRONTEND %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Ver Estado del Pedido</a>
+                <a href="<%= process.env.URL_FRONTEND %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Seguir Pedido</a>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
             <p class="footer-text">
-                <% if (tenant && tenant.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.store_name %>. Todos los derechos reservados.
+                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
                 <% } else { %>
                     © <%= new Date().getFullYear() %>. Todos los derechos reservados.
                 <% } %>
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 32px;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        .order-number {
-            background-color: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .printing-icon {
-            text-align: center;
-            font-size: 80px;
-            margin: 20px 0;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        .status-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            padding: 25px;
-            margin: 30px 0;
-            text-align: center;
-            color: white;
-        }
-        .status-section h3 {
-            margin: 0 0 15px;
-            font-size: 20px;
-        }
-        .status-message {
-            background-color: rgba(255,255,255,0.9);
-            color: #2d3436;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            margin: 15px 0;
-        }
-        .info-section {
-            background-color: #f1f2f6;
-            border-radius: 10px;
-            padding: 25px;
-            margin: 25px 0;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #dfe6e9;
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #2d3436;
-        }
-        .info-value {
-            color: #636e72;
-        }
-        .product-item {
-            display: grid;
-            grid-template-columns: 100px 1fr;
-            gap: 15px;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .product-item:last-child {
-            border-bottom: none;
-        }
-        .product-image {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        .product-details h4 {
-            margin: 0 0 8px;
-            color: #2d3436;
-            font-size: 16px;
-        }
-        .product-details p {
-            margin: 3px 0;
-            font-size: 14px;
-            color: #636e72;
-        }
-        .production-estimate {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .production-estimate h4 {
-            margin: 0 0 5px;
-            color: #1565c0;
-        }
-        .production-estimate p {
-            margin: 0;
-            color: #1565c0;
-        }
-        .timeline {
-            margin: 30px 0;
-            padding: 0;
-            list-style: none;
-        }
-        .timeline-item {
-            padding: 15px 0 15px 40px;
-            position: relative;
-        }
-        .timeline-item::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            top: 15px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background-color: #667eea;
-            color: white;
-            text-align: center;
-            line-height: 28px;
-            font-weight: bold;
-        }
-        .timeline-item.active::before {
-            content: '⚡';
-            background-color: #ffc107;
-            animation: pulse 1.5s infinite;
-        }
-        .timeline-item.pending::before {
-            content: '○';
-            background-color: #dfe6e9;
-            color: #636e72;
-        }
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 35px;
-            text-decoration: none;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .footer {
-            background-color: #2d3436;
-            color: #b2bec3;
-            padding: 25px 30px;
-            text-align: center;
-            font-size: 14px;
-        }
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        .social-icons {
-            margin: 20px 0;
-        }
-        .social-icons img {
-            width: 24px;
-            height: 24px;
-            margin: 0 10px;
-        }
-        @media only screen and (max-width: 600px) {
-            body { padding: 10px; }
-            .header, .content, .footer { padding: 20px; }
-            .product-item { grid-template-columns: 1fr; }
-            .product-image { width: 100%; height: auto; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🎨 ¡Tu Pedido Está en Producción!</h1>
-            <div class="order-number">#PF<%= order.printfulOrderId %></div>
-        </div>
-
-        <!-- Content -->
-        <div class="content">
-            <div class="printing-icon">🖨️</div>
-            
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #2d3436; font-size: 24px; margin: 0 0 10px;">¡Hola <%= customer.name %>! 🎉</h2>
-                <p style="font-size: 16px; color: #636e72;">
-                    Hemos recibido tu pedido y está siendo preparado con mucho cuidado.
-                </p>
-            </div>
-
-            <!-- Status Section -->
-            <div class="status-section">
-                <h3>🎨 Estado Actual: En Producción</h3>
-                <p style="color: rgba(255,255,255,0.9); margin: 10px 0;">
-                    Nuestros artistas están imprimiendo tu diseño en este momento
-                </p>
-                <div class="status-message">
-                    <strong>Tiempo estimado de producción:</strong> 2-7 días laborables
-                </div>
-            </div>
-
-            <!-- Production Estimate -->
-            <div class="production-estimate">
-                <h4>⏱️ ¿Qué está pasando ahora?</h4>
-                <p>
-                    Tu producto está siendo impreso con tecnología de alta calidad. 
-                    Una vez completada la impresión, lo empaquetaremos y enviaremos a tu dirección.
-                </p>
-            </div>
-
-            <!-- Order Info -->
-            <div class="info-section">
-                <h3 style="color: #2d3436; margin: 0 0 20px;">📦 Información del Pedido</h3>
-                <div class="info-row">
-                    <span class="info-label">Número de Orden:</span>
-                    <span class="info-value">#PF<%= order.printfulOrderId %></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Fecha de Pedido:</span>
-                    <span class="info-value">
-                        <%= new Date(order.created).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                        }) %>
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Total:</span>
-                    <span class="info-value"><%= order.total %> €</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Dirección de Envío:</span>
-                    <span class="info-value">
-                        <% if (address && address.address) { %>
-                            <%= address.address %>, <%= address.ciudad %>
-                        <% } else { %>
-                            No disponible
-                        <% } %>
-                    </span>
-                </div>
-            </div>
-
-            <!-- Order Timeline -->
-            <div style="margin: 40px 0;">
-                <h3 style="color: #2d3436; margin-bottom: 20px;">📍 Progreso de tu Pedido</h3>
-                <ul class="timeline">
-                    <li class="timeline-item">
-                        <strong>Pedido Confirmado</strong><br>
-                        <small style="color: #636e72;">Tu pedido ha sido recibido y verificado</small>
-                    </li>
-                    <li class="timeline-item active">
-                        <strong>En Producción</strong><br>
-                        <small style="color: #636e72;">Tu producto está siendo impreso ahora</small>
-                    </li>
-                    <li class="timeline-item pending">
-                        <strong>Control de Calidad</strong><br>
-                        <small style="color: #636e72;">Verificaremos la calidad antes de enviarlo</small>
-                    </li>
-                    <li class="timeline-item pending">
-                        <strong>Empaquetado y Envío</strong><br>
-                        <small style="color: #636e72;">Recibirás el número de seguimiento</small>
-                    </li>
-                    <li class="timeline-item pending">
-                        <strong>En Camino</strong><br>
-                        <small style="color: #636e72;">Tu pedido llegará a tu puerta</small>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Products -->
-            <div style="margin: 40px 0;">
-                <h3 style="color: #2d3436; margin-bottom: 20px;">🛍️ Productos en Producción</h3>
-                <% for(var i=0; i < products.length; i++) { %>
-                <div class="product-item">
-                    <img src="<%= products[i].image %>" alt="<%= products[i].title %>" class="product-image">
-                    <div class="product-details">
-                        <h4><%= products[i].title %></h4>
-                        <p><strong>Cantidad:</strong> <%= products[i].quantity %></p>
-                        <% if(products[i].variant) { %>
-                        <p><strong>Talla:</strong> <%= products[i].variant %></p>
-                        <% } %>
-                        <% if(products[i].color) { %>
-                        <p><strong>Color:</strong> <%= products[i].color %></p>
-                        <% } %>
-                    </div>
-                </div>
-                <% } %>
-            </div>
-
-            <!-- What's Next -->
-            <div style="background-color: #fff8e1; border-radius: 10px; padding: 25px; margin: 30px 0;">
-                <h3 style="color: #f57c00; margin: 0 0 15px;">📬 ¿Qué Sigue?</h3>
-                <p style="margin: 5px 0; font-size: 14px; color: #e65100;">
-                    <strong>1.</strong> Completaremos la impresión de tu producto (2-7 días)
-                </p>
-                <p style="margin: 5px 0; font-size: 14px; color: #e65100;">
-                    <strong>2.</strong> Realizaremos un control de calidad exhaustivo
-                </p>
-                <p style="margin: 5px 0; font-size: 14px; color: #e65100;">
-                    <strong>3.</strong> Te enviaremos un email cuando el paquete sea enviado con tu número de seguimiento
-                </p>
-            </div>
-
-            <!-- CTA - Tracking de Pedido -->
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; border: 2px dashed #dee2e6;">
-                <h3 style="color: #2d3436; margin: 0 0 15px; font-size: 20px;">🚚 Rastrea tu pedido</h3>
-                <p style="font-size: 14px; color: #636e72; margin-bottom: 20px;">
-                    Consulta el estado de tu envío en tiempo real haciendo clic en el botón de abajo
-                </p>
-                <a href="<%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>" 
-                   style="display: inline-block; 
-                          background: #000000; 
-                          color: #ffffff; 
-                          padding: 14px 32px; 
-                          text-decoration: none; 
-                          border-radius: 6px; 
-                          font-weight: 600;
-                          font-size: 16px;
-                          margin-bottom: 15px;">
-                    📦 Ver Estado de mi Pedido
-                </a>
-                <p style="font-size: 12px; color: #868e96; margin-top: 15px;">
-                    Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-                    <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; word-break: break-all;">
-                        <%= process.env.URL_FRONTEND %>/<%= country %>/<%= locale %>/tracking/<%= order.id %>/<%= order.trackingToken %>
-                    </code>
-                </p>
-            </div>
-
-            <!-- Help Section -->
-            <div style="background-color: #f1f2f6; border-radius: 10px; padding: 25px; margin: 30px 0;">
-                <h3 style="color: #2d3436; margin: 0 0 15px;">❓ ¿Tienes Preguntas?</h3>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">
-                    Si tienes alguna duda sobre tu pedido, no dudes en contactarnos.
-                </p>
-                <p style="margin: 5px 0; font-size: 14px; color: #636e72;">
-                    Te mantendremos informado en cada paso del proceso. 📧
-                </p>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p style="margin: 0 0 15px;">🎉 ¡Gracias por tu compra!</p>
-            <div class="social-icons">
-                <a href="https://www.instagram.com/tienda.lujandev/" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/instagram-logo-white.png" alt="Instagram"></a>
-                <a href="https://twitter.com/Lujandev" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/twitter-logo-white.png" alt="Twitter"></a>
-                <a href="https://www.tiktok.com/@tienda.lujandev" target="_blank"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/tiktok-logo-white.png" alt="TikTok"></a>
-                <!-- <a href="#"><img src="https://elijlem.stripocdn.email/content/assets/img/social-icons/logo-white/x-logo-white.png" alt="X"></a> -->
-            </div>
-            <p style="margin: 0 0 20px;">© <%= new Date().getFullYear() %> Lujandev. Todos los derechos reservados.</p>
-            <p style="margin: 0; font-size: 12px;">
-                <a href="<%= process.env.URL_FRONTEND %>">Visitar tienda</a> | 
-                <a href="#">Ayuda</a> | 
-                <a href="#">Devoluciones</a>
             </p>
         </div>
     </div>
