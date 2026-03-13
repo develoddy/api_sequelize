@@ -3,7 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tu Pedido Está en Producción</title>
+    <title>Pedido en Producción</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            padding: 40px 40px 30px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .store-name {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 15px;
+            color: #666;
+            font-weight: 400;
+        }
+        .content {
+            padding: 40px;
+        }
+        .status-box {
+            background-color: #f9f9f9;
+            border-left: 3px solid #1a1a1a;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .status-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .info-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+            text-align: right;
+        }
+        .cta-section {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 1px solid #e5e5e5;
+            margin-top: 30px;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            padding: 14px 32px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .cta-button:hover {
+            background-color: #333;
+        }
+        .footer {
+            padding: 30px 40px;
+            background-color: #fafafa;
+            text-align: center;
+            border-top: 1px solid #e5e5e5;
+        }
+        .footer-text {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.8;
+        }
+        @media only screen and (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content, .footer { padding: 25px 20px; }
+            .title { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="store-name">
+                <% if (tenant && tenant.store_name) { %>
+                    <%= tenant.store_name %>
+                <% } else { %>
+                    Tienda
+                <% } %>
+            </div>
+            <h1 class="title">Pedido en Producción</h1>
+            <p class="subtitle">Hemos recibido tu pedido y está siendo preparado.</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Status -->
+            <div class="status-box">
+                <div class="status-label">Estado Actual</div>
+                <div class="status-value">En Producción</div>
+            </div>
+
+            <!-- Order Info -->
+            <div class="info-row">
+                <span class="info-label">Número de Pedido</span>
+                <span class="info-value">#PF<%= order.printfulOrderId %></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Fecha</span>
+                <span class="info-value">
+                    <%= new Date(order.created).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    }) %>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Total</span>
+                <span class="info-value"><%= order.total %> <%= order.currency %></span>
+            </div>
+
+            <!-- CTA -->
+            <div class="cta-section">
+                <a href="<%= process.env.URL_FRONTEND %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Ver Estado del Pedido</a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                <% if (tenant && tenant.store_name) { %>
+                    © <%= new Date().getFullYear() %> <%= tenant.store_name %>. Todos los derechos reservados.
+                <% } else { %>
+                    © <%= new Date().getFullYear() %>. Todos los derechos reservados.
+                <% } %>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

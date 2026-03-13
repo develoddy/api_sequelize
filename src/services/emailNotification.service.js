@@ -113,37 +113,15 @@ export async function sendOrderShippedEmail(orderData) {
             email: orderData.customer.email,
             printfulOrderId: orderData.order.printfulOrderId
         });
-
-        // Obtener country/locale desde la venta
-        const { country, locale } = await getCountryLocale(orderData.order.saleId);
         
         // Preparar datos para el template
         const templateData = {
-            customer: {
-                name: orderData.customer.name,
-                email: orderData.customer.email
-            },
-            order: {
-                id: orderData.order.id, // 🔑 ID para tracking
-                trackingToken: orderData.order.trackingToken, // 🔒 Token para tracking
-                printfulOrderId: orderData.order.printfulOrderId,
-                n_transaction: orderData.order.n_transaction,
-                created: orderData.order.created,
-                total: orderData.order.total,
-                currency: orderData.order.currency || 'EUR'
-            },
-            shipment: {
-                trackingNumber: orderData.shipment.trackingNumber,
-                trackingUrl: orderData.shipment.trackingUrl,
-                carrier: orderData.shipment.carrier || 'Carrier',
-                service: orderData.shipment.service || 'Standard',
-                estimatedDelivery: orderData.shipment.estimatedDelivery,
-                shippedDate: orderData.shipment.shippedDate || new Date()
-            },
+            customer: orderData.customer,
+            order: orderData.order,
+            shipment: orderData.shipment,
             products: orderData.products || [],
             address: orderData.address || {},
-            country: country,
-            locale: locale,
+            tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND
@@ -181,17 +159,13 @@ export async function sendOrderPrintingEmail(orderData) {
             customer: orderData.customer.name,
             printfulOrderId: orderData.order.printfulOrderId
         });
-
-        // Obtener country/locale desde la venta
-        const { country, locale } = await getCountryLocale(orderData.order.saleId);
         
         const templateData = {
             customer: orderData.customer,
             order: orderData.order,
             products: orderData.products,
             address: orderData.address,
-            country: country,
-            locale: locale,
+            tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND
@@ -219,18 +193,14 @@ export async function sendOrderDeliveredEmail(orderData) {
             customer: orderData.customer.name,
             printfulOrderId: orderData.order.printfulOrderId
         });
-
-        // Obtener country/locale desde la venta
-        const { country, locale } = await getCountryLocale(orderData.order.saleId);
         
         const templateData = {
             customer: orderData.customer,
             order: orderData.order,
             delivery: orderData.delivery,
             products: orderData.products,
-            address: orderData.address, // 🏠 Agregar address para el template
-            country: country,
-            locale: locale,
+            address: orderData.address,
+            tenant: orderData.tenant || null, // 🏢 Tenant para personalización
             process: {
                 env: {
                     URL_FRONTEND: process.env.URL_FRONTEND

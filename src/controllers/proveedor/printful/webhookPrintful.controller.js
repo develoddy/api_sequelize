@@ -81,11 +81,11 @@ export const handleWebhook = async (req, res) => {
     try {
       switch (eventType) {
         case 'package_shipped':
-          processed = await handlePackageShipped(webhookData, webhookLog, tenantId);
+          processed = await handlePackageShipped(webhookData, webhookLog, tenant);
           break;
 
         case 'package_delivered':
-          processed = await handlePackageDelivered(webhookData, webhookLog, tenantId);
+          processed = await handlePackageDelivered(webhookData, webhookLog, tenant);
           break;
 
         case 'order_failed':
@@ -101,7 +101,7 @@ export const handleWebhook = async (req, res) => {
           break;
 
         case 'order_created':
-          processed = await handleOrderCreated(webhookData, webhookLog);
+          processed = await handleOrderCreated(webhookData, webhookLog, tenant);
           break;
 
         default:
@@ -145,9 +145,9 @@ export const handleWebhook = async (req, res) => {
  * 📦 Paquete enviado - HANDLER PROFESIONAL
  * @param {Object} data - Webhook payload
  * @param {Object} webhookLog - Log del webhook
- * @param {Number} tenantId - ID del tenant (opcional para multi-tenant)
+ * @param {Object} tenant - Tenant object (opcional para multi-tenant)
  */
-async function handlePackageShipped(data, webhookLog, tenantId = null) {
+async function handlePackageShipped(data, webhookLog, tenant = null) {
   console.log('🚚 [WEBHOOK] Procesando package_shipped...');
   
   const order = data.data.order;
@@ -188,7 +188,7 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
       errorMessage: null // Limpiar error anterior si existía
     });
     
-    console.log(`✅ [WEBHOOK] Orden #${sale.id} marcada como enviada`);
+    console.log(`📦 [WEBHOOK] Orden #${sale.id} marcada como enviada`);
     console.log(`   📍 Tracking: ${shipment.tracking_number}`);
     console.log(`   🚚 Carrier: ${shipment.carrier}`);
     
@@ -224,6 +224,12 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
       }
 
       if (customerEmail) {
+        // Obtener tenant para personalización del email
+        let emailTenant = tenant;
+        if (!emailTenant && sale.tenant_id) {
+          emailTenant = await Tenant.findByPk(sale.tenant_id);
+        }
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => ({
           image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
@@ -239,6 +245,8 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
             email: customerEmail
           },
           order: {
+            id: sale.id, // 🔑 ID para tracking
+            trackingToken: sale.trackingToken, // 🔒 Token para tracking
             printfulOrderId: sale.printfulOrderId,
             n_transaction: sale.n_transaction,
             created: sale.createdAt,
@@ -260,7 +268,8 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
             ciudad: saleAddress?.ciudad || '',
             region: saleAddress?.region || '',
             telefono: saleAddress?.telefono || ''
-          }
+          },
+          tenant: emailTenant // 🏢 Tenant para personalización
         };
 
         // Enviar email
@@ -285,8 +294,8 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
     console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
     
     // 🏢 Multi-tenant: Crear Sale automáticamente para órdenes externas de tenants
-    if (tenantId) {
-      console.log(`🏢 [WEBHOOK] Tenant ${tenantId} - Creando Sale para orden externa de Printful`);
+    if (tenant) {
+      console.log(`🏢 [WEBHOOK] Tenant ${tenant.id} - Creando Sale para orden externa de Printful`);
       
       try {
         // 2️⃣ Crear Sale con datos del payload
@@ -294,7 +303,7 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
         const orderTotal = parseFloat(order.costs?.total || '0');
         
         const newSale = await Sale.create({
-          tenant_id: tenantId,
+          tenant_id: tenant.id,
           method_payment: 'printful_external',
           n_transaction: `printful_${order.id}`,
           total: orderTotal,
@@ -310,7 +319,7 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
           printfulUpdatedAt: new Date()
         });
         
-        console.log(`✅ [WEBHOOK] Sale creado: ID ${newSale.id} para tenant ${tenantId}`);
+        console.log(`✅ [WEBHOOK] Sale creado: ID ${newSale.id} para tenant ${tenant.id}`);
         
         // 2.1️⃣ Crear SaleAddress con datos del recipient
         try {
@@ -393,12 +402,13 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
               email: order.recipient.email
             },
             order: {
+              id: newSale.id, // 🔑 ID para tracking
+              trackingToken: newSale.trackingToken, // 🔒 Token para tracking
               printfulOrderId: order.id,
               n_transaction: newSale.n_transaction,
               created: newSale.createdAt,
               total: newSale.total,
-              currency: order.costs?.currency || 'USD',
-              trackingToken: newSale.trackingToken
+              currency: order.costs?.currency || 'USD'
             },
             shipment: {
               trackingNumber: shipment.tracking_number,
@@ -415,7 +425,8 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
               ciudad: order.recipient.city || '',
               region: order.recipient.state_name || order.recipient.state_code || '',
               telefono: order.recipient.phone || ''
-            }
+            },
+            tenant: tenant // 🏢 Tenant para personalización
           };
           
           const emailResult = await sendOrderShippedEmail(emailData);
@@ -465,7 +476,7 @@ async function handlePackageShipped(data, webhookLog, tenantId = null) {
 /**
  * ✅ Paquete entregado - HANDLER PROFESIONAL
  */
-async function handlePackageDelivered(data, webhookLog, tenantId = null) {
+async function handlePackageDelivered(data, webhookLog, tenant = null) {
   console.log('✅ [WEBHOOK] Procesando package_delivered...');
   
   const order = data.data.order;
@@ -564,6 +575,12 @@ async function handlePackageDelivered(data, webhookLog, tenantId = null) {
       }
 
       if (customerEmail) {
+        // Obtener tenant para personalización del email
+        let emailTenant = tenant;
+        if (!emailTenant && sale.tenant_id) {
+          emailTenant = await Tenant.findByPk(sale.tenant_id);
+        }
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => {
           // Para órdenes externas, los productos pueden no existir en nuestra DB
@@ -592,6 +609,8 @@ async function handlePackageDelivered(data, webhookLog, tenantId = null) {
             email: customerEmail
           },
           order: {
+            id: sale.id, // 🔑 ID para tracking
+            trackingToken: sale.trackingToken, // 🔒 Token para tracking
             printfulOrderId: sale.printfulOrderId,
             n_transaction: sale.n_transaction,
             created: sale.createdAt,
@@ -602,7 +621,8 @@ async function handlePackageDelivered(data, webhookLog, tenantId = null) {
             deliveredDate: new Date(),
             address: `${saleAddress?.address || ''}, ${saleAddress?.ciudad || ''}, ${saleAddress?.region || ''}`
           },
-          products: products
+          products: products,
+          tenant: emailTenant // 🏢 Tenant para personalización
         };
 
         // Enviar email
@@ -855,7 +875,7 @@ async function handleOrderUpdated(data, webhookLog) {
 /**
  * 🆕 Orden creada - HANDLER PROFESIONAL
  */
-async function handleOrderCreated(data, webhookLog) {
+async function handleOrderCreated(data, webhookLog, tenant = null) {
   console.log('🆕 [WEBHOOK] Procesando order_created...');
   
   const order = data.data.order;
@@ -924,6 +944,12 @@ async function handleOrderCreated(data, webhookLog) {
       }
 
       if (customerEmail) {
+        // Obtener tenant para personalización del email
+        let emailTenant = tenant;
+        if (!emailTenant && sale.tenant_id) {
+          emailTenant = await Tenant.findByPk(sale.tenant_id);
+        }
+        
         // Preparar productos para el email
         const products = saleDetails.map(detail => ({
           image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
@@ -940,6 +966,8 @@ async function handleOrderCreated(data, webhookLog) {
             email: customerEmail
           },
           order: {
+            id: sale.id, // 🔑 ID para tracking
+            trackingToken: sale.trackingToken, // 🔒 Token para tracking
             printfulOrderId: sale.printfulOrderId,
             n_transaction: sale.n_transaction,
             created: sale.createdAt,
@@ -953,7 +981,8 @@ async function handleOrderCreated(data, webhookLog) {
             ciudad: saleAddress?.ciudad || '',
             region: saleAddress?.region || '',
             telefono: saleAddress?.telefono || ''
-          }
+          },
+          tenant: emailTenant // 🏢 Tenant para personalización
         };
 
         // Enviar email
