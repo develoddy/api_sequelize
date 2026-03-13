@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido Enviado</title>
+    <title>Order Shipped</title>
     <style>
         * {
             margin: 0;
@@ -79,6 +79,10 @@
             font-size: 14px;
             color: #666;
         }
+        .info-label::after {
+            content: ':';
+            margin-left: 2px;
+        }
         .info-value {
             font-size: 14px;
             font-weight: 500;
@@ -93,7 +97,7 @@
         }
         .cta-button {
             display: inline-block;
-            background-color: #1a1a1a;
+            background-color: #2563EB;
             color: #ffffff;
             padding: 14px 32px;
             text-decoration: none;
@@ -104,7 +108,7 @@
             transition: background-color 0.2s;
         }
         .cta-button:hover {
-            background-color: #333;
+            background-color: #1D4ED8;
         }
         .footer {
             padding: 30px 40px;
@@ -132,38 +136,38 @@
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
                     <%= tenant.settings.store_name %>
                 <% } else { %>
-                    Tienda
+                    Store
                 <% } %>
             </div>
-            <h1 class="title">Pedido Enviado</h1>
-            <p class="subtitle">Tu pedido está en camino.</p>
+            <h1 class="title">Order Shipped</h1>
+            <p class="subtitle">Your order is on its way.</p>
         </div>
 
         <!-- Content -->
         <div class="content">
             <!-- Status -->
             <div class="status-box">
-                <div class="status-label">Estado Actual</div>
-                <div class="status-value">Enviado</div>
+                <div class="status-label">Current Status</div>
+                <div class="status-value">Shipped</div>
             </div>
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Pedido</span>
+                <span class="info-label">Order</span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Número de Seguimiento</span>
+                <span class="info-label">Tracking Number</span>
                 <span class="info-value"><%= shipment.trackingNumber %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Transportista</span>
+                <span class="info-label">Carrier</span>
                 <span class="info-value"><%= shipment.carrier %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Fecha de Envío</span>
+                <span class="info-label">Shipping Date</span>
                 <span class="info-value">
-                    <%= new Date(shipment.shippedDate).toLocaleDateString('es-ES', {
+                    <%= new Date(shipment.shippedDate).toLocaleDateString('en-US', {
                         day: '2-digit',
                         month: 'long',
                         year: 'numeric'
@@ -172,9 +176,9 @@
             </div>
             <% if (shipment.estimatedDeliveryDate) { %>
             <div class="info-row">
-                <span class="info-label">Entrega Estimada</span>
+                <span class="info-label">Estimated Delivery</span>
                 <span class="info-value">
-                    <%= new Date(shipment.estimatedDeliveryDate).toLocaleDateString('es-ES', {
+                    <%= new Date(shipment.estimatedDeliveryDate).toLocaleDateString('en-US', {
                         day: '2-digit',
                         month: 'long',
                         year: 'numeric'
@@ -185,7 +189,7 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Rastrear Envío</a>
+                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Track Shipment</a>
             </div>
         </div>
 
@@ -193,9 +197,9 @@
         <div class="footer">
             <p class="footer-text">
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. All rights reserved.
                 <% } else { %>
-                    © <%= new Date().getFullYear() %>. Todos los derechos reservados.
+                    © <%= new Date().getFullYear() %>. All rights reserved.
                 <% } %>
             </p>
         </div>

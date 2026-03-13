@@ -275,6 +275,10 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
           tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
 
+        // 🔍 DEBUG: Verificar que tenantData se pasa correctamente
+        console.log('🔍 [DEBUG handlePackageShipped] tenantData:', tenantData);
+        console.log('🔍 [DEBUG handlePackageShipped] emailData.tenant:', emailData.tenant);
+
         // Enviar email
         const emailResult = await sendOrderShippedEmail(emailData);
         
@@ -630,6 +634,10 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
           products: products,
           tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
+
+        // 🔍 DEBUG: Verificar que tenantData se pasa correctamente
+        console.log('🔍 [DEBUG handlePackageDelivered] tenantData:', tenantData);
+        console.log('🔍 [DEBUG handlePackageDelivered] emailData.tenant:', emailData.tenant);
 
         // Enviar email
         const emailResult = await sendOrderDeliveredEmail(emailData);
@@ -993,6 +1001,10 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
           },
           tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
+
+        // 🔍 DEBUG: Verificar que tenantData se pasa correctamente
+        console.log('🔍 [DEBUG handleOrderCreated] tenantData:', tenantData);
+        console.log('🔍 [DEBUG handleOrderCreated] emailData.tenant:', emailData.tenant);
 
         // Enviar email
         const emailResult = await sendOrderPrintingEmail(emailData);

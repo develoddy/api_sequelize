@@ -141,7 +141,7 @@ export async function sendOrderShippedEmail(orderData) {
         const html = await renderTemplate('email_order_shipped.html', templateData);
 
         // Enviar email
-        const subject = `📦 ¡Tu pedido #PF${orderData.order.printfulOrderId} está en camino!`;
+        const subject = `Your order #PF${orderData.order.printfulOrderId} has been shipped`;
         const result = await sendEmail(orderData.customer.email, subject, html);
 
         if (result.success) {
@@ -190,7 +190,7 @@ export async function sendOrderPrintingEmail(orderData) {
         };
 
         const html = await renderTemplate('email_order_printing.html', templateData);
-        const subject = `🎨 ¡Tu pedido #PF${orderData.order.printfulOrderId} está siendo impreso!`;
+        const subject = `Your order #PF${orderData.order.printfulOrderId} is being prepared`;
         
         return await sendEmail(orderData.customer.email, subject, html);
     } catch (error) {
@@ -233,7 +233,7 @@ export async function sendOrderDeliveredEmail(orderData) {
         };
 
         const html = await renderTemplate('email_order_delivered.html', templateData);
-        const subject = `✅ ¡Tu pedido #PF${orderData.order.printfulOrderId} ha sido entregado!`;
+        const subject = `Your order #PF${orderData.order.printfulOrderId} has been delivered`;
         
         return await sendEmail(orderData.customer.email, subject, html);
     } catch (error) {

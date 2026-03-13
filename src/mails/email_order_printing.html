@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido en Producción</title>
+    <title>Order in Production</title>
     <style>
         * {
             margin: 0;
@@ -79,6 +79,10 @@
             font-size: 14px;
             color: #666;
         }
+        .info-label::after {
+            content: ':';
+            margin-left: 2px;
+        }
         .info-value {
             font-size: 14px;
             font-weight: 500;
@@ -93,7 +97,7 @@
         }
         .cta-button {
             display: inline-block;
-            background-color: #1a1a1a;
+            background-color: #2563EB;
             color: #ffffff;
             padding: 14px 32px;
             text-decoration: none;
@@ -104,7 +108,7 @@
             transition: background-color 0.2s;
         }
         .cta-button:hover {
-            background-color: #333;
+            background-color: #1D4ED8;
         }
         .footer {
             padding: 30px 40px;
@@ -132,28 +136,28 @@
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
                     <%= tenant.settings.store_name %>
                 <% } else { %>
-                    Tienda
+                    Store
                 <% } %>
             </div>
-            <h1 class="title">Pedido en Producción</h1>
-            <p class="subtitle">Tu pedido está siendo preparado.</p>
+            <h1 class="title">Order in Production</h1>
+            <p class="subtitle">Your order is being prepared.</p>
         </div>
 
         <!-- Content -->
         <div class="content">
             <!-- Status -->
             <div class="status-box">
-                <div class="status-label">Estado Actual</div>
-                <div class="status-value">En Producción</div>
+                <div class="status-label">Current Status</div>
+                <div class="status-value">In Production</div>
             </div>
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Pedido</span>
+                <span class="info-label">Order</span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Transacción</span>
+                <span class="info-label">Transaction</span>
                 <span class="info-value"><%= order.n_transaction %></span>
             </div>
             <div class="info-row">
@@ -163,7 +167,7 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Seguir Pedido</a>
+                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Track Your Order</a>
             </div>
         </div>
 
@@ -171,9 +175,9 @@
         <div class="footer">
             <p class="footer-text">
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. All rights reserved.
                 <% } else { %>
-                    © <%= new Date().getFullYear() %>. Todos los derechos reservados.
+                    © <%= new Date().getFullYear() %>. All rights reserved.
                 <% } %>
             </p>
         </div>
