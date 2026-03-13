@@ -11,6 +11,7 @@ import { SaleAddress } from '../../models/SaleAddress.js';
 import { SaleDetail } from '../../models/SaleDetail.js';
 import { Product } from '../../models/Product.js';
 import { Variedad } from '../../models/Variedad.js';
+import { Tenant } from '../../models/Tenant.js';
 import { 
     sendOrderShippedEmail, 
     sendOrderPrintingEmail, 
@@ -40,6 +41,16 @@ export const testOrderPrintingEmail = async (req, res) => {
 
         if (!sale) {
             return res.status(404).json({ message: 'Venta no encontrada' });
+        }
+
+        // 🏢 Obtener tenant si la venta tiene tenant_id
+        let tenantData = null;
+        if (sale.tenant_id) {
+            const tenant = await Tenant.findByPk(sale.tenant_id);
+            if (tenant) {
+                tenantData = tenant.get({ plain: true });
+                console.log('🏢 [TEST] Tenant encontrado:', tenantData.name, '| store_name:', tenantData.settings?.store_name);
+            }
         }
 
         // Obtener detalles de productos
@@ -77,7 +88,8 @@ export const testOrderPrintingEmail = async (req, res) => {
                 address: sale.sale_addresses[0].address,
                 city: sale.sale_addresses[0].ciudad,
                 country: sale.sale_addresses[0].pais
-            } : {}
+            } : {},
+            tenant: tenantData // 🏢 Tenant para personalización
         };
 
         const result = await sendOrderPrintingEmail(mockOrderData);
@@ -125,6 +137,16 @@ export const testOrderShippedEmail = async (req, res) => {
             return res.status(404).json({ message: 'Venta no encontrada' });
         }
 
+        // 🏢 Obtener tenant si la venta tiene tenant_id
+        let tenantData = null;
+        if (sale.tenant_id) {
+            const tenant = await Tenant.findByPk(sale.tenant_id);
+            if (tenant) {
+                tenantData = tenant.get({ plain: true });
+                console.log('🏢 [TEST] Tenant encontrado:', tenantData.name, '| store_name:', tenantData.settings?.store_name);
+            }
+        }
+
         const saleDetails = await SaleDetail.findAll({
             where: { saleId: sale.id },
             include: [{ model: Product }, { model: Variedad }]
@@ -159,7 +181,8 @@ export const testOrderShippedEmail = async (req, res) => {
                 quantity: detail.cantidad,
                 price: detail.price_unitario
             })),
-            address: sale.sale_addresses?.[0] || {}
+            address: sale.sale_addresses?.[0] || {},
+            tenant: tenantData // 🏢 Tenant para personalización
         };
 
         const result = await sendOrderShippedEmail(mockOrderData);
@@ -208,6 +231,16 @@ export const testOrderDeliveredEmail = async (req, res) => {
             return res.status(404).json({ message: 'Venta no encontrada' });
         }
 
+        // 🏢 Obtener tenant si la venta tiene tenant_id
+        let tenantData = null;
+        if (sale.tenant_id) {
+            const tenant = await Tenant.findByPk(sale.tenant_id);
+            if (tenant) {
+                tenantData = tenant.get({ plain: true });
+                console.log('🏢 [TEST] Tenant encontrado:', tenantData.name, '| store_name:', tenantData.settings?.store_name);
+            }
+        }
+
         const saleDetails = await SaleDetail.findAll({
             where: { saleId: sale.id },
             include: [{ model: Product }, { model: Variedad }]
@@ -240,7 +273,8 @@ export const testOrderDeliveredEmail = async (req, res) => {
                 quantity: detail.cantidad,
                 price: detail.price_unitario
             })),
-            address: sale.sale_addresses?.[0] || {}
+            address: sale.sale_addresses?.[0] || {},
+            tenant: tenantData // 🏢 Tenant para personalización
         };
 
         const result = await sendOrderDeliveredEmail(mockOrderData);
