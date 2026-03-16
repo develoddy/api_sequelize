@@ -79,9 +79,6 @@
             font-size: 14px;
             color: #666;
         }
-        .info-label::after {
-            content: ': ';
-        }
         .info-value {
             font-size: 14px;
             font-weight: 500;
@@ -152,19 +149,19 @@
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Order</span>
+                <span class="info-label">Order: </span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Tracking Number</span>
+                <span class="info-label">Tracking Number: </span>
                 <span class="info-value"><%= shipment.trackingNumber %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Carrier</span>
+                <span class="info-label">Carrier: </span>
                 <span class="info-value"><%= shipment.carrier %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Shipping Date</span>
+                <span class="info-label">Shipping Date: </span>
                 <span class="info-value">
                     <%= new Date(shipment.shippedDate).toLocaleDateString('en-US', {
                         day: '2-digit',
@@ -175,7 +172,7 @@
             </div>
             <% if (shipment.estimatedDeliveryDate) { %>
             <div class="info-row">
-                <span class="info-label">Estimated Delivery</span>
+                <span class="info-label">Estimated Delivery: </span>
                 <span class="info-value">
                     <%= new Date(shipment.estimatedDeliveryDate).toLocaleDateString('en-US', {
                         day: '2-digit',

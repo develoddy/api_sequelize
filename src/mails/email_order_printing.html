@@ -79,9 +79,6 @@
             font-size: 14px;
             color: #666;
         }
-        .info-label::after {
-            content: ': ';
-        }
         .info-value {
             font-size: 14px;
             font-weight: 500;
@@ -152,11 +149,11 @@
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Order</span>
+                <span class="info-label">Order: </span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Total</span>
+                <span class="info-label">Total: </span>
                 <span class="info-value"><%= order.total %> <%= order.currency %></span>
             </div>
 
