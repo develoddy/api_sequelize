@@ -563,12 +563,23 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
         const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
         
         // Preparar productos para el email
-        const products = saleDetails.map(detail => ({
-          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
-          title: detail.product.title,
-          quantity: detail.cantidad,
-          variant: detail.variedad ? detail.variedad.valor : null
-        }));
+        const products = saleDetails.map(detail => {
+          if (detail.product) {
+            return {
+              image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+              title: detail.product.title,
+              quantity: detail.cantidad,
+              variant: detail.variedad ? detail.variedad.valor : null
+            };
+          } else {
+            return {
+              image: null,
+              title: detail.code_discount || 'External Product',
+              quantity: detail.cantidad,
+              variant: null
+            };
+          }
+        });
 
         // Preparar datos para el email
         const emailData = {
