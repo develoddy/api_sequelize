@@ -465,7 +465,7 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
   console.log(`📦 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
 
   // Buscar por external_id con includes para email
-  const sale = await Sale.findOne({
+  let sale = await Sale.findOne({
     where: { id: externalId },
     include: [
       {
@@ -478,6 +478,26 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
       }
     ]
   });
+
+  // Si no encuentra por external_id, buscar por printfulOrderId
+  if (!sale && printfulOrderId) {
+    sale = await Sale.findOne({
+      where: { printfulOrderId: String(printfulOrderId) },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'surname', 'email']
+        },
+        {
+          model: Guest,
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Orden encontrada por printfulOrderId: ${printfulOrderId}`);
+    }
+  }
 
   if (sale) {
     // ✅ Actualización completa con tracking info
