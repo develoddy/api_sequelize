@@ -141,6 +141,163 @@ export const handleWebhook = async (req, res) => {
   }
 };
 
+// ----------- ESTO ES INBOX ZERO --------------------
+/**
+ * 🆕 Order creada - HANDLER PROFESIONAL
+ * @param {Object} data - Webhook payload
+ * @param {Object} webhookLog - Log del webhook
+ * @param {Object} tenant - Tenant object (opcional para multi-tenant)
+ */
+async function handleOrderCreated(data, webhookLog, tenant = null) {
+  console.log('🆕 [WEBHOOK] Procesando order_created...');
+  
+  const order = data.data.order;
+  const externalId = order.external_id;
+  const printfulOrderId = order.id;
+  const status = order.status;
+
+  console.log(`🆕 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+
+  const sale = await Sale.findOne({
+    where: { id: externalId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'name', 'surname', 'email']
+      },
+      {
+        model: Guest,
+        attributes: ['id', 'name', 'email']
+      }
+    ]
+  });
+
+  if (sale) {
+    // ✅ Confirmar recepción y guardar ID de Printful
+    await sale.update({
+      printfulOrderId: printfulOrderId,
+      printfulStatus: status || 'pending',
+      syncStatus: 'pending',
+      printfulUpdatedAt: new Date(),
+      errorMessage: null // Limpiar error si hubo reintento
+    });
+    
+    console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
+    console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
+    
+    // 📧 Enviar email al cliente notificando que está en producción
+    try {
+      // Obtener detalles completos para el email
+      const saleDetails = await SaleDetail.findAll({
+        where: { saleId: sale.id },
+        include: [
+          { 
+            model: Product,
+            attributes: ['id', 'title', 'portada']
+          },
+          { 
+            model: Variedad,
+            attributes: ['id', 'valor', 'color']
+          }
+        ]
+      });
+
+      const saleAddress = await SaleAddress.findOne({
+        where: { saleId: sale.id }
+      });
+
+      // Determinar email y nombre del cliente
+      let customerEmail, customerName;
+      if (sale.user) {
+        customerEmail = sale.user.email;
+        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
+      } else if (sale.guest) {
+        customerEmail = sale.guest.email;
+        customerName = sale.guest.name || 'Cliente';
+      } else if (saleAddress) {
+        // Orden externa - obtener email de SaleAddress
+        customerEmail = saleAddress.email;
+        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
+        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
+      }
+
+      if (customerEmail) {
+        // Obtener tenant para personalización del email
+        let emailTenant = tenant;
+        if (!emailTenant && sale.tenant_id) {
+          emailTenant = await Tenant.findByPk(sale.tenant_id);
+        }
+        
+        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
+        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
+        
+        // Preparar productos para el email
+        const products = saleDetails.map(detail => ({
+          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
+          title: detail.product.title,
+          quantity: detail.cantidad,
+          variant: detail.variedad ? detail.variedad.valor : null,
+          color: detail.variedad ? detail.variedad.color : null
+        }));
+
+        // Preparar datos para el email
+        const emailData = {
+          customer: {
+            name: customerName,
+            email: customerEmail
+          },
+          order: {
+            id: sale.id, // 🔑 ID para tracking
+            trackingToken: sale.trackingToken, // 🔒 Token para tracking
+            printfulOrderId: sale.printfulOrderId,
+            n_transaction: sale.n_transaction,
+            created: sale.createdAt,
+            total: sale.total,
+            currency: sale.currency_payment || 'EUR'
+          },
+          products: products,
+          address: {
+            name: saleAddress?.name || customerName,
+            address: saleAddress?.address || '',
+            ciudad: saleAddress?.ciudad || '',
+            region: saleAddress?.region || '',
+            telefono: saleAddress?.telefono || ''
+          },
+          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
+        };
+
+        // Enviar email
+        const emailResult = await sendOrderPrintingEmail(emailData);
+        
+        if (emailResult.success) {
+          console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${customerEmail}`);
+        } else {
+          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+        }
+      } else {
+        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
+      }
+    } catch (emailError) {
+      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
+      // No fallar el webhook por error de email
+    }
+    
+    return true; // Procesado exitosamente
+    
+  } else {
+    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    
+    // Actualizar el log actual como orphan
+    await webhookLog.update({
+      event_type: `orphan_order_created`,
+      processed: false,
+      processing_error: `Sale with ID ${externalId} not found in database`
+    });
+    
+    return null; // No actualizar más el log
+  }
+}
+
 /**
  * 📦 Paquete enviado - HANDLER PROFESIONAL
  * @param {Object} data - Webhook payload
@@ -477,7 +634,10 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
 }
 
 /**
- * ✅ Paquete entregado - HANDLER PROFESIONAL
+ * 📦 Paquete entregado - HANDLER PROFESIONAL
+ * @param {Object} data - Webhook payload
+ * @param {Object} webhookLog - Log del webhook
+ * @param {Object} tenant - Tenant object (opcional para multi-tenant)
  */
 async function handlePackageDelivered(data, webhookLog, tenant = null) {
   console.log('✅ [WEBHOOK] Procesando package_delivered...');
@@ -671,6 +831,7 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
     return null; // No actualizar más el log (ya actualizado)
   }
 }
+// ----------- /END ESTO ES INBOX ZERO --------------------
 
 /**
  * ❌ Orden fallida - HANDLER PROFESIONAL
@@ -878,158 +1039,7 @@ async function handleOrderUpdated(data, webhookLog) {
   }
 }
 
-/**
- * 🆕 Orden creada - HANDLER PROFESIONAL
- */
-async function handleOrderCreated(data, webhookLog, tenant = null) {
-  console.log('🆕 [WEBHOOK] Procesando order_created...');
-  
-  const order = data.data.order;
-  const externalId = order.external_id;
-  const printfulOrderId = order.id;
-  const status = order.status;
 
-  console.log(`🆕 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
-
-  const sale = await Sale.findOne({
-    where: { id: externalId },
-    include: [
-      {
-        model: User,
-        attributes: ['id', 'name', 'surname', 'email']
-      },
-      {
-        model: Guest,
-        attributes: ['id', 'name', 'email']
-      }
-    ]
-  });
-
-  if (sale) {
-    // ✅ Confirmar recepción y guardar ID de Printful
-    await sale.update({
-      printfulOrderId: printfulOrderId,
-      printfulStatus: status || 'pending',
-      syncStatus: 'pending',
-      printfulUpdatedAt: new Date(),
-      errorMessage: null // Limpiar error si hubo reintento
-    });
-    
-    console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
-    console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
-    
-    // 📧 Enviar email al cliente notificando que está en producción
-    try {
-      // Obtener detalles completos para el email
-      const saleDetails = await SaleDetail.findAll({
-        where: { saleId: sale.id },
-        include: [
-          { 
-            model: Product,
-            attributes: ['id', 'title', 'portada']
-          },
-          { 
-            model: Variedad,
-            attributes: ['id', 'valor', 'color']
-          }
-        ]
-      });
-
-      const saleAddress = await SaleAddress.findOne({
-        where: { saleId: sale.id }
-      });
-
-      // Determinar email y nombre del cliente
-      let customerEmail, customerName;
-      if (sale.user) {
-        customerEmail = sale.user.email;
-        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
-      } else if (sale.guest) {
-        customerEmail = sale.guest.email;
-        customerName = sale.guest.name || 'Cliente';
-      } else if (saleAddress) {
-        // Orden externa - obtener email de SaleAddress
-        customerEmail = saleAddress.email;
-        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
-        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
-      }
-
-      if (customerEmail) {
-        // Obtener tenant para personalización del email
-        let emailTenant = tenant;
-        if (!emailTenant && sale.tenant_id) {
-          emailTenant = await Tenant.findByPk(sale.tenant_id);
-        }
-        
-        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
-        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
-        
-        // Preparar productos para el email
-        const products = saleDetails.map(detail => ({
-          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
-          title: detail.product.title,
-          quantity: detail.cantidad,
-          variant: detail.variedad ? detail.variedad.valor : null,
-          color: detail.variedad ? detail.variedad.color : null
-        }));
-
-        // Preparar datos para el email
-        const emailData = {
-          customer: {
-            name: customerName,
-            email: customerEmail
-          },
-          order: {
-            id: sale.id, // 🔑 ID para tracking
-            trackingToken: sale.trackingToken, // 🔒 Token para tracking
-            printfulOrderId: sale.printfulOrderId,
-            n_transaction: sale.n_transaction,
-            created: sale.createdAt,
-            total: sale.total,
-            currency: sale.currency_payment || 'EUR'
-          },
-          products: products,
-          address: {
-            name: saleAddress?.name || customerName,
-            address: saleAddress?.address || '',
-            ciudad: saleAddress?.ciudad || '',
-            region: saleAddress?.region || '',
-            telefono: saleAddress?.telefono || ''
-          },
-          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
-        };
-
-        // Enviar email
-        const emailResult = await sendOrderPrintingEmail(emailData);
-        
-        if (emailResult.success) {
-          console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${customerEmail}`);
-        } else {
-          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
-        }
-      } else {
-        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
-      }
-    } catch (emailError) {
-      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
-      // No fallar el webhook por error de email
-    }
-    
-    return true; // Procesado exitosamente
-    
-  } else {
-    console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
-    
-    // Actualizar el log actual como orphan
-    await webhookLog.update({
-      event_type: `orphan_order_created`,
-      processed: false,
-      processing_error: `Sale with ID ${externalId} not found in database`
-    });
-    
-    return null; // No actualizar más el log
-  }
-}
 
 /**
  * 📦 Producto sincronizado

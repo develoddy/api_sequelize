@@ -24,21 +24,29 @@
         }
         .header {
             padding: 40px 40px 30px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 4px solid #32CD32;
+            background: linear-gradient(180deg, #E6FFE6 0%, #ffffff 100%);
         }
         .store-name {
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-            color: #666;
+            color: #228B22;
             margin-bottom: 20px;
         }
         .title {
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 26px;
+            font-weight: 700;
             color: #1a1a1a;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .title::before {
+            content: '✅';
+            font-size: 28px;
         }
         .subtitle {
             font-size: 15px;
@@ -49,22 +57,32 @@
             padding: 40px;
         }
         .status-box {
-            background-color: #f9f9f9;
-            border-left: 3px solid #1a1a1a;
-            padding: 20px;
+            background: linear-gradient(135deg, #E6FFE6 0%, #CCFFCC 100%);
+            border-left: 5px solid #32CD32;
+            border-radius: 8px;
+            padding: 24px;
             margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(50, 205, 50, 0.15);
         }
         .status-label {
             font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #666;
-            margin-bottom: 5px;
+            letter-spacing: 0.8px;
+            color: #228B22;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
         .status-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a1a1a;
+            font-size: 20px;
+            font-weight: 700;
+            color: #228B22;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-value::before {
+            content: '🎉';
+            font-size: 18px;
         }
         .info-row {
             display: flex;
@@ -93,18 +111,21 @@
         }
         .cta-button {
             display: inline-block;
-            background-color: #111111 !important;
+            background: linear-gradient(135deg, #32CD32 0%, #228B22 100%) !important;
             color: #ffffff !important;
-            padding: 14px 32px;
+            padding: 16px 40px;
             text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            border-radius: 4px;
-            transition: background-color 0.2s;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(50, 205, 50, 0.3);
         }
         .cta-button:hover {
-            background-color: #333333 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(50, 205, 50, 0.4) !important;
+            background: linear-gradient(135deg, #228B22 0%, #1a7a1a 100%) !important;
         }
         .footer {
             padding: 30px 40px;
