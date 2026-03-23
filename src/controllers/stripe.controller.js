@@ -1239,13 +1239,18 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           console.error('[Stripe Webhook] Error creating Printful order for saleId=', sale.id, pfErr && (pfErr.message || pfErr));
         }
 
-        // Always attempt to send confirmation email
-        try {
-          console.log('[Stripe Webhook] Calling sendEmail for saleId=', sale.id);
-          await sendEmail(sale.id);
-          console.log('[Stripe Webhook] sendEmail finished for saleId=', sale.id);
-        } catch (emailErr) {
-          console.error('[Stripe Webhook] sendEmail error for saleId=', sale.id, emailErr && (emailErr.message || emailErr));
+        // Solo enviar email de confirmación si NO usa Inbox Zero
+        // Si tiene tenant_id, Inbox Zero maneja toda la comunicación
+        if (!sale.tenant_id) {
+          try {
+            console.log('[Stripe Webhook] Calling sendEmail for saleId=', sale.id);
+            await sendEmail(sale.id);
+            console.log('[Stripe Webhook] sendEmail finished for saleId=', sale.id);
+          } catch (emailErr) {
+            console.error('[Stripe Webhook] sendEmail error for saleId=', sale.id, emailErr && (emailErr.message || emailErr));
+          }
+        } else {
+          console.log('[Stripe Webhook] Skipping sendEmail - tenant uses Inbox Zero for saleId=', sale.id, 'tenant_id=', sale.tenant_id);
         }
       } else {
         console.log('[Stripe Webhook] No address/email available to create Printful order or send email for saleId=', sale.id);
