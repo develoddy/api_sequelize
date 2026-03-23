@@ -287,7 +287,155 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
   } else {
     console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
     
-    // Actualizar el log actual como orphan
+    // 🏢 Multi-tenant: Crear Sale automáticamente para órdenes externas de tenants
+    if (tenant) {
+      console.log(`🏢 [WEBHOOK] Tenant ${tenant.id} - Creando Sale para orden externa de Printful`);
+      
+      try {
+        // 2️⃣ Crear Sale con datos del payload
+        const trackingToken = crypto.randomBytes(16).toString('hex');
+        const orderTotal = parseFloat(order.costs?.total || '0');
+        
+        const newSale = await Sale.create({
+          tenant_id: tenant.id,
+          method_payment: 'printful_external',
+          n_transaction: `printful_${order.id}`,
+          total: orderTotal,
+          currency_total: order.costs?.currency || 'USD',
+          trackingToken: trackingToken,
+          printfulOrderId: printfulOrderId,
+          printfulStatus: status || 'pending',
+          syncStatus: 'pending',
+          printfulUpdatedAt: new Date()
+        });
+        
+        console.log(`✅ [WEBHOOK] Sale creado: ID ${newSale.id} para tenant ${tenant.id}`);
+        
+        // 2.1️⃣ Crear SaleAddress con datos del recipient
+        try {
+          // Dividir name en nombre y apellido (o usar placeholder)
+          const fullName = order.recipient.name || 'External Customer';
+          const nameParts = fullName.trim().split(' ');
+          const firstName = nameParts[0] || 'External';
+          const lastName = nameParts.slice(1).join(' ') || 'Customer';
+
+          await SaleAddress.create({
+            saleId: newSale.id,
+            name: firstName,
+            surname: lastName,
+            email: order.recipient.email || 'no-email@external.order',
+            telefono: order.recipient.phone || 'N/A',
+            pais: order.recipient.country_code || 'XX',
+            region: order.recipient.state_name || order.recipient.state_code || 'N/A',
+            address: order.recipient.address1 || 'External order',
+            referencia: order.recipient.address2 || null,
+            ciudad: order.recipient.city || 'N/A',
+            zipcode: order.recipient.zip || '00000',
+            nota: `External Printful order - ID: ${order.id}`
+          });
+
+          console.log(`✅ [WEBHOOK] SaleAddress creado para Sale #${newSale.id}`);
+        } catch (addressError) {
+          console.error('❌ [WEBHOOK] Error creando SaleAddress (no crítico):', addressError.message);
+          // No crítico - continuar con el flujo
+        }
+
+        // 2.2️⃣ Crear SaleDetail por cada item (si existen en el payload)
+        if (order.items && order.items.length > 0) {
+          try {
+            let detailsCreated = 0;
+            
+            for (const item of order.items) {
+              try {
+                const itemPrice = parseFloat(item.price || item.retail_price || 0);
+                const itemQty = parseInt(item.quantity || 1);
+                const itemTotal = parseFloat((itemPrice * itemQty).toFixed(2));
+                const itemName = item.name || 'External Product';
+
+                await SaleDetail.create({
+                  saleId: newSale.id,
+                  productId: null,          // ❌ No existe en nuestra DB
+                  variedadId: null,         // ❌ No existe en nuestra DB
+                  module_id: null,          // ❌ No es módulo
+                  cantidad: itemQty,
+                  price_unitario: itemPrice,
+                  subtotal: itemTotal,
+                  total: itemTotal,
+                  discount: 0,
+                  type_discount: 1,
+                  code_cupon: null,
+                  code_discount: itemName,  // 🔧 Guardar nombre del producto aquí (temporal)
+                  type_campaign: null
+                });
+
+                detailsCreated++;
+              } catch (itemError) {
+                console.error(`❌ [WEBHOOK] Error creando SaleDetail para item ${item.name || item.id}:`, itemError.message);
+                // Continuar con los demás items
+              }
+            }
+
+            console.log(`✅ [WEBHOOK] ${detailsCreated}/${order.items.length} SaleDetail(s) creados para Sale #${newSale.id}`);
+          } catch (detailError) {
+            console.error('❌ [WEBHOOK] Error creando SaleDetails (no crítico):', detailError.message);
+            // No crítico - continuar con el email
+          }
+        } else {
+          console.log(`ℹ️ [WEBHOOK] No hay items en order.items, SaleDetails no creados`);
+        }
+        
+        // 3️⃣ Enviar email al comprador notificando producción
+        try {
+          const emailData = {
+            customer: {
+              name: order.recipient.name,
+              email: order.recipient.email
+            },
+            order: {
+              id: newSale.id, // 🔑 ID para tracking
+              trackingToken: newSale.trackingToken, // 🔒 Token para tracking
+              printfulOrderId: printfulOrderId,
+              n_transaction: newSale.n_transaction,
+              created: newSale.createdAt,
+              total: newSale.total,
+              currency: order.costs?.currency || 'USD'
+            },
+            products: [], // Orden externa - no tenemos detalles de productos en DB
+            address: {
+              name: order.recipient.name,
+              address: order.recipient.address1 || '',
+              ciudad: order.recipient.city || '',
+              region: order.recipient.state_name || order.recipient.state_code || '',
+              telefono: order.recipient.phone || ''
+            },
+            tenant: tenant // 🏢 Tenant para personalización
+          };
+          
+          const emailResult = await sendOrderPrintingEmail(emailData);
+          
+          if (emailResult.success) {
+            console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${order.recipient.email}`);
+          } else {
+            console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+          }
+        } catch (emailError) {
+          console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError.message);
+          // No fallar el webhook por error de email
+        }
+        
+        return true; // Procesado exitosamente
+        
+      } catch (createError) {
+        console.error('❌ [WEBHOOK] Error creando Sale para tenant:', createError);
+        await webhookLog.update({
+          processed: false,
+          processing_error: `Error creating Sale for tenant: ${createError.message}`
+        });
+        return null;
+      }
+    }
+    
+    // 🔄 Legacy: Sin tenant - marcar como orphan
     await webhookLog.update({
       event_type: `orphan_order_created`,
       processed: false,
