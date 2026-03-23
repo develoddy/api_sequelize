@@ -947,6 +947,11 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
       } else if (sale.guest) {
         customerEmail = sale.guest.email;
         customerName = sale.guest.name || 'Cliente';
+      } else if (saleAddress) {
+        // Orden externa - obtener email de SaleAddress
+        customerEmail = saleAddress.email;
+        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
+        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
       }
 
       if (customerEmail) {
