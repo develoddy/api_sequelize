@@ -1,4 +1,5 @@
 import { Op, Sequelize } from 'sequelize';
+import { sequelize } from '../database/database.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import { Sale } from '../models/Sale.js';
@@ -234,6 +235,25 @@ export const createCheckoutSession = async (req, res) => {
       console.warn('[Stripe] Could not create CheckoutCache, falling back to metadata cart (may fail on large carts):', cacheErr);
     }
     
+    // 🔍 Buscar tenant dinámicamente por store_url
+    let tenantIdForMetadata = "";
+    try {
+      const [results] = await sequelize.query(
+        `SELECT id FROM tenants WHERE JSON_UNQUOTE(JSON_EXTRACT(settings, '$.store_url')) = :storeUrl LIMIT 1`,
+        { 
+          replacements: { storeUrl: process.env.URL_FRONTEND },
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+      if (results && results.id) {
+        tenantIdForMetadata = String(results.id);
+      }
+      console.log('[Stripe] Tenant lookup result:', tenantIdForMetadata ? `found id=${tenantIdForMetadata}` : 'NOT FOUND');
+    } catch (e) {
+      console.error('[Stripe] ERROR resolving tenantId:', e.message);
+    }
+    console.log('[Stripe] tenantIdForMetadata resolved to:', tenantIdForMetadata);
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode        : "payment",
@@ -246,6 +266,7 @@ export const createCheckoutSession = async (req, res) => {
         userId  : metadataUserId || "",
         guestId : metadataGuestId || "",
         email   : address?.email || "",
+        tenantId: tenantIdForMetadata, // 🏢 Resuelto dinámicamente desde store_url
         // 🆕 Añadir module info si es compra de módulo
         ...(isModulePurchase && {
           moduleId: String(moduleId),
@@ -464,6 +485,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
     const sale = await Sale.create({
       userId,
       guestId,
+      tenant_id: tenantId, // 🏢 Asociar con tenant (ej: tenant 43 para tienda.lujandev.com)
       currency_payment: session.currency,
       method_payment: 'STRIPE',
       n_transaction: 'temp', // Se actualizará después de obtener el ID
@@ -955,9 +977,9 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
         }
       }
 
-      if (!saleAddressFromCache && req && req._stripe_cached_address) {
-        saleAddressFromCache = req._stripe_cached_address;
-      }
+      // if (!saleAddressFromCache && req && req._stripe_cached_address) {
+      //   saleAddressFromCache = req._stripe_cached_address;
+      // }
 
       // Crear recibo (Receipt) asociado a la venta ===
       try {
@@ -1149,6 +1171,40 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           console.warn('[Stripe Webhook] Could not persist SaleAddress for saleId=', sale.id, addrErr && addrErr.message);
         }
 
+        // 🆕 FALLBACK: Si no se creó SaleAddress, crear una mínima con datos de Stripe
+        try {
+          const existingAddr = await SaleAddress.findOne({ where: { saleId: sale.id } });
+          if (!existingAddr) {
+            const emailFromStripe = session.customer_details?.email || session.metadata?.email || '';
+            const nameFromStripe = session.customer_details?.name || 'Cliente';
+            
+            if (emailFromStripe) {
+              const nameParts = nameFromStripe.trim().split(' ');
+              const firstName = nameParts[0] || 'Cliente';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              
+              await SaleAddress.create({
+                saleId: sale.id,
+                name: firstName,
+                surname: lastName,
+                pais: country || 'ES',
+                address: 'Dirección de checkout',
+                ciudad: '',
+                region: '',
+                telefono: '',
+                email: emailFromStripe,
+                nota: 'Creado desde webhook de Stripe (fallback)',
+                zipcode: ''
+              });
+              console.log('[Stripe Webhook] ✅ Created fallback SaleAddress with email from Stripe:', emailFromStripe);
+            } else {
+              console.warn('[Stripe Webhook] ⚠️ No email available in Stripe session to create fallback SaleAddress');
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn('[Stripe Webhook] Could not create fallback SaleAddress:', fallbackErr && fallbackErr.message);
+        }
+
         // Log payload and call Printful
         try {
           console.log('[Stripe Webhook] Printful order payload (recipient, first item):', {
@@ -1263,8 +1319,12 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
     console.log('[Stripe Webhook] Venta y detalles registrados correctamente, saleId=', sale.id);
   } catch (err) {
     console.error('[Stripe Webhook] Error registrando venta + detalles:', err && (err.stack || err.message || err));
+    await webhookLog.markAsFailed(err.message || 'Unknown error during sale processing');
+    return res.status(500).json({ received: false, error: err.message });
   }
 
+  // ✅ Marcar webhook como exitoso
+  await webhookLog.markAsSuccess('Sale created and processed successfully');
   res.json({ received: true });
 }
 

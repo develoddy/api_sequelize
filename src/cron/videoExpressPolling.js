@@ -27,9 +27,9 @@ let isRunning = false; // Flag para prevenir ejecuciones simultáneas
 export function startVideoExpressPolling() {
     console.log('🚀 Iniciando cron job de Video Express Polling...');
 
-    // Ejecutar cada 10 segundos (optimizado para reducir latencia)
-    // Sintaxis cron: "*/10 * * * * *" = cada 10 segundos
-    const cronSchedule = '*/10 * * * * *';
+    // Ejecutar cada 5 minutos (reducido temporalmente para debug de Stripe)
+    // Sintaxis cron: "*/5 * * * *" = cada 5 minutos
+    const cronSchedule = '*/5 * * * *';
 
     const job = cron.schedule(cronSchedule, async () => {
         // Prevenir ejecuciones simultáneas

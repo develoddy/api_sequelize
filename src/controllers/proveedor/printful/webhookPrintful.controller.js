@@ -532,7 +532,7 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
     await sale.update({
       printfulOrderId: printfulOrderId,
       printfulStatus: 'fulfilled',
-      syncStatus: 'delivered',
+      syncStatus: 'fulfilled',
       deliveredAt: new Date(),
       completedAt: new Date(),
       printfulUpdatedAt: new Date()

@@ -121,6 +121,60 @@
 // ⚠️ IMPORTANTE: Cargar variables de entorno ANTES que cualquier otro módulo
 import './config/env.js';
 
+// ================================================================
+// 📝 SISTEMA DE LOGGING A ARCHIVO (para debugging de Stripe y otros)
+// ================================================================
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logFilePath = path.join(__dirname, '../logs/server.log');
+
+// Crear directorio logs si no existe
+const logsDir = path.dirname(logFilePath);
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+}
+
+// Función helper para escribir a archivo
+const writeToLogFile = (level, ...args) => {
+    const timestamp = new Date().toISOString();
+    const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+    ).join(' ');
+    const logLine = `[${timestamp}] [${level}] ${message}\n`;
+    
+    fs.appendFile(logFilePath, logLine, (err) => {
+        if (err && level !== 'LOG') { // Evitar loop infinito
+            console.error('Error writing to log file:', err);
+        }
+    });
+};
+
+// Interceptar console.log, console.error, console.warn
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+console.log = function(...args) {
+    originalLog.apply(console, args);
+    writeToLogFile('LOG', ...args);
+};
+
+console.error = function(...args) {
+    originalError.apply(console, args);
+    writeToLogFile('ERROR', ...args);
+};
+
+console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    writeToLogFile('WARN', ...args);
+};
+
+console.log('📝 Logging to file enabled:', logFilePath);
+
 // 🚨 Inicializar Sentry INMEDIATAMENTE después de las variables de entorno
 import { initSentry } from './config/sentry.js';
 initSentry();
@@ -129,16 +183,23 @@ initSentry();
 // 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
 // ================================================================
 if (process.env.NODE_ENV === 'production') {
-    // Desactivar logs que podrían exponer información sensible
-    console.log = function () {};
-    console.debug = function () {};
-    console.info = function () {};
-    console.table = function () {};
+    // Desactivar logs EN PANTALLA pero seguir escribiendo a archivo
+    console.log = function (...args) {
+        writeToLogFile('LOG', ...args);
+    };
+    console.debug = function (...args) {
+        writeToLogFile('DEBUG', ...args);
+    };
+    console.info = function (...args) {
+        writeToLogFile('INFO', ...args);
+    };
+    console.table = function () {
+        // table no se loguea a archivo
+    };
     
-    // Mantener console.warn y console.error para monitoreo
-    // console.warn y console.error NO se desactivan
+    // Mantener console.warn y console.error para monitoreo (ya interceptados arriba)
     
-    console.warn('🔒 [PRODUCTION MODE] console.log/debug/info/table desactivados por seguridad');
+    console.warn('🔒 [PRODUCTION MODE] console.log/debug/info/table desactivados en pantalla (pero logueados a archivo)');
 }
 
 import http from 'http';
