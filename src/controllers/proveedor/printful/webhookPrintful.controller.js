@@ -546,6 +546,10 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
       } else if (sale.guest) {
         customerEmail = sale.guest.email;
         customerName = sale.guest.name || 'Cliente';
+      } else if (saleAddress) {
+        customerEmail = saleAddress.email;
+        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
+        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
       }
 
       if (customerEmail) {
