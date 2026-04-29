@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Confirmed</title>
+    <title>Pedido Confirmado</title>
     <style>
         * {
             margin: 0;
@@ -232,21 +232,21 @@
                     <%= process.env.STORE_NAME || 'Store' %>
                 <% } %>
             </div>
-            <h1 class="title">Order Confirmed</h1>
-            <p class="subtitle">Thank you for your purchase!</p>
+            <h1 class="title">Pedido Confirmado</h1>
+            <p class="subtitle">¡Gracias por tu compra!</p>
         </div>
 
         <!-- Content -->
         <div class="content">
             <!-- Status -->
             <div class="status-box">
-                <div class="status-label">Order Status</div>
-                <div class="status-value">Payment Confirmed</div>
+                <div class="status-label">Estado del Pedido</div>
+                <div class="status-value">Pago Confirmado</div>
             </div>
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Order Number:</span>
+                <span class="info-label">Número de Pedido:</span>
                 <span class="info-value">
                     <% if (order.printfulOrderId) { %>
                         #PF<%= order.printfulOrderId %>
@@ -257,7 +257,7 @@
             </div>
             <% if (address_sale && address_sale.name) { %>
             <div class="info-row">
-                <span class="info-label">Customer:</span>
+                <span class="info-label">Cliente:</span>
                 <span class="info-value"><%= address_sale.name %></span>
             </div>
             <% } %>
@@ -271,7 +271,7 @@
             <!-- Products -->
             <% if (order_detail && order_detail.length > 0) { %>
             <div class="product-section">
-                <div class="product-section-title">Order Details</div>
+                <div class="product-section-title">Detalles del Pedido</div>
                 <% order_detail.forEach(function(detail) { %>
                 <div class="product-item">
                     <% if (detail.product && detail.product.portada) { %>
@@ -287,11 +287,11 @@
                         </div>
                         <% if (detail.variedad && detail.variedad.name) { %>
                         <div class="product-variant">
-                            Variant: <%= detail.variedad.name %>
+                            Variante: <%= detail.variedad.name %>
                         </div>
                         <% } %>
                         <div class="product-variant">
-                            Quantity: <%= detail.cantidad %>
+                            Cantidad: <%= detail.cantidad %>
                         </div>
                         <div class="product-price">
                             <% if (detail.totalDiscount && detail.totalDiscount > 0) { %>
@@ -315,7 +315,7 @@
                     <span><%= order.originalSubtotal %> <%= order.currency_payment || 'USD' %></span>
                 </div>
                 <div class="summary-row">
-                    <span>Discount:</span>
+                    <span>Descuento:</span>
                     <span style="color: #32CD32;">-<%= order.totalDiscount %> <%= order.currency_payment || 'USD' %></span>
                 </div>
                 <% } %>
@@ -330,22 +330,22 @@
             <div class="cta-section">
                 <div style="background: linear-gradient(135deg, #F3E6FF 0%, #E6CCFF 100%); border-radius: 8px; padding: 24px; text-align: center;">
                     <div style="font-size: 32px; margin-bottom: 10px;">📦</div>
-                    <h3 style="font-size: 18px; font-weight: 700; color: #6A0DAD; margin: 0 0 10px;">What's Next?</h3>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #6A0DAD; margin: 0 0 10px;">¿Qué sigue?</h3>
                     <p style="font-size: 14px; color: #666; margin: 0; line-height: 1.6;">
-                        We're preparing your order and will notify you via email as soon as it ships.<br>
-                        You'll receive tracking information to follow your package in real-time.
+                        Estamos preparando tu pedido y te notificaremos por email tan pronto como sea enviado.<br>
+                        Recibirás información de seguimiento para rastrear tu paquete en tiempo real.
                     </p>
                 </div>
             </div>
             <% } else { %>
             <div class="cta-section">
                 <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
-                    You'll receive access instructions for your digital product soon
+                    Recibirás instrucciones de acceso para tu producto digital pronto
                 </p>
                 <% if (tenant && tenant.email) { %>
-                <a href="mailto:<%= tenant.email %>" class="cta-button">Contact Support</a>
+                <a href="mailto:<%= tenant.email %>" class="cta-button">Contactar Soporte</a>
                 <% } else { %>
-                <a href="mailto:<%= process.env.EMAIL_SUPPORT || 'support@store.com' %>" class="cta-button">Contact Support</a>
+                <a href="mailto:<%= process.env.EMAIL_SUPPORT || 'support@store.com' %>" class="cta-button">Contactar Soporte</a>
                 <% } %>
             </div>
             <% } %>
@@ -355,9 +355,9 @@
         <div class="footer">
             <p class="footer-text">
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. All rights reserved.
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
                 <% } else { %>
-                    © <%= new Date().getFullYear() %> <%= process.env.STORE_NAME || 'Store' %>. All rights reserved.
+                    © <%= new Date().getFullYear() %> <%= process.env.STORE_NAME || 'Store' %>. Todos los derechos reservados.
                 <% } %>
             </p>
         </div>

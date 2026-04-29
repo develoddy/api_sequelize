@@ -403,8 +403,11 @@ async function send_email(sale_id) {
             
             console.log('📧 [Email] Subject:', subject);
 
+            // 🏢 Usar branding del tenant (consistente con emails de Printful)
+            const storeName = tenant?.settings?.store_name || process.env.STORE_NAME || 'Store';
+            
             const mailOptions = {
-                from: `"tienda.lujandev.com" <${process.env.EMAIL_USER}>`,
+                from: `"${storeName}" <${process.env.EMAIL_USER}>`,
                 to: emailDestino,
                 subject: subject,
                 html: htmlToSend

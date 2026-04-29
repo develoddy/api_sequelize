@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Delivered</title>
+    <title>Pedido Entregado</title>
     <style>
         * {
             margin: 0;
@@ -153,30 +153,30 @@
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
                     <%= tenant.settings.store_name %>
                 <% } else { %>
-                    Store
+                    <%= process.env.STORE_NAME || 'Store' %>
                 <% } %>
             </div>
-            <h1 class="title">Order Delivered</h1>
-            <p class="subtitle">Your order has been successfully delivered.</p>
+            <h1 class="title">Pedido Entregado</h1>
+            <p class="subtitle">Tu pedido ha sido entregado exitosamente.</p>
         </div>
 
         <!-- Content -->
         <div class="content">
             <!-- Status -->
             <div class="status-box">
-                <div class="status-label">Final Status</div>
-                <div class="status-value">Delivered</div>
+                <div class="status-label">Estado Final</div>
+                <div class="status-value">Entregado</div>
             </div>
 
             <!-- Order Info -->
             <div class="info-row">
-                <span class="info-label">Order: </span>
+                <span class="info-label">Pedido: </span>
                 <span class="info-value">#PF<%= order.printfulOrderId %></span>
             </div>
             <div class="info-row">
-                <span class="info-label">Delivery Date: </span>
+                <span class="info-label">Fecha de Entrega: </span>
                 <span class="info-value">
-                    <%= new Date(delivery.deliveredDate).toLocaleDateString('en-US', {
+                    <%= new Date(delivery.deliveredDate).toLocaleDateString('es-ES', {
                         day: '2-digit',
                         month: 'long',
                         year: 'numeric'
@@ -190,7 +190,7 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">View Order Details</a>
+                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Ver detalles del pedido</a>
             </div>
         </div>
 
@@ -198,9 +198,9 @@
         <div class="footer">
             <p class="footer-text">
                 <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. All rights reserved.
+                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
                 <% } else { %>
-                    © <%= new Date().getFullYear() %>. All rights reserved.
+                    © <%= new Date().getFullYear() %> <%= process.env.STORE_NAME || 'Store' %>. Todos los derechos reservados.
                 <% } %>
             </p>
         </div>
