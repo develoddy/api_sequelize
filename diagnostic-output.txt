@@ -1,0 +1,257 @@
+🔍 ===== DIAGNÓSTICO: ECOMMERCE → TENANT → SALES =====
+
+📡 Conectando a MySQL...
+✅ Conectado a MySQL
+
+🏢 ===== 1. VERIFICACIÓN DE TENANT 43 (LujanDev) =====
+✅ Tenant 43 encontrado:
+   Name: eddylujann
+   Email: eddylujann@gmail.com
+   Status: trial
+   Plan: trial
+   Module Key: inbox-zero-prevention
+   Store URL: "http://localhost:5000"
+   Printful API Key: ✅ CONFIGURADO
+   Stripe Webhook Secret: ❌ NO CONFIGURADO
+   Stripe Customer ID: NULL
+   Stripe Subscription ID: NULL
+   Created At: Mon Mar 09 2026 19:22:05 GMT+0100 (Central European Standard Time)
+
+💰 ===== 2. VERIFICACIÓN DE VENTAS RECIENTES =====
+📊 Total de ventas recientes: 10
+
+Últimas 10 ventas:
+
+1. Sale ID: 42
+   Tenant ID: 43
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a1RDHUNlr0mSaAuLairNdVUB4cWhlNRJSFiitWjMFbpOy5yLJq0kSUr2M9
+   Tracking Token: 03fe13111e7e192e88e016c85bc8fd1b
+   Fecha: Wed Apr 29 2026 11:25:39 GMT+0200 (Central European Summer Time)
+
+2. Sale ID: 41
+   Tenant ID: 43
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a118JfXCRBPgdHGPYyB6w5HCTlf65vvTO1l1Cpl2YK8XMWvpbTqqooaqhk
+   Tracking Token: 4f4c9a67db72079d2a3aac103318b710
+   Fecha: Wed Apr 29 2026 11:21:45 GMT+0200 (Central European Summer Time)
+
+3. Sale ID: 40
+   Tenant ID: 43
+   Total: $57.9
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_b1zTEpI8vjAKKQl7wJSR0c9b5OMzeasMVdtMfp1IUbw3aOmG0yAcbi6CK5
+   Tracking Token: 9e4e571357fee0d553a7e200bf83bb60
+   Fecha: Wed Apr 29 2026 11:13:12 GMT+0200 (Central European Summer Time)
+
+4. Sale ID: 39
+   Tenant ID: 43
+   Total: $65.9
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_b10SlGTXz3g0Zpgl2kt4ErEl5vKaSeaczfpJ0r64YnJ3Kp3Gl6rSyAy7Bi
+   Tracking Token: a311d20229968d531d0da7ab2afb6b04
+   Fecha: Wed Apr 29 2026 11:00:26 GMT+0200 (Central European Summer Time)
+
+5. Sale ID: 38
+   Tenant ID: 43
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a139gq10cQSrujUP17kiKXkkWNq007TRolXDp8RiEmNILrWKvcjxOrrF4h
+   Tracking Token: 9c409dd023d7c411080dc4679b84f450
+   Fecha: Mon Mar 23 2026 11:54:49 GMT+0100 (Central European Standard Time)
+
+6. Sale ID: 37
+   Tenant ID: ❌ NULL
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a1gUaPH12EeifjHQ0tggSHtk4GCuPnBrN6CW2OzObk918FgFzJG3v6tMj7
+   Tracking Token: 123c5977cf7509c39be0655381de809c
+   Fecha: Mon Mar 23 2026 11:41:54 GMT+0100 (Central European Standard Time)
+
+7. Sale ID: 36
+   Tenant ID: ❌ NULL
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a1C7ekyGIBKHjqk7cMqn5EDkLyKzfuh1sL1hEv1lvP3AM7Q5uj9hKyKfJi
+   Tracking Token: 3e7581a83d9857e1b165e4d506ede97a
+   Fecha: Mon Mar 23 2026 11:30:25 GMT+0100 (Central European Standard Time)
+
+8. Sale ID: 35
+   Tenant ID: ❌ NULL
+   Total: $42.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a115gkxuRijwJLYD7XQAOz41FEtAKv3H9PmjWPSULqPgxpSoofLP5W1zfW
+   Tracking Token: b48fa5e1dada0374555c6320a3589153
+   Fecha: Mon Mar 23 2026 11:23:38 GMT+0100 (Central European Standard Time)
+
+9. Sale ID: 34
+   Tenant ID: ❌ NULL
+   Total: $42.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a1ii5aPmP1WunDyNaJ6N4fXM5O1Pp6Sq74henyQ5PgfdGVZ3ZFUXxJSK1o
+   Tracking Token: 5142da33e3e98dca7593e05a535a2608
+   Fecha: Mon Mar 23 2026 11:21:56 GMT+0100 (Central European Standard Time)
+
+10. Sale ID: 33
+   Tenant ID: ❌ NULL
+   Total: $22.95
+   Método: STRIPE
+   Sync Status: pending
+   Stripe Session: cs_test_a1yjclRQgY9bkqf5OtjPUrKdipOX1Xflgv5YhxgjyQfVqwBnM3zhffFkUh
+   Tracking Token: 2023ed09ef854cd10678c45a4708f33b
+   Fecha: Mon Mar 23 2026 11:20:45 GMT+0100 (Central European Standard Time)
+
+⚠️  ===== 3. VENTAS SIN TENANT_ID =====
+📊 Ventas sin tenant_id: 12
+
+Últimas 5 ventas sin tenant_id:
+   Sale 37: $22.95 - STRIPE - Mon Mar 23 2026 11:41:54 GMT+0100 (Central European Standard Time)
+   Sale 36: $22.95 - STRIPE - Mon Mar 23 2026 11:30:25 GMT+0100 (Central European Standard Time)
+   Sale 35: $42.95 - STRIPE - Mon Mar 23 2026 11:23:38 GMT+0100 (Central European Standard Time)
+   Sale 34: $42.95 - STRIPE - Mon Mar 23 2026 11:21:56 GMT+0100 (Central European Standard Time)
+   Sale 33: $22.95 - STRIPE - Mon Mar 23 2026 11:20:45 GMT+0100 (Central European Standard Time)
+
+🔔 ===== 4. WEBHOOKS DE STRIPE =====
+📊 Total de webhooks recientes: 10
+
+Últimos 10 webhooks:
+
+1. Webhook ID: 91
+   Event Type: charge.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:25:39 GMT+0200 (Central European Summer Time)
+
+2. Webhook ID: 92
+   Event Type: payment_intent.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:25:39 GMT+0200 (Central European Summer Time)
+
+3. Webhook ID: 93
+   Event Type: payment_intent.created
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:25:39 GMT+0200 (Central European Summer Time)
+
+4. Webhook ID: 94
+   Event Type: checkout.session.completed
+   Tenant ID: 43
+   Status: success
+   Retry Count: 0
+   Message: Sale created and processed successfully...
+   Fecha: Wed Apr 29 2026 11:25:39 GMT+0200 (Central European Summer Time)
+
+5. Webhook ID: 87
+   Event Type: charge.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:21:44 GMT+0200 (Central European Summer Time)
+
+6. Webhook ID: 88
+   Event Type: payment_intent.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:21:44 GMT+0200 (Central European Summer Time)
+
+7. Webhook ID: 89
+   Event Type: payment_intent.created
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:21:44 GMT+0200 (Central European Summer Time)
+
+8. Webhook ID: 90
+   Event Type: checkout.session.completed
+   Tenant ID: 43
+   Status: success
+   Retry Count: 0
+   Message: Sale created and processed successfully...
+   Fecha: Wed Apr 29 2026 11:21:44 GMT+0200 (Central European Summer Time)
+
+9. Webhook ID: 83
+   Event Type: payment_intent.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:13:12 GMT+0200 (Central European Summer Time)
+
+10. Webhook ID: 84
+   Event Type: charge.succeeded
+   Tenant ID: ❌ NULL
+   Status: success
+   Retry Count: 0
+   Message: Event type ignored (not relevant)...
+   Fecha: Wed Apr 29 2026 11:13:12 GMT+0200 (Central European Summer Time)
+
+📧 ===== 5. VERIFICACIÓN DE SALE_ADDRESSES =====
+📊 Ventas sin dirección (últimas 5): 5
+
+Ventas sin SaleAddress:
+   Sale 28: $22.95 - tenant_id: 43 - Mon Mar 23 2026 09:40:54 GMT+0100 (Central European Standard Time)
+   Sale 27: $22.95 - tenant_id: NULL - Mon Mar 23 2026 09:29:31 GMT+0100 (Central European Standard Time)
+   Sale 26: $22.95 - tenant_id: NULL - Mon Mar 23 2026 09:21:57 GMT+0100 (Central European Standard Time)
+   Sale 25: $22.95 - tenant_id: NULL - Mon Mar 23 2026 08:42:20 GMT+0100 (Central European Standard Time)
+   Sale 24: $22.95 - tenant_id: NULL - Mon Mar 23 2026 08:14:42 GMT+0100 (Central European Standard Time)
+
+📬 ===== 6. CONFIGURACIÓN DE EMAILS =====
+Variables de entorno SMTP:
+   SMTP_HOST: lujandev-com.correoseguro.dinaserver.com
+   SMTP_PORT: 465
+   EMAIL_USER: lujandev@lujandev.com
+   EMAIL_PASS: ✅ CONFIGURADO
+
+🌐 ===== 7. VERIFICACIÓN DE URLS =====
+URL_FRONTEND (.env): http://localhost:5000
+Store URL (tenant 43): http://localhost:5000
+Match: ✅ URLs coinciden
+
+🎯 ===== DIAGNÓSTICO FINAL =====
+
+ÉXITOS:
+   ✅ Tenant 43 existe y está configurado
+   ✅ 5/10 ventas recientes tienen tenant_id
+   ✅ Configuración SMTP presente
+
+ADVERTENCIAS:
+   ⚠️  Tenant status: trial (no active)
+
+PROBLEMAS CRÍTICOS:
+   ❌ 12 ventas sin tenant_id asignado
+
+💡 ===== RECOMENDACIONES =====
+
+1. ASIGNAR tenant_id A VENTAS EXISTENTES:
+   UPDATE sales SET tenant_id = 43 WHERE tenant_id IS NULL;
+
+3. VERIFICAR FLUJO DE COMPRA:
+   a) Hacer compra de prueba en ecommerce
+   b) Verificar que se cree Sale con tenant_id = 43
+   c) Verificar que se registre webhook en stripe_webhook_logs
+   d) Verificar que se envíe email de confirmación
+
+
+📡 Conexión cerrada

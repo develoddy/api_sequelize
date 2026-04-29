@@ -1239,18 +1239,24 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           console.error('[Stripe Webhook] Error creating Printful order for saleId=', sale.id, pfErr && (pfErr.message || pfErr));
         }
 
-        // Solo enviar email de confirmación si NO usa Inbox Zero
-        // Si tiene tenant_id, Inbox Zero maneja toda la comunicación
-        if (!sale.tenant_id) {
-          try {
-            console.log('[Stripe Webhook] Calling sendEmail for saleId=', sale.id);
-            await sendEmail(sale.id);
-            console.log('[Stripe Webhook] sendEmail finished for saleId=', sale.id);
-          } catch (emailErr) {
-            console.error('[Stripe Webhook] sendEmail error for saleId=', sale.id, emailErr && (emailErr.message || emailErr));
-          }
-        } else {
-          console.log('[Stripe Webhook] Skipping sendEmail - tenant uses Inbox Zero for saleId=', sale.id, 'tenant_id=', sale.tenant_id);
+        // 📧 Enviar email de confirmación
+        // El sistema de emails directo maneja todos los casos (con/sin tenant)
+        // Los emails de tracking posterior vienen por webhooks de Printful (webhookPrintful.controller.js)
+        try {
+          console.log('🔍 [DEBUG] ===== ANTES DE LLAMAR sendEmail =====');
+          console.log('🔍 [DEBUG] sale.id:', sale.id);
+          console.log('🔍 [DEBUG] sale.tenant_id:', sale.tenant_id);
+          console.log('🔍 [DEBUG] timestamp:', new Date().toISOString());
+          
+          await sendEmail(sale.id);
+          
+          console.log('🔍 [DEBUG] ===== DESPUÉS DE sendEmail =====');
+          console.log('🔍 [DEBUG] sendEmail completado sin errores para saleId=', sale.id);
+        } catch (emailErr) {
+          console.error('❌ [DEBUG] ===== ERROR EN sendEmail =====');
+          console.error('❌ [DEBUG] saleId:', sale.id);
+          console.error('❌ [DEBUG] Error message:', emailErr?.message);
+          console.error('❌ [DEBUG] Error stack:', emailErr?.stack);
         }
       } else {
         console.log('[Stripe Webhook] No address/email available to create Printful order or send email for saleId=', sale.id);

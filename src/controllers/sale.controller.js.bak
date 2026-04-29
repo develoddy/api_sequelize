@@ -194,7 +194,7 @@ async function send_email(sale_id) {
             
             if (err) {
                 console.error('\u274c [DEBUG] Error leyendo HTML:', err);
-                return; // Salir del callback si hay error
+                return callback(err);
             }
             
             console.log('\ud83d\udd0d [DEBUG] HTML le\u00eddo exitosamente, length:', html?.length);
