@@ -259,8 +259,27 @@ export const createPrintfulOrderService = async ( orderData ) => {
         });
 
         const selectedRate = shippingRatesRes.data.result[0];
-        const minDeliveryDate = selectedRate.minDeliveryDate; // ya formateado YYYY-MM-DD
-        const maxDeliveryDate = selectedRate.maxDeliveryDate;
+        
+        // ✅ FIX: Calcular fechas a partir de días (API solo devuelve days, no dates)
+        const today = new Date();
+        
+        // Calcular minDeliveryDate
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() + (selectedRate.minDeliveryDays || 0));
+        const minDeliveryDate = minDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Calcular maxDeliveryDate (usar maxDeliveryDays real, NO hardcodear)
+        const maxDate = new Date(today);
+        maxDate.setDate(maxDate.getDate() + (selectedRate.maxDeliveryDays || selectedRate.minDeliveryDays || 0));
+        const maxDeliveryDate = maxDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        console.log('📅 [Printful Service] Delivery dates calculated:', {
+            minDeliveryDays: selectedRate.minDeliveryDays,
+            maxDeliveryDays: selectedRate.maxDeliveryDays,
+            minDeliveryDate,
+            maxDeliveryDate,
+            shippingService: selectedRate.name
+        });
 
         // 2. Crear pedido en modo borrador
         const createOrderRes = await printfulApi.post('/orders', orderData);
@@ -275,8 +294,10 @@ export const createPrintfulOrderService = async ( orderData ) => {
             orderId: orderDetails.id,
             shippingServiceName: orderDetails.shipping_service_name,
             shippingCost: parseFloat(orderDetails.costs.shipping),
-            minDeliveryDate,
-            maxDeliveryDate,
+            minDeliveryDate,  // ✅ Correctamente calculado desde días
+            maxDeliveryDate,  // ✅ Correctamente calculado desde días
+            minDeliveryDays: selectedRate.minDeliveryDays, // 🆕 Incluir para referencia
+            maxDeliveryDays: selectedRate.maxDeliveryDays, // 🆕 Incluir para referencia
             dashboardUrl: orderDetails.dashboard_url,
             raw: orderDetails
         };

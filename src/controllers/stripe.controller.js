@@ -1361,14 +1361,22 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
             printfulCreated = true;
             console.log('✅ [Stripe Webhook] Printful order created successfully - orderId:', printfulOrderId);
 
+            // ✅ FIX: Usar fechas calculadas correctamente por printfulService (sin hardcode)
             const pfDates = (pfData.result || pfData);
-            if (pfDates && pfDates.minDeliveryDate) {
-              const minD = new Date(pfDates.minDeliveryDate);
-              if (!isNaN(minD.getTime())) {
-                const maxD = new Date(minD);
-                maxD.setDate(maxD.getDate() + 7);
-                await sale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
-              }
+            if (pfDates && pfDates.minDeliveryDate && pfDates.maxDeliveryDate) {
+              console.log('📅 [Stripe Webhook] Setting delivery dates from Printful:', {
+                minDeliveryDate: pfDates.minDeliveryDate,
+                maxDeliveryDate: pfDates.maxDeliveryDate,
+                minDeliveryDays: pfDates.minDeliveryDays,
+                maxDeliveryDays: pfDates.maxDeliveryDays
+              });
+              
+              await sale.update({ 
+                minDeliveryDate: pfDates.minDeliveryDate,  // ✅ Fecha calculada correctamente
+                maxDeliveryDate: pfDates.maxDeliveryDate   // ✅ Sin hardcode +7 días
+              });
+            } else {
+              console.warn('⚠️ [Stripe Webhook] No delivery dates returned from Printful for saleId=', sale.id);
             }
           } else {
             console.warn('[Stripe Webhook] Printful returned no data for saleId=', sale.id, 'pfResult=', pfResult);

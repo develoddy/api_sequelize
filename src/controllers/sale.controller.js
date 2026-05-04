@@ -282,20 +282,20 @@ export const registerGuest = async (req, res) => {
             console.error('[Printful Guest] Error guardando estado en BD:', pfSaveErr && (pfSaveErr.message || pfSaveErr));
         }
 
-        // Obtener fechas de entrega desde Printful
-        let minDeliveryDate = result.data.minDeliveryDate ? new Date(result.data.minDeliveryDate) : null;
-        
-        if (!minDeliveryDate || isNaN(minDeliveryDate.getTime())) {
-            minDeliveryDate = new Date();
+        // ✅ FIX: Usar fechas de entrega calculadas correctamente desde Printful
+        if (result.data.minDeliveryDate && result.data.maxDeliveryDate) {
+            console.log('📅 [Register] Setting delivery dates from Printful:', {
+                minDeliveryDate: result.data.minDeliveryDate,
+                maxDeliveryDate: result.data.maxDeliveryDate
+            });
+            
+            await sale.update({
+                minDeliveryDate: result.data.minDeliveryDate,  // ✅ Ya viene en formato YYYY-MM-DD
+                maxDeliveryDate: result.data.maxDeliveryDate   // ✅ Sin hardcode +7 días
+            });
+        } else {
+            console.warn('⚠️ [Register] No delivery dates returned from Printful for sale:', sale.id);
         }
-
-        const maxDeliveryDate = new Date(minDeliveryDate);
-        maxDeliveryDate.setDate(maxDeliveryDate.getDate() + 7);
-
-        await sale.update({
-            minDeliveryDate: minDeliveryDate.toISOString().split('T')[0],
-            maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
-        });
 
         // ❌ Email NO se envía aquí - PayPal webhook lo envía
         console.log('ℹ️ [Sale Controller GUEST] Email será enviado por PayPal webhook');
@@ -564,25 +564,20 @@ export const register = async (req, res) => {
             console.error('[Printful] Error guardando estado en BD:', pfSaveErr && (pfSaveErr.message || pfSaveErr));
         }
 
-        // Obtener la fecha mínima desde la respuesta de Printful
-        //const minDeliveryDate = new Date(result.data.minDeliveryDate);
-        // Obtener la fecha mínima desde la respuesta de Printful
-        let minDeliveryDate = result.data.minDeliveryDate ? new Date(result.data.minDeliveryDate) : null;
-
-        // Verificar que sea válida
-        if (!minDeliveryDate || isNaN(minDeliveryDate.getTime())) {
-            minDeliveryDate = new Date(); // o null si prefieres
+        // ✅ FIX: Usar fechas de entrega calculadas correctamente desde Printful
+        if (result.data.minDeliveryDate && result.data.maxDeliveryDate) {
+            console.log('📅 [RegisterGuest] Setting delivery dates from Printful:', {
+                minDeliveryDate: result.data.minDeliveryDate,
+                maxDeliveryDate: result.data.maxDeliveryDate
+            });
+            
+            await sale.update({
+                minDeliveryDate: result.data.minDeliveryDate,  // ✅ Ya viene en formato YYYY-MM-DD
+                maxDeliveryDate: result.data.maxDeliveryDate   // ✅ Sin hardcode +7 días
+            });
+        } else {
+            console.warn('⚠️ [RegisterGuest] No delivery dates returned from Printful for sale:', sale.id);
         }
-
-        // Generar la fecha máxima añadiendo 7 días
-        const maxDeliveryDate = new Date(minDeliveryDate);
-        maxDeliveryDate.setDate(maxDeliveryDate.getDate() + 7);
-
-        // Guardar ambas fechas en la venta
-        await sale.update({
-            minDeliveryDate: minDeliveryDate.toISOString().split('T')[0], // YYYY-MM-DD
-            maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
-        });
 
         // ❌ Email NO se envía aquí - PayPal webhook lo envía
         console.log('ℹ️ [Sale Controller] Email será enviado por PayPal webhook');
@@ -2028,13 +2023,19 @@ export const createAdminSale = async (req, res) => {
                     printfulStatus
                 });
 
-                // delivery dates may be in pfResp.data or pfResp.data.result
+                // ✅ FIX: Usar fechas calculadas correctamente (delivery dates vienen desde printfulService)
                 const pfData = pfResp.data.result || pfResp.data || {};
-                if (pfData.minDeliveryDate) {
-                    const minD = new Date(pfData.minDeliveryDate);
-                    const maxD = new Date(minD);
-                    maxD.setDate(maxD.getDate() + 7);
-                    await newSale.update({ minDeliveryDate: minD.toISOString().split('T')[0], maxDeliveryDate: maxD.toISOString().split('T')[0] });
+                if (pfData.minDeliveryDate && pfData.maxDeliveryDate) {
+                    console.log('📅 [Admin Create] Setting delivery dates from Printful:', {
+                        minDeliveryDate: pfData.minDeliveryDate,
+                        maxDeliveryDate: pfData.maxDeliveryDate
+                    });
+                    await newSale.update({ 
+                        minDeliveryDate: pfData.minDeliveryDate,  // ✅ Ya viene en formato YYYY-MM-DD
+                        maxDeliveryDate: pfData.maxDeliveryDate   // ✅ Sin hardcode +7 días
+                    });
+                } else {
+                    console.warn('[Printful] No delivery dates returned for admin create sale:', newSale.id);
                 }
             } else {
                 console.warn('[Printful] No se recibió data válida de la orden para admin create.');
@@ -2333,14 +2334,17 @@ export const adminCorrectSale = async (req, res) => {
                     replacementOfId: original.id
                 };
 
-                // delivery dates may be present in different shapes
+                // ✅ FIX: Usar fechas calculadas correctamente (delivery dates vienen desde printfulService)
                 const pfData = pfResp.data.result || pfResp.data || {};
-                if (pfData.minDeliveryDate) {
-                    const minD = new Date(pfData.minDeliveryDate);
-                    const maxD = new Date(minD);
-                    maxD.setDate(maxD.getDate() + 7);
-                    updatePayload.minDeliveryDate = minD.toISOString().split('T')[0];
-                    updatePayload.maxDeliveryDate = maxD.toISOString().split('T')[0];
+                if (pfData.minDeliveryDate && pfData.maxDeliveryDate) {
+                    console.log('📅 [Admin Correction] Setting delivery dates from Printful:', {
+                        minDeliveryDate: pfData.minDeliveryDate,
+                        maxDeliveryDate: pfData.maxDeliveryDate
+                    });
+                    updatePayload.minDeliveryDate = pfData.minDeliveryDate;  // ✅ Ya viene en formato YYYY-MM-DD
+                    updatePayload.maxDeliveryDate = pfData.maxDeliveryDate;  // ✅ Sin hardcode +7 días
+                } else {
+                    console.warn('[Printful] No delivery dates returned for admin correction sale:', newSale.id);
                 }
 
                 await newSale.update(updatePayload);
