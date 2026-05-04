@@ -9,7 +9,7 @@ import { User } from "../../../models/User.js";
 import { Guest } from "../../../models/Guest.js";
 import { Receipt } from "../../../models/Receipt.js";
 import { Tenant } from "../../../models/Tenant.js";
-import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
+import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
 
 /**
  * 🔔 Recibir y procesar webhooks de Printful
@@ -185,102 +185,8 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
     console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
     console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
     
-    // 📧 Enviar email al cliente notificando que está en producción
-    try {
-      // Obtener detalles completos para el email
-      const saleDetails = await SaleDetail.findAll({
-        where: { saleId: sale.id },
-        include: [
-          { 
-            model: Product,
-            attributes: ['id', 'title', 'portada']
-          },
-          { 
-            model: Variedad,
-            attributes: ['id', 'valor', 'color']
-          }
-        ]
-      });
-
-      const saleAddress = await SaleAddress.findOne({
-        where: { saleId: sale.id }
-      });
-
-      // Determinar email y nombre del cliente
-      let customerEmail, customerName;
-      if (sale.user) {
-        customerEmail = sale.user.email;
-        customerName = `${sale.user.name} ${sale.user.surname || ''}`.trim();
-      } else if (sale.guest) {
-        customerEmail = sale.guest.email;
-        customerName = sale.guest.name || 'Cliente';
-      } else if (saleAddress) {
-        // Orden externa - obtener email de SaleAddress
-        customerEmail = saleAddress.email;
-        customerName = `${saleAddress.name || ''} ${saleAddress.surname || ''}`.trim() || 'Cliente';
-        console.log(`📧 [WEBHOOK] Email obtenido de SaleAddress para orden externa`);
-      }
-
-      if (customerEmail) {
-        // Obtener tenant para personalización del email
-        let emailTenant = tenant;
-        if (!emailTenant && sale.tenant_id) {
-          emailTenant = await Tenant.findByPk(sale.tenant_id);
-        }
-        
-        // 🔧 Convertir tenant a objeto plano para que getters funcionen en templates
-        const tenantData = emailTenant ? emailTenant.get({ plain: true }) : null;
-        
-        // Preparar productos para el email
-        const products = saleDetails.map(detail => ({
-          image: `${process.env.URL_BACKEND}/api/products/uploads/product/${detail.product.portada}`,
-          title: detail.product.title,
-          quantity: detail.cantidad,
-          variant: detail.variedad ? detail.variedad.valor : null,
-          color: detail.variedad ? detail.variedad.color : null
-        }));
-
-        // Preparar datos para el email
-        const emailData = {
-          customer: {
-            name: customerName,
-            email: customerEmail
-          },
-          order: {
-            id: sale.id, // 🔑 ID para tracking
-            trackingToken: sale.trackingToken, // 🔒 Token para tracking
-            printfulOrderId: sale.printfulOrderId,
-            n_transaction: sale.n_transaction,
-            created: sale.createdAt,
-            total: sale.total,
-            currency: sale.currency_payment || 'EUR'
-          },
-          products: products,
-          address: {
-            name: saleAddress?.name || customerName,
-            address: saleAddress?.address || '',
-            ciudad: saleAddress?.ciudad || '',
-            region: saleAddress?.region || '',
-            telefono: saleAddress?.telefono || ''
-          },
-          tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
-        };
-
-        // Enviar email
-        const emailResult = await sendOrderPrintingEmail(emailData);
-        
-        if (emailResult.success) {
-          console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${customerEmail}`);
-        } else {
-          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
-        }
-      } else {
-        console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
-      }
-    } catch (emailError) {
-      console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError);
-      // No fallar el webhook por error de email
-    }
+    // ℹ️ Email de confirmación ya fue enviado por webhook Stripe/PayPal
+    console.log(`ℹ️ [WEBHOOK Printful] Orden #${sale.id} creada en Printful - Email ya enviado previamente`);
     
     return true; // Procesado exitosamente
     
@@ -384,44 +290,8 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
           console.log(`ℹ️ [WEBHOOK] No hay items en order.items, SaleDetails no creados`);
         }
         
-        // 3️⃣ Enviar email al comprador notificando producción
-        try {
-          const emailData = {
-            customer: {
-              name: order.recipient.name,
-              email: order.recipient.email
-            },
-            order: {
-              id: newSale.id, // 🔑 ID para tracking
-              trackingToken: newSale.trackingToken, // 🔒 Token para tracking
-              printfulOrderId: printfulOrderId,
-              n_transaction: newSale.n_transaction,
-              created: newSale.createdAt,
-              total: newSale.total,
-              currency: order.costs?.currency || 'USD'
-            },
-            products: [], // Orden externa - no tenemos detalles de productos en DB
-            address: {
-              name: order.recipient.name,
-              address: order.recipient.address1 || '',
-              ciudad: order.recipient.city || '',
-              region: order.recipient.state_name || order.recipient.state_code || '',
-              telefono: order.recipient.phone || ''
-            },
-            tenant: tenant // 🏢 Tenant para personalización
-          };
-          
-          const emailResult = await sendOrderPrintingEmail(emailData);
-          
-          if (emailResult.success) {
-            console.log(`📧 [WEBHOOK] Email "Order Printing" enviado a ${order.recipient.email}`);
-          } else {
-            console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
-          }
-        } catch (emailError) {
-          console.error('❌ [WEBHOOK] Error enviando email (no crítico):', emailError.message);
-          // No fallar el webhook por error de email
-        }
+        // 3️⃣ Email de confirmación ya enviado previamente (órdenes externas)
+        console.log(`ℹ️ [WEBHOOK Printful] Orden externa creada para tenant ${tenant.id} - Email omitido`);
         
         return true; // Procesado exitosamente
         

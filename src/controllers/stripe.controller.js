@@ -64,8 +64,34 @@ export const createCheckoutSession = async (req, res) => {
       moduleId,
       moduleKey,
       country,
-      locale
+      locale,
+      hasAddress: !!address,
+      addressPreview: address ? {
+        name: address.name,
+        email: address.email,
+        address: address.address,
+        ciudad: address.ciudad,
+        pais: address.pais
+      } : null
     }, null, 2));
+    
+    // 🚨 VALIDACIÓN CRÍTICA: Detectar address incompleto o null
+    if (address && (!address.name || !address.email || !address.address)) {
+      console.error('❌ [Stripe] Address incompleto recibido desde frontend:', address);
+      console.error('❌ [Stripe] ESTO CAUSARÁ FALLBACK EN WEBHOOK - Rechazando request');
+      return res.status(400).json({ 
+        message: 'Dirección incompleta. Por favor, complete todos los campos obligatorios.',
+        missingFields: {
+          name: !address.name,
+          email: !address.email,
+          address: !address.address
+        }
+      });
+    }
+    
+    if (!address) {
+      console.warn('⚠️ [Stripe] NO se recibió address en request body - se usará fallback en webhook');
+    }
     
     // 🆕 Detectar si es compra de módulo
     const isModulePurchase = !!moduleId;
@@ -275,7 +301,19 @@ export const createCheckoutSession = async (req, res) => {
         country : requestCountry, // 🌍 País de contexto
         locale  : requestLocale,  // 🌍 Idioma de contexto
         // Prefer lightweight cartId reference to the stored CheckoutCache when possible
-        ...(checkoutCache ? { cartId: String(checkoutCache.id) } : { cart: JSON.stringify(sanitizedCart) })
+        ...(checkoutCache ? { cartId: String(checkoutCache.id) } : { cart: JSON.stringify(sanitizedCart) }),
+        // 🔒 BACKUP: Incluir address completa en metadata como última línea de defensa
+        ...(address && {
+          addressName: address.name || '',
+          addressSurname: address.surname || '',
+          addressEmail: address.email || '',
+          addressLine: address.address || '',
+          addressCity: address.ciudad || '',
+          addressRegion: address.region || '',
+          addressCountry: address.pais || '',
+          addressZipcode: address.zipcode || '',
+          addressPhone: address.telefono || ''
+        })
       },
     });
 
@@ -977,9 +1015,46 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
         }
       }
 
-      // if (!saleAddressFromCache && req && req._stripe_cached_address) {
-      //   saleAddressFromCache = req._stripe_cached_address;
-      // }
+      // 🔒 PRIORIDAD DE FUENTES: Intentar múltiples fuentes antes de usar fallback
+      if (!saleAddressFromCache) {
+        console.warn('[Stripe Webhook] ⚠️ CheckoutCache address es NULL, intentando fuentes alternativas...');
+        
+        // FUENTE 1: Metadata de Stripe (backup desde createCheckoutSession)
+        if (session.metadata?.addressName && session.metadata?.addressEmail) {
+          saleAddressFromCache = {
+            name: session.metadata.addressName || '',
+            surname: session.metadata.addressSurname || '',
+            email: session.metadata.addressEmail || '',
+            address: session.metadata.addressLine || '',
+            ciudad: session.metadata.addressCity || '',
+            region: session.metadata.addressRegion || '',
+            pais: session.metadata.addressCountry || 'ES',
+            zipcode: session.metadata.addressZipcode || '',
+            telefono: session.metadata.addressPhone || ''
+          };
+          console.log('[Stripe Webhook] ✅ Address recuperado desde Stripe metadata:', saleAddressFromCache);
+        }
+        // FUENTE 2: Stripe customer_details (si el usuario completó address en Stripe Checkout)
+        else if (session.customer_details?.address) {
+          const stripeAddr = session.customer_details.address;
+          saleAddressFromCache = {
+            name: session.customer_details.name || '',
+            surname: '',
+            email: session.customer_details.email || session.metadata?.email || '',
+            address: stripeAddr.line1 || '',
+            ciudad: stripeAddr.city || '',
+            region: stripeAddr.state || '',
+            pais: stripeAddr.country || 'ES',
+            zipcode: stripeAddr.postal_code || '',
+            telefono: session.customer_details.phone || ''
+          };
+          console.log('[Stripe Webhook] ✅ Address recuperado desde Stripe customer_details:', saleAddressFromCache);
+        } else {
+          console.error('[Stripe Webhook] ❌ NO se pudo recuperar address de NINGUNA fuente (CheckoutCache, metadata, customer_details)');
+        }
+      } else {
+        console.log('[Stripe Webhook] ✅ Address recuperado desde CheckoutCache correctamente:', saleAddressFromCache);
+      }
 
       // Crear recibo (Receipt) asociado a la venta ===
       try {
@@ -1171,10 +1246,17 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           console.warn('[Stripe Webhook] Could not persist SaleAddress for saleId=', sale.id, addrErr && addrErr.message);
         }
 
-        // 🆕 FALLBACK: Si no se creó SaleAddress, crear una mínima con datos de Stripe
+        // 🆕 FALLBACK MEJORADO: Solo crear si NO se pudo obtener address de ninguna fuente
         try {
           const existingAddr = await SaleAddress.findOne({ where: { saleId: sale.id } });
           if (!existingAddr) {
+            // 🚨 CRÍTICO: Si no se creó SaleAddress, significa que NO hay datos de ninguna fuente
+            console.error('🚨 [Stripe Webhook] ❌ CRÍTICO: NO se pudo crear SaleAddress - ninguna fuente válida de datos');
+            console.error('🚨 [Stripe Webhook] CheckoutCache address:', saleAddressFromCache ? 'found' : 'NULL');
+            console.error('🚨 [Stripe Webhook] Stripe metadata address:', session.metadata?.addressName ? 'found' : 'NULL');
+            console.error('🚨 [Stripe Webhook] Stripe customer_details:', session.customer_details?.address ? 'found' : 'NULL');
+            
+            // Solo crear fallback si al menos hay email disponible
             const emailFromStripe = session.customer_details?.email || session.metadata?.email || '';
             const nameFromStripe = session.customer_details?.name || 'Cliente';
             
@@ -1188,17 +1270,19 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
                 name: firstName,
                 surname: lastName,
                 pais: country || 'ES',
-                address: 'Dirección de checkout',
+                address: '⚠️ DIRECCIÓN NO DISPONIBLE - Verificar con cliente',
                 ciudad: '',
                 region: '',
                 telefono: '',
                 email: emailFromStripe,
-                nota: 'Creado desde webhook de Stripe (fallback)',
+                nota: '🚨 FALLBACK: No se recibió dirección completa. Contactar cliente antes de enviar.',
                 zipcode: ''
               });
-              console.log('[Stripe Webhook] ✅ Created fallback SaleAddress with email from Stripe:', emailFromStripe);
+              console.log('[Stripe Webhook] ⚠️ Fallback SaleAddress creado con email:', emailFromStripe);
+              console.log('[Stripe Webhook] 📧 ACCIÓN REQUERIDA: Verificar dirección con cliente antes de enviar pedido');
             } else {
-              console.warn('[Stripe Webhook] ⚠️ No email available in Stripe session to create fallback SaleAddress');
+              console.error('[Stripe Webhook] ❌ FALLBACK IMPOSIBLE: No hay email disponible');
+              console.error('[Stripe Webhook] ❌ Sale ID:', sale.id, '- PEDIDO BLOQUEADO - Requiere intervención manual');
             }
           }
         } catch (fallbackErr) {
@@ -1247,6 +1331,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           console.log('🔍 [DEBUG] sale.id:', sale.id);
           console.log('🔍 [DEBUG] sale.tenant_id:', sale.tenant_id);
           console.log('🔍 [DEBUG] timestamp:', new Date().toISOString());
+          console.log('📧 EMAIL TRIGGERED FROM: stripe.controller.js - PRINTFUL PURCHASE (line ~1335)');
           
           await sendEmail(sale.id);
           

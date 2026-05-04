@@ -226,6 +226,7 @@ export const paypalWebhook = async (req, res) => {
 
     // Enviar email de confirmación
     try {
+      console.log('📧 EMAIL TRIGGERED FROM: paypal.controller.js - PAYPAL WEBHOOK (line ~229)');
       await sendEmail(sale.id);
       console.log('[PayPal Webhook] ✅ Confirmation email sent');
     } catch (emailErr) {

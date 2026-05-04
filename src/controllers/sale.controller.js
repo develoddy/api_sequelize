@@ -205,20 +205,8 @@ export const registerGuest = async (req, res) => {
                 total: sale.total
             });
             
-            // 🆕 Enviar email de confirmación para módulos
-            console.log('📧 [Sale Controller GUEST] ===== ENVIANDO EMAIL DE CONFIRMACIÓN =====');
-            console.log('📧 [Sale Controller GUEST] Sale ID:', sale.id);
-            console.log('📧 [Sale Controller GUEST] Module ID:', moduleId);
-            console.log('📧 [Sale Controller GUEST] Sale email:', sale.email);
-            console.log('📧 [Sale Controller GUEST] Address email:', saleAddress?.email);
-            
-            try {
-                await sendEmail(sale.id);
-                console.log('✅ [Sale Controller GUEST] Confirmation email SENT successfully for module purchase');
-            } catch (emailErr) {
-                console.error('❌ [Sale Controller GUEST] Error sending confirmation email:', emailErr);
-                console.error('❌ [Sale Controller GUEST] Email error stack:', emailErr.stack);
-            }
+            // ❌ Email NO se envía aquí - Stripe/PayPal webhooks lo envían
+            console.log('ℹ️ [Sale Controller GUEST] Email será enviado por webhook (Stripe/PayPal)');
             
             // Recargar sale con SaleAddresses
             const saleWithDetails = await Sale.findByPk(sale.id, {
@@ -309,11 +297,8 @@ export const registerGuest = async (req, res) => {
             maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
         });
 
-        try {
-            await sendEmail(sale.id);
-        } catch (emailErr) {
-            console.error('Error enviando email de confirmación (guest):', emailErr);
-        }
+        // ❌ Email NO se envía aquí - PayPal webhook lo envía
+        console.log('ℹ️ [Sale Controller GUEST] Email será enviado por PayPal webhook');
 
         const saleDetails = await getSaleDetails(sale.id);
 
@@ -485,13 +470,8 @@ export const register = async (req, res) => {
             await createSaleReceipt(sale.id);
             console.log('[Sale Controller] ✅ Receipt created for sale:', sale.id);
             
-            // 🆕 Enviar email de confirmación para módulos
-            try {
-                await sendEmail(sale.id);
-                console.log('[Sale Controller] ✅ Confirmation email sent for module purchase');
-            } catch (emailErr) {
-                console.error('[Sale Controller] ❌ Error sending confirmation email:', emailErr);
-            }
+            // ❌ Email NO se envía aquí - Stripe webhook lo envía
+            console.log('ℹ️ [Sale Controller] Email será enviado por Stripe webhook');
             
             console.log('[Sale Controller] ✅ MODULE sale completed successfully:', {
                 saleId: sale.id,
@@ -604,12 +584,8 @@ export const register = async (req, res) => {
             maxDeliveryDate: maxDeliveryDate.toISOString().split('T')[0]
         });
 
-        // Enviar email de confirmación sin afectar el flujo
-        try {
-            await sendEmail(sale.id);
-        } catch (emailErr) {
-            console.error('Error enviando email de confirmación (auth):', emailErr);
-        }
+        // ❌ Email NO se envía aquí - PayPal webhook lo envía
+        console.log('ℹ️ [Sale Controller] Email será enviado por PayPal webhook');
 
         // Obtener los detalles de la venta
         const saleDetails = await getSaleDetails(sale.id);

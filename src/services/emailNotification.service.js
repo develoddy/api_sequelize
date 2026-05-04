@@ -79,6 +79,8 @@ const renderTemplate = async (templateName, data) => {
  */
 const sendEmail = async (to, subject, html, from = null) => {
     try {
+        console.log('📧 EMAIL TRIGGERED FROM:', import.meta.url);
+        console.log('📧 [emailNotification] Enviando email a:', to, '| Subject:', subject);
         const transporter = getTransporter();
         
         const mailOptions = {
@@ -156,6 +158,7 @@ export async function sendOrderShippedEmail(orderData) {
  */
 export async function sendOrderPrintingEmail(orderData) {
     try {
+        console.log('📧 EMAIL TRIGGERED FROM:', import.meta.url);
         console.log('🎨 Sending "Order Printing" email...', {
             customer: orderData.customer.name,
             printfulOrderId: orderData.order.printfulOrderId

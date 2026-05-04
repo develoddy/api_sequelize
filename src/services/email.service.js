@@ -12,9 +12,42 @@ import Handlebars from 'handlebars';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
 
+// 🛡️ GUARD: Prevenir doble ejecución para la misma sale_id
+const sentEmails = new Set();
+const inProgress = new Set();
+
 export async function sendOrderConfirmationEmail(sale_id) {
+    // 🚨 UNIQUE EMAIL SEND LOG
+    const uniqueId = `sale-${sale_id}-${Date.now()}`;
     console.log('📧 ===== INICIO send_email =====');
+    console.log('📧 UNIQUE EMAIL SEND', {
+        saleId: sale_id,
+        timestamp: Date.now(),
+        uniqueId: uniqueId,
+        stack: new Error().stack.split('\n').slice(2, 5).join('\n')
+    });
+    console.log('📧 EMAIL TRIGGERED FROM:', import.meta.url);
     console.log('📧 [send_email] Sale ID:', sale_id);
+    
+    // 🛡️ VERIFICAR SI YA SE ENVIÓ
+    if (sentEmails.has(sale_id)) {
+        console.warn('⚠️ ⚠️ ⚠️ EMAIL DUPLICADO BLOQUEADO:', sale_id);
+        console.warn('⚠️ Este email ya fue enviado previamente');
+        console.warn('⚠️ Stack de la llamada duplicada:', new Error().stack);
+        return;
+    }
+    
+    // 🛡️ VERIFICAR SI ESTÁ EN PROGRESO
+    if (inProgress.has(sale_id)) {
+        console.warn('⚠️ ⚠️ ⚠️ EMAIL EN PROGRESO - BLOQUEANDO DUPLICADO:', sale_id);
+        console.warn('⚠️ Este email ya se está enviando en otra ejecución');
+        console.warn('⚠️ Stack de la llamada duplicada:', new Error().stack);
+        return;
+    }
+    
+    // Marcar como en progreso
+    inProgress.add(sale_id);
+    console.log('🔒 [Guard] Email marcado como EN PROGRESO:', sale_id);
     
     try {
         // Función para formatear precios a 2 decimales estándar
@@ -134,31 +167,28 @@ export async function sendOrderConfirmationEmail(sale_id) {
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT),
-            secure: true, // true para puerto 465
+            secure: true,
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             },
             tls: {
-                // Para depurar problemas TLS, puede ser útil:
                 rejectUnauthorized: false
             },
-            logger: true,    // Para logging detallado de SMTP
-            debug: false      // Mostrar detalles en consola
+            pool: false,  // 🔥 DESHABILITAR POOL - 1 conexión por envío
+            maxConnections: 1,  // 🔥 MÁXIMO 1 conexión simultánea
+            logger: true,
+            debug: false
         });
 
-        transporter.verify(function(error, success) {
-            if (error) {
-                console.log('SMTP connection error:', error);
-            } else {
-                console.log('SMTP server is ready to take messages');
-            }
-        });
+        // ❌ ELIMINAR verify() - abre conexión innecesaria
+        // La verificación se hará implícitamente al enviar
+        console.log('📧 [Transporter] Creado sin pool, maxConnections=1');
 
         console.log('🔍 [DEBUG] Llamando readHTMLFile...');
-        console.log('🔍 [DEBUG] Path:', `${process.cwd()}/src/mails/email_sale.html`);
+        console.log('🔍 [DEBUG] Path:', `${process.cwd()}/src/mails/email_sale-old.html`);
         
-        readHTMLFile(`${process.cwd()}/src/mails/email_sale.html`, (err, html) => {
+        readHTMLFile(`${process.cwd()}/src/mails/email_sale-old.html`, async (err, html) => {
             console.log('🔍 [DEBUG] readHTMLFile callback ejecutado');
             
             if (err) {
@@ -394,44 +424,55 @@ export async function sendOrderConfirmationEmail(sale_id) {
             console.log('🔍 [DEBUG] to:', mailOptions.to);
             console.log('🔍 [DEBUG] subject:', mailOptions.subject);
             console.log('🔍 [DEBUG] timestamp:', new Date().toISOString());
+            console.log('🔍 [DEBUG] saleId:', sale_id);
             
+            // 🔥 ASYNC/AWAIT PURO - SIN CALLBACKS
             try {
-                transporter.sendMail(mailOptions, (error, info) => {
-                    console.log('🔍 [DEBUG] sendMail CALLBACK ejecutado');
-                    
-                    if (error) {
-                        console.error('❌ [DEBUG] TRANSPORTER ERROR:',error.message);
-                        console.error('❌ [DEBUG] Error code:', error.code);
-                        console.error('❌ [DEBUG] Error response:', error.response);
-                        console.error('❌ [Email] Error enviando email de confirmación:', error.message || error);
-                        console.error('❌ [Email] Error completo:', error);
-                        // Si el error es de dominio rechazado (nullMX), registrarlo pero no lanzar excepción
-                        if (error.message?.includes('nullMX') || error.message?.includes('Recipient address rejected')) {
-                            console.warn(`⚠️ [Email] Dominio de email rechazado: ${emailDestino}. El email no puede ser entregado.`);
-                        }
-                    } else {
-                        console.log('✅ [DEBUG] ===== EMAIL ENVIADO EXITOSAMENTE =====');
-                        console.log('✅ [DEBUG] Response:', info.response);
-                        console.log('✅ [DEBUG] MessageId:', info.messageId);
-                        console.log('✅ [DEBUG] Accepted:', info.accepted);
-                        console.log('✅ [DEBUG] Rejected:', info.rejected);
-                        console.log('✅ [Email] Email de confirmación enviado exitosamente!');
-                        console.log('✅ [Email] Info response:', info.response);
-                        console.log('✅ [Email] MessageId:', info.messageId);
-                    }
-                });
+                const info = await transporter.sendMail(mailOptions);
+                
+                console.log('✅ [DEBUG] ===== EMAIL ENVIADO EXITOSAMENTE =====');
+                console.log('✅ [DEBUG] Response:', info.response);
+                console.log('✅ [DEBUG] MessageId:', info.messageId);
+                console.log('✅ [DEBUG] Accepted:', info.accepted);
+                console.log('✅ [DEBUG] Rejected:', info.rejected);
+                console.log('✅ [Email] Email de confirmación enviado exitosamente!');
+                console.log('✅ [Email] MessageId:', info.messageId);
+                
+                // ✅ Marcar como enviado exitosamente
+                sentEmails.add(sale_id);
+                inProgress.delete(sale_id);
+                console.log('✅ [Guard] Email marcado como ENVIADO:', sale_id);
+                
             } catch (sendError) {
-                console.error('❌ [Email] Excepción al intentar enviar email:', sendError.message || sendError);
-                console.error('❌ [Email] Excepción completa:', sendError);
-                // No lanzar error para evitar bloquear el flujo de la venta
+                console.error('❌ [Email] Error enviando email:', sendError.message || sendError);
+                console.error('❌ [Email] Error code:', sendError.code);
+                console.error('❌ [Email] Error response:', sendError.response);
+                console.error('❌ [Email] Error stack:', sendError.stack);
+                
+                // Limpiar estado en caso de error
+                inProgress.delete(sale_id);
+                console.log('❌ [Guard] Email removido de EN PROGRESO debido a error:', sale_id);
+                
+                // Si el error es de dominio rechazado, no propagar
+                if (sendError.message?.includes('nullMX') || sendError.message?.includes('Recipient address rejected')) {
+                    console.warn(`⚠️ [Email] Dominio rechazado: ${emailDestino}`);
+                } else {
+                    // Para otros errores, registrar pero no bloquear
+                    console.error('❌ [Email] Error crítico pero no se propaga');
+                }
             }
         });
 
     } catch (error) {
         console.error('❌ [send_email] Error general en send_email():', error.message || error);
         console.error('❌ [send_email] Error stack:', error.stack);
-        // No propagar el error para evitar bloquear operaciones críticas
+        
+        // Limpiar estado en caso de error general
+        inProgress.delete(sale_id);
+        console.log('❌ [Guard] Email removido de EN PROGRESO debido a error general:', sale_id);
     } finally {
         console.log('📧 ===== FIN send_email =====');
+        console.log('📊 [Guard Stats] Emails enviados total:', sentEmails.size);
+        console.log('📊 [Guard Stats] Emails en progreso:', inProgress.size);
     }
 }
