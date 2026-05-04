@@ -511,6 +511,31 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
 
   console.log('[Stripe Webhook] Purchase type:', isModulePurchase ? `MODULE (${moduleKey})` : 'PRINTFUL');
 
+  // 🛡️ IDEMPOTENCIA: Verificar si ya existe Sale con este stripeSessionId
+  const existingSale = await Sale.findOne({
+    where: { stripeSessionId: session.id }
+  });
+  
+  if (existingSale) {
+    console.log('⚠️ [Stripe Webhook] Sale already exists for session:', session.id);
+    console.log('✅ [Stripe Webhook] Existing sale ID:', existingSale.id);
+    console.log('✅ [Stripe Webhook] Idempotent check - returning existing sale (no action taken)');
+    await webhookLog.markAsSuccess('Sale already processed (idempotent check)');
+    return res.json({ 
+      received: true, 
+      saleId: existingSale.id, 
+      idempotent: true,
+      message: 'Sale already exists, webhook ignored safely'
+    });
+  }
+  
+  console.log('✅ [Stripe Webhook] No existing sale found - proceeding with sale creation');
+
+  // 🔒 TRANSACCIÓN DB: Asegurar atomicidad de Sale + SaleAddress + SaleDetails
+  const transaction = await sequelize.transaction();
+  console.log('🔄 [Stripe Webhook] Database transaction started');
+
+  let sale;
   try {
     // 🔒 Generar token único para tracking público
     const trackingToken = crypto.randomBytes(16).toString('hex'); // 32 caracteres
@@ -520,7 +545,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
     const locale = session.metadata.locale || 'es';
 
     // Crear venta con ID amigable
-    const sale = await Sale.create({
+    sale = await Sale.create({
       userId,
       guestId,
       tenant_id: tenantId, // 🏢 Asociar con tenant (ej: tenant 43 para tienda.lujandev.com)
@@ -532,11 +557,11 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
       trackingToken, // 🔒 Token de seguridad para tracking
       country, // 🌍 País de contexto
       locale,  // 🌍 Idioma de contexto
-    });
+    }, { transaction });
 
     // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}
     const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
-    await sale.update({ n_transaction: friendlyTransactionId });
+    await sale.update({ n_transaction: friendlyTransactionId }, { transaction });
     
     // 🆕 Si es compra de módulo, crear venta simple y retornar
     if (isModulePurchase) {
@@ -544,7 +569,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
       console.log('[Stripe Webhook] session.metadata:', session.metadata);
       
       // Actualizar sale con module_id
-      await sale.update({ module_id: moduleId });
+      await sale.update({ module_id: moduleId }, { transaction });
       
       // 🆕 Crear SaleAddress para módulos (NECESARIO PARA EMAIL)
       console.log('[Stripe Webhook] Creating SaleAddress for module...');
@@ -601,7 +626,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           zipcode: moduleAddress.zipcode || ''
         };
         
-        await SaleAddress.create(saleAddressPayload);
+        await SaleAddress.create(saleAddressPayload, { transaction });
         console.log('✅ [Stripe Webhook] SaleAddress created with email:', moduleAddress.email);
       } else {
         console.error('❌ [Stripe Webhook] No email available to create SaleAddress!');
@@ -625,44 +650,59 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           total: module.base_price,
           discount: 0,
           type_discount: 1
-        });
+        }, { transaction });
         
         console.log('[Stripe Webhook] MODULE sale created successfully:', sale.id);
         
         // 🆕 Auto-actualizar syncStatus según tipo de módulo
         if (module.type === 'digital' || module.type === 'service') {
-          await sale.update({ syncStatus: 'fulfilled' });
+          await sale.update({ syncStatus: 'fulfilled' }, { transaction });
           console.log('[Stripe Webhook] ✅ syncStatus set to fulfilled for digital/service module');
         } else if (module.type === 'physical') {
           // Productos físicos mantienen pending hasta fulfillment
           console.log('[Stripe Webhook] 📦 syncStatus remains pending for physical module');
         }
         
+        // ✅ COMMIT: Transacción completada - Sale + SaleAddress + SaleDetail confirmados
+        await transaction.commit();
+        console.log('✅ [Stripe Webhook] Transaction committed successfully for module purchase');
+        
+        // 🔹 OPERACIONES NO TRANSACCIONALES (después del commit)
+        // Pueden fallar sin afectar la integridad de la venta
+        
         // 📊 Incrementar estadísticas del módulo
-        await module.increment({
-          total_sales: 1,
-          total_revenue: module.base_price,
-          total_orders: 1
-        });
-        await module.update({ last_sale_at: new Date() });
-        console.log('[Stripe Webhook] 📊 Module stats updated:', {
-          total_sales: module.total_sales + 1,
-          total_revenue: parseFloat(module.total_revenue) + module.base_price
-        });
+        try {
+          await module.increment({
+            total_sales: 1,
+            total_revenue: module.base_price,
+            total_orders: 1
+          });
+          await module.update({ last_sale_at: new Date() });
+          console.log('[Stripe Webhook] 📊 Module stats updated:', {
+            total_sales: module.total_sales + 1,
+            total_revenue: parseFloat(module.total_revenue) + module.base_price
+          });
+        } catch (statsErr) {
+          console.error('⚠️ [Stripe Webhook] Error updating module stats (non-critical):', statsErr.message);
+        }
         
         // � AUTO-VALIDACIÓN: Si alcanzó el target, pasar de Testing → Live
-        await module.reload();
-        if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
-          await module.update({
-            status: 'live',
-            validated_at: new Date()
-          });
-          console.log('[Stripe Webhook] 🎉 MODULE AUTO-VALIDATED! Transitioned from testing → live:', {
-            module_id: module.id,
-            module_key: module.key,
-            total_sales: module.total_sales,
-            validation_target: module.validation_target_sales
-          });
+        try {
+          await module.reload();
+          if (module.status === 'testing' && module.total_sales >= module.validation_target_sales) {
+            await module.update({
+              status: 'live',
+              validated_at: new Date()
+            });
+            console.log('[Stripe Webhook] 🎉 MODULE AUTO-VALIDATED! Transitioned from testing → live:', {
+              module_id: module.id,
+              module_key: module.key,
+              total_sales: module.total_sales,
+              validation_target: module.validation_target_sales
+            });
+          }
+        } catch (validationErr) {
+          console.error('⚠️ [Stripe Webhook] Error in auto-validation (non-critical):', validationErr.message);
         }
         
         // �🆕 Enviar email de confirmación para módulos
@@ -671,10 +711,10 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           await sendEmail(sale.id);
           console.log('✅ [Stripe Webhook] Confirmation email sent for module purchase');
         } catch (emailErr) {
-          console.error('❌ [Stripe Webhook] Error sending confirmation email:', emailErr);
-          console.error('❌ [Stripe Webhook] Error stack:', emailErr.stack);
+          console.error('⚠️ [Stripe Webhook] Error sending confirmation email (non-critical):', emailErr.message);
         }
         
+        await webhookLog.markAsSuccess('Module purchase processed successfully');
         return res.json({ received: true, saleId: sale.id, type: 'module' });
       } else {
         console.error('[Stripe Webhook] Module not found:', moduleId);
@@ -959,7 +999,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           total
         });
 
-        const createdDetail = await SaleDetail.create(detailPayload);
+        const createdDetail = await SaleDetail.create(detailPayload, { transaction });
         createdDetailsCount++;
         console.log(`[Stripe Webhook] ✅ SaleDetail ${createdDetailsCount}/${expectedCount} creado exitosamente:`, {
           saleDetailId: createdDetail.id,
@@ -974,8 +1014,8 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
         console.error('[Stripe Webhook] Item que falló:', item);
         console.error('[Stripe Webhook] Error details:', detailErr && (detailErr.stack || detailErr.message || detailErr));
         
-        // Este error es crítico - no continuar con la limpieza
-        console.error(`[Stripe Webhook] ❌ CRÍTICO: Falló creación de SaleDetail, NO se limpiará el carrito`);
+        // Error crítico - lanzar para hacer rollback de transacción
+        throw new Error(`Failed to create SaleDetail ${index + 1}: ${detailErr.message}`);
       }
     }
 
@@ -986,6 +1026,8 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
     
 
     if (!saleDetailsCreationSuccess) {
+      await transaction.rollback();
+      console.error('❌ [Stripe Webhook] Transaction rolled back - SaleDetails creation incomplete');
       
       return res.status(500).json({ 
         received: false, 
@@ -995,8 +1037,14 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
       });
     }
 
+    // ✅ COMMIT: Transacción completada - Sale + SaleAddress + SaleDetails confirmados
+    await transaction.commit();
+    console.log('✅ [Stripe Webhook] Transaction committed successfully - Sale + SaleAddress + SaleDetails created');
+
+    // 🔹 OPERACIONES NO TRANSACCIONALES (después del commit)
+    // Printful, Email, Cleanup - pueden fallar sin afectar la integridad de la venta
+
     // Decrementar cupones solo si todos los SaleDetails se crearon exitosamente
-    
     await decrementCouponUsageForStripe(cartItems);
 
     // === Printful + email flow ===
@@ -1304,8 +1352,14 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           if (pfData) {
             const printfulOrderId = pfData.orderId ?? (pfData.result && pfData.result.id) ?? null;
             const printfulStatus = pfData.raw?.status || (pfData.result && pfData.result.status) || 'unknown';
-            await sale.update({ printfulOrderId, printfulStatus, printfulUpdatedAt: new Date() });
+            await sale.update({ 
+              printfulOrderId, 
+              printfulStatus, 
+              printfulUpdatedAt: new Date(),
+              syncUpdatedAt: new Date() // 🔹 Timestamp de última sincronización exitosa
+            });
             printfulCreated = true;
+            console.log('✅ [Stripe Webhook] Printful order created successfully - orderId:', printfulOrderId);
 
             const pfDates = (pfData.result || pfData);
             if (pfDates && pfDates.minDeliveryDate) {
@@ -1320,7 +1374,22 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
             console.warn('[Stripe Webhook] Printful returned no data for saleId=', sale.id, 'pfResult=', pfResult);
           }
         } catch (pfErr) {
-          console.error('[Stripe Webhook] Error creating Printful order for saleId=', sale.id, pfErr && (pfErr.message || pfErr));
+          // 🚨 IMPORTANTE: Venta YA confirmada - solo actualizar estado de sincronización
+          console.error('❌ [Stripe Webhook] PRINTFUL ORDER FAILED for saleId=', sale.id);
+          console.error('❌ [Stripe Webhook] Error:', pfErr && (pfErr.message || pfErr));
+          console.error('❌ [Stripe Webhook] Stack:', pfErr && pfErr.stack);
+          
+          // Guardar estado de fallo en la venta para visibilidad manual
+          try {
+            await sale.update({ 
+              syncStatus: 'failed',
+              syncError: pfErr?.message || 'Unknown Printful error',
+              syncUpdatedAt: new Date()
+            });
+            console.log('⚠️ [Stripe Webhook] Sale syncStatus updated to "failed" - Manual intervention required');
+          } catch (updateErr) {
+            console.error('❌ [Stripe Webhook] Could not update syncStatus:', updateErr.message);
+          }
         }
 
         // 📧 Enviar email de confirmación
@@ -1414,7 +1483,17 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
 
     console.log('[Stripe Webhook] Venta y detalles registrados correctamente, saleId=', sale.id);
   } catch (err) {
-    console.error('[Stripe Webhook] Error registrando venta + detalles:', err && (err.stack || err.message || err));
+    // ❌ ROLLBACK: Deshacer cambios si la transacción aún está activa
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+        console.error('❌ [Stripe Webhook] Transaction rolled back due to error');
+      } catch (rollbackErr) {
+        console.error('❌ [Stripe Webhook] Error during rollback:', rollbackErr.message);
+      }
+    }
+    
+    console.error('[Stripe Webhook] ❌ Error registrando venta + detalles:', err && (err.stack || err.message || err));
     await webhookLog.markAsFailed(err.message || 'Unknown error during sale processing');
     return res.status(500).json({ received: false, error: err.message });
   }

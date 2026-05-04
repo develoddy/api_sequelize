@@ -258,9 +258,6 @@ export const createPrintfulOrderService = async ( orderData ) => {
             locale: "es_ES"
         });
 
-        //console.log("---> API createPrintfulOrderService > shippingRatesRes: " , shippingRatesRes.data.result);
-        //return;
-
         const selectedRate = shippingRatesRes.data.result[0];
         const minDeliveryDate = selectedRate.minDeliveryDate; // ya formateado YYYY-MM-DD
         const maxDeliveryDate = selectedRate.maxDeliveryDate;

@@ -12,7 +12,12 @@ export const Sale = sequelize.define('sales', {
   minDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
   maxDeliveryDate: { type: DataTypes.DATEONLY, allowNull: true },
   // Stripe session identifier
-  stripeSessionId: { type: DataTypes.STRING, allowNull: true },
+  stripeSessionId: { 
+    type: DataTypes.STRING, 
+    allowNull: true,
+    unique: true,  // 🔒 Prevenir duplicados de webhooks Stripe
+    comment: 'ID de sesión de Stripe Checkout (único)'
+  },
   // Printful integration fields
   printfulOrderId: {
     type: DataTypes.STRING,
@@ -60,6 +65,16 @@ export const Sale = sequelize.define('sales', {
     type: DataTypes.ENUM('pending', 'failed', 'shipped', 'canceled', 'fulfilled'),
     allowNull: true,
     defaultValue: 'pending'
+  },
+  syncError: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Mensaje de error cuando la sincronización con Printful falla'
+  },
+  syncUpdatedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp de última actualización de sincronización'
   },
   completedAt: {
     type: DataTypes.DATE,
