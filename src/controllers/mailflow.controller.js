@@ -340,15 +340,68 @@ export const getSequence = async (req, res) => {
 /**
  * Lista todas las secuencias del usuario/tenant
  * GET /api/mailflow/sequences
+ * 
+ * ============================================================================
+ * MVP MODE - PUBLIC VALIDATION
+ * DO NOT REVERT YET
+ * ============================================================================
+ * 
+ * CURRENT BEHAVIOR:
+ * - WITH AUTH: Filter by tenantId or userId (normal multi-tenant)
+ * - WITHOUT AUTH: Requires ?sequenceIds=seq1,seq2,seq3 from localStorage
+ * 
+ * SECURITY (MVP MODE):
+ * - No auth + no sequenceIds = empty array (safe)
+ * - No auth + sequenceIds = only those sequences (localStorage-based identity)
+ * - User can only see sequences they created (IDs stored in localStorage)
+ * 
+ * WHY THIS WORKS FOR MVP:
+ * - User creates sequence → sequenceId saved to localStorage
+ * - User visits dashboard → frontend sends sequenceIds from localStorage
+ * - Backend returns ONLY those sequences
+ * - If user loses localStorage = loses access (like logout)
+ * 
+ * FUTURE (PRODUCTION):
+ * - Always require authentication
+ * - Always filter by tenantId (workspace isolation)
+ * - No localStorage-based identity
+ * - Proper session management
+ * 
+ * @date 2026-05-05
+ * ============================================================================
  */
 export const listSequences = async (req, res) => {
     try {
         const where = {};
         
+        // Multi-tenant mode: filtrar por tenantId o userId
         if (req.user?.tenantId) {
             where.tenantId = req.user.tenantId;
         } else if (req.user?.id) {
             where.userId = req.user.id;
+        } else {
+            // MVP público: requiere sequenceIds en query param
+            // Frontend debe enviar los IDs que tiene guardados en localStorage
+            const { sequenceIds } = req.query;
+            
+            if (!sequenceIds) {
+                // Sin autenticación y sin sequenceIds = retornar vacío (seguridad)
+                return res.json({
+                    status: 200,
+                    data: []
+                });
+            }
+            
+            // Parsear sequenceIds (formato: "seq1,seq2,seq3")
+            const idsArray = sequenceIds.split(',').filter(id => id.trim());
+            if (idsArray.length === 0) {
+                return res.json({
+                    status: 200,
+                    data: []
+                });
+            }
+            
+            where.sequenceId = idsArray;
         }
 
         const sequences = await MailflowSequence.findAll({

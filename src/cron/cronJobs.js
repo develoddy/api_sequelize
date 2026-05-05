@@ -8,6 +8,7 @@ import {
     aggregateMonthlyMetrics 
 } from '../services/analyticsCalculation.service.js';
 import { startWebhookRetryCron } from './retry-webhooks.cron.js';
+import { startMailflowSenderCron } from './mailflow-sender.cron.js';
 
 /**
  * ⏰ CRON JOBS
@@ -144,6 +145,10 @@ export function initCronJobs() {
     
     // 🔄 Iniciar cron de retry de webhooks (SaaS Management)
     startWebhookRetryCron();
+    
+    // 📧 Iniciar cron de MailFlow (Email Sequences)
+    startMailflowSenderCron();
+    console.log('   📧 MailFlow Sender: Cada 15 minutos (Europe/Madrid)');
 }
 
 /**

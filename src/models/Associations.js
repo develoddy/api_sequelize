@@ -322,3 +322,24 @@ Liability.belongsTo(User, {
   foreignKey: 'user_id', 
   as: 'user' 
 });
+
+/*
+ * MAILFLOW MODULE
+ * RELACIONES MAILFLOW_CONTACT -> MAILFLOW_SEQUENCE
+ * Un contacto pertenece a una secuencia
+ * Una secuencia tiene múltiples contactos
+ */
+import { MailflowContact } from './MailflowContact.js';
+import { MailflowSequence } from './MailflowSequence.js';
+
+MailflowContact.belongsTo(MailflowSequence, {
+  foreignKey: 'sequenceId',
+  targetKey: 'sequenceId',
+  as: 'MailflowSequence'
+});
+
+MailflowSequence.hasMany(MailflowContact, {
+  foreignKey: 'sequenceId',
+  sourceKey: 'sequenceId',
+  as: 'contacts'
+});
