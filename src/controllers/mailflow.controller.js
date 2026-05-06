@@ -1,6 +1,8 @@
 import { MailflowSequence } from '../models/MailflowSequence.js';
 import { MailflowContact } from '../models/MailflowContact.js';
+import { MailflowEmailLog } from '../models/MailflowEmailLog.js';
 import { generateSequence } from '../services/mailflowSequenceGenerator.js';
+import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 
 /**
@@ -267,21 +269,27 @@ export const getSequenceStatus = async (req, res) => {
             });
         }
 
-        // Obtener estadísticas de contactos
+        // ✅ REAL STATS: Obtener estadísticas desde source of truth (mailflow_email_logs + mailflow_contacts)
         const totalContacts = await MailflowContact.count({ where: { sequenceId } });
         const activeContacts = await MailflowContact.count({ where: { sequenceId, status: 'active' } });
         const completedContacts = await MailflowContact.count({ where: { sequenceId, status: 'completed' } });
         const failedContacts = await MailflowContact.count({ where: { sequenceId, status: 'failed' } });
+        
+        // Calcular sent y failed desde mailflow_email_logs (source of truth)
+        const sentCount = await MailflowEmailLog.count({ 
+            where: { sequenceId, status: 'sent' } 
+        });
+        const failedCount = await MailflowEmailLog.count({ 
+            where: { sequenceId, status: 'failed' } 
+        });
 
         return res.json({
             status: 200,
             data: {
-                sent: sequence.stats.sent || 0,
+                sent: sentCount,
                 pending: activeContacts,
-                failed: sequence.stats.failed || 0,
-                openRate: sequence.stats.opened && sequence.stats.sent 
-                    ? (sequence.stats.opened / sequence.stats.sent * 100).toFixed(2) 
-                    : null,
+                failed: failedCount,
+                openRate: null, // TODO: implementar tracking de aperturas
                 totalContacts,
                 completedContacts
             }
@@ -404,10 +412,66 @@ export const listSequences = async (req, res) => {
             where.sequenceId = idsArray;
         }
 
+        // ✅ REAL STATS: Calcular desde source of truth (mailflow_email_logs + mailflow_contacts)
         const sequences = await MailflowSequence.findAll({
             where,
             order: [['createdAt', 'DESC']],
-            attributes: ['sequenceId', 'name', 'status', 'estimatedContacts', 'stats', 'createdAt', 'activatedAt']
+            attributes: [
+                'sequenceId',
+                'name',
+                'status',
+                'estimatedContacts',
+                'createdAt',
+                'activatedAt',
+                // Stats reales calculadas desde tablas de datos
+                [
+                    sequelize.literal(`(
+                        SELECT COUNT(*) 
+                        FROM mailflow_email_logs 
+                        WHERE mailflow_email_logs.sequenceId = MailflowSequence.sequenceId 
+                        AND status = 'sent'
+                    )`),
+                    'realSent'
+                ],
+                [
+                    sequelize.literal(`(
+                        SELECT COUNT(*) 
+                        FROM mailflow_contacts 
+                        WHERE mailflow_contacts.sequenceId = MailflowSequence.sequenceId 
+                        AND status = 'active'
+                    )`),
+                    'realPending'
+                ],
+                [
+                    sequelize.literal(`(
+                        SELECT COUNT(*) 
+                        FROM mailflow_contacts 
+                        WHERE mailflow_contacts.sequenceId = MailflowSequence.sequenceId 
+                        AND status = 'completed'
+                    )`),
+                    'realCompleted'
+                ],
+                [
+                    sequelize.literal(`(
+                        SELECT MIN(nextEmailAt) 
+                        FROM mailflow_contacts 
+                        WHERE mailflow_contacts.sequenceId = MailflowSequence.sequenceId 
+                        AND status = 'active'
+                        AND nextEmailAt > NOW()
+                    )`),
+                    'nextScheduledEmail'
+                ],
+                [
+                    sequelize.literal(`(
+                        SELECT MAX(sentAt) 
+                        FROM mailflow_email_logs 
+                        WHERE mailflow_email_logs.sequenceId = MailflowSequence.sequenceId 
+                        AND status = 'sent'
+                    )`),
+                    'lastEmailSent'
+                ]
+            ],
+            raw: true // Necesario para que las subqueries funcionen correctamente
         });
 
         return res.json({

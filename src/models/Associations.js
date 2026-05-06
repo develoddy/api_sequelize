@@ -331,6 +331,7 @@ Liability.belongsTo(User, {
  */
 import { MailflowContact } from './MailflowContact.js';
 import { MailflowSequence } from './MailflowSequence.js';
+import { MailflowEmailLog } from './MailflowEmailLog.js';
 
 MailflowContact.belongsTo(MailflowSequence, {
   foreignKey: 'sequenceId',
@@ -342,4 +343,32 @@ MailflowSequence.hasMany(MailflowContact, {
   foreignKey: 'sequenceId',
   sourceKey: 'sequenceId',
   as: 'contacts'
+});
+
+/*
+ * MAILFLOW EMAIL LOGS
+ * Registra todos los intentos de envío de emails (exitosos y fallidos)
+ */
+MailflowEmailLog.belongsTo(MailflowSequence, {
+  foreignKey: 'sequenceId',
+  targetKey: 'sequenceId',
+  as: 'sequence'
+});
+
+MailflowSequence.hasMany(MailflowEmailLog, {
+  foreignKey: 'sequenceId',
+  sourceKey: 'sequenceId',
+  as: 'emailLogs'
+});
+
+MailflowEmailLog.belongsTo(MailflowContact, {
+  foreignKey: 'contactId',
+  targetKey: 'id',
+  as: 'contact'
+});
+
+MailflowContact.hasMany(MailflowEmailLog, {
+  foreignKey: 'contactId',
+  sourceKey: 'id',
+  as: 'emailLogs'
 });
