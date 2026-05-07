@@ -371,8 +371,12 @@ export const generateSequence = (businessType, goal, brandName, emailTone = 'fri
         editable: true
     }));
 
+    // Generate timestamp to avoid duplicate names
+    const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const baseName = template.name.replace('E-commerce', brandName).replace('SaaS', brandName);
+
     return {
-        name: template.name.replace('E-commerce', brandName).replace('SaaS', brandName),
+        name: `${baseName} – ${timestamp}`,
         emails: personalizedEmails
     };
 };
@@ -381,8 +385,12 @@ export const generateSequence = (businessType, goal, brandName, emailTone = 'fri
  * Genera una secuencia genérica si no hay template específico
  */
 const generateGenericSequence = (businessType, goal, brandName, emailTone) => {
+    // Generate timestamp to avoid duplicate names
+    const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const baseName = `${brandName} Onboarding Sequence`;
+    
     return {
-        name: `${brandName} Onboarding Sequence`,
+        name: `${baseName} – ${timestamp}`,
         emails: [
             {
                 order: 1,
