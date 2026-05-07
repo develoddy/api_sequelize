@@ -388,28 +388,18 @@ export const listSequences = async (req, res) => {
         } else if (req.user?.id) {
             where.userId = req.user.id;
         } else {
-            // MVP público: requiere sequenceIds en query param
-            // Frontend debe enviar los IDs que tiene guardados en localStorage
+            // MVP público: usar sequenceIds si se proveen, sino devolver todas
             const { sequenceIds } = req.query;
             
-            if (!sequenceIds) {
-                // Sin autenticación y sin sequenceIds = retornar vacío (seguridad)
-                return res.json({
-                    status: 200,
-                    data: []
-                });
+            if (sequenceIds) {
+                // Parsear sequenceIds (formato: "seq1,seq2,seq3")
+                const idsArray = sequenceIds.split(',').filter(id => id.trim());
+                if (idsArray.length > 0) {
+                    where.sequenceId = idsArray;
+                }
             }
-            
-            // Parsear sequenceIds (formato: "seq1,seq2,seq3")
-            const idsArray = sequenceIds.split(',').filter(id => id.trim());
-            if (idsArray.length === 0) {
-                return res.json({
-                    status: 200,
-                    data: []
-                });
-            }
-            
-            where.sequenceId = idsArray;
+            // Si no hay sequenceIds, no añadir filtro (devolver todas las sequences)
+            // Esto hace el dashboard más robusto ante fallos de localStorage
         }
 
         // ✅ REAL STATS: Calcular desde source of truth (mailflow_email_logs + mailflow_contacts)
