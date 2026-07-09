@@ -374,7 +374,7 @@ export const stripeWebhook = async (req, res) => {
   try {
     // ✅ Manejar checkout.session.completed (compras únicas y primera subscripción)
     if (event.type === 'checkout.session.completed') {
-      await handleCheckoutCompleted(event, res, webhookLog);
+      await handleCheckoutCompleted(req, event, res, webhookLog);
       return;
     }
 
@@ -409,7 +409,7 @@ export const stripeWebhook = async (req, res) => {
  * Manejar evento checkout.session.completed
  * (Compras Printful y primera creación de subscripción SaaS)
  */
-async function handleCheckoutCompleted(event, res, webhookLog) {
+async function handleCheckoutCompleted(req, event, res, webhookLog) {
   console.log('✅ [Stripe Webhook] Processing checkout.session.completed event');
   const session = event.data.object;
 
@@ -531,7 +531,7 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
   
   console.log('✅ [Stripe Webhook] No existing sale found - proceeding with sale creation');
 
-  // 🔒 TRANSACCIÓN DB: Asegurar atomicidad de Sale + SaleAddress + SaleDetails
+    // 🔒 TRANSACCIÓN DB: Asegurar atomicidad de Sale + SaleAddress + SaleDetails
   const transaction = await sequelize.transaction();
   console.log('🔄 [Stripe Webhook] Database transaction started');
 
@@ -562,6 +562,11 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
     // Actualizar n_transaction con formato amigable: sale_{id}_{timestamp}
     const friendlyTransactionId = `sale_${sale.id}_${Date.now()}`;
     await sale.update({ n_transaction: friendlyTransactionId }, { transaction });
+    console.log('[Stripe Webhook] Correlation IDs initialized:', {
+      stripeSessionId: session.id,
+      saleId: sale.id,
+      n_transaction: friendlyTransactionId
+    });
     
     // 🆕 Si es compra de módulo, crear venta simple y retornar
     if (isModulePurchase) {
@@ -1221,17 +1226,25 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
         // Feature flag para auto-confirm de órdenes de Printful
         const AUTO_CONFIRM = process.env.PRINTFUL_AUTO_CONFIRM === 'true';
 
+        const printfulExternalId = String(sale.id);
         const pfOrder = {
           recipient,
           items: pfItems,
           retail_costs: { subtotal: subtotal.toFixed(2), discount: '0.00', shipping: '0.00', tax: '0.00' },
-          external_id: `sale_${sale.id}_${Date.now()}`,
+          external_id: printfulExternalId,
           shipping: 'STANDARD',
           confirm: AUTO_CONFIRM
         };
 
         // 🔹 Console log para depuración
         console.log('[Stripe Webhook] pfOrder payload to send to Printful:', JSON.stringify(pfOrder, null, 2));
+        console.log('[Stripe Webhook] Printful correlation payload:', {
+          stripeSessionId: session.id,
+          saleId: sale.id,
+          n_transaction: sale.n_transaction,
+          printfulExternalId,
+          printfulOrderId: null
+        });
         console.log(`[Stripe Webhook] Printful auto-confirm: ${AUTO_CONFIRM}`);
 
         // Persist recipient email to Guest/User if present
@@ -1360,6 +1373,13 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
             });
             printfulCreated = true;
             console.log('✅ [Stripe Webhook] Printful order created successfully - orderId:', printfulOrderId);
+            console.log('[Stripe Webhook] Printful correlation success:', {
+              stripeSessionId: session.id,
+              saleId: sale.id,
+              n_transaction: sale.n_transaction,
+              printfulExternalId,
+              printfulOrderId
+            });
 
             // ✅ FIX: Usar fechas calculadas correctamente por printfulService (sin hardcode)
             const pfDates = (pfData.result || pfData);
@@ -1385,6 +1405,13 @@ async function handleCheckoutCompleted(event, res, webhookLog) {
           // 🚨 IMPORTANTE: Venta YA confirmada - solo actualizar estado de sincronización
           console.error('❌ [Stripe Webhook] PRINTFUL ORDER FAILED for saleId=', sale.id);
           console.error('❌ [Stripe Webhook] Error:', pfErr && (pfErr.message || pfErr));
+          console.error('[Stripe Webhook] Printful correlation failure:', {
+            stripeSessionId: session.id,
+            saleId: sale.id,
+            n_transaction: sale.n_transaction,
+            printfulExternalId: String(sale.id),
+            printfulOrderId: null
+          });
           console.error('❌ [Stripe Webhook] Stack:', pfErr && pfErr.stack);
           
           // Guardar estado de fallo en la venta para visibilidad manual

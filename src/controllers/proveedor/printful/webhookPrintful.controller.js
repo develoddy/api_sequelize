@@ -11,6 +11,27 @@ import { Receipt } from "../../../models/Receipt.js";
 import { Tenant } from "../../../models/Tenant.js";
 import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
 
+const INTERNAL_TX_REGEX = /^sale_(\d+)_\d+$/;
+
+const extractInternalSaleIdFromExternalId = (externalId) => {
+  if (externalId == null) return null;
+  const normalized = String(externalId).trim();
+  if (!normalized) return null;
+  if (/^\d+$/.test(normalized)) return Number(normalized);
+
+  const txMatch = normalized.match(INTERNAL_TX_REGEX);
+  if (txMatch && txMatch[1]) return Number(txMatch[1]);
+
+  return null;
+};
+
+const looksLikeInternalCheckoutExternalId = (externalId) => {
+  if (externalId == null) return false;
+  const normalized = String(externalId).trim();
+  if (!normalized) return false;
+  return /^\d+$/.test(normalized) || INTERNAL_TX_REGEX.test(normalized);
+};
+
 /**
  * 🔔 Recibir y procesar webhooks de Printful
  * Endpoint público: POST /api/printful/webhook (legacy - tienda principal)
@@ -155,11 +176,17 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
   const externalId = order.external_id;
   const printfulOrderId = order.id;
   const status = order.status;
+  const resolvedInternalSaleId = extractInternalSaleIdFromExternalId(externalId);
 
   console.log(`🆕 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+  console.log('🆕 [WEBHOOK] Correlation input:', {
+    printfulExternalId: externalId,
+    printfulOrderId,
+    resolvedInternalSaleId
+  });
 
-  const sale = await Sale.findOne({
-    where: { id: externalId },
+  let sale = await Sale.findOne({
+    where: { id: resolvedInternalSaleId || externalId },
     include: [
       {
         model: User,
@@ -171,6 +198,44 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
       }
     ]
   });
+
+  if (!sale && externalId) {
+    sale = await Sale.findOne({
+      where: { n_transaction: String(externalId) },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'surname', 'email']
+        },
+        {
+          model: Guest,
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Correlated by n_transaction: ${sale.n_transaction}`);
+    }
+  }
+
+  if (!sale && printfulOrderId) {
+    sale = await Sale.findOne({
+      where: { printfulOrderId: String(printfulOrderId) },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'surname', 'email']
+        },
+        {
+          model: Guest,
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Correlated by printfulOrderId: ${printfulOrderId}`);
+    }
+  }
 
   if (sale) {
     // ✅ Confirmar recepción y guardar ID de Printful
@@ -184,6 +249,12 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
     
     console.log(`✅ [WEBHOOK] Orden #${sale.id} confirmada por Printful`);
     console.log(`   🆔 Printful Order ID: ${printfulOrderId}`);
+    console.log('✅ [WEBHOOK] Correlation success:', {
+      saleId: sale.id,
+      n_transaction: sale.n_transaction,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
     
     // ℹ️ Email de confirmación ya fue enviado por webhook Stripe/PayPal
     console.log(`ℹ️ [WEBHOOK Printful] Orden #${sale.id} creada en Printful - Email ya enviado previamente`);
@@ -192,6 +263,22 @@ async function handleOrderCreated(data, webhookLog, tenant = null) {
     
   } else {
     console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    console.warn('⚠️ [WEBHOOK] Correlation miss:', {
+      saleId: null,
+      n_transaction: null,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
+
+    if (looksLikeInternalCheckoutExternalId(externalId)) {
+      console.error('🚨 [WEBHOOK] Internal checkout external_id not found. Blocking printful_external auto-create to avoid ghost sale.');
+      await webhookLog.update({
+        event_type: `orphan_internal_order_created`,
+        processed: false,
+        processing_error: `Internal external_id ${externalId} not found in database`
+      });
+      return null;
+    }
     
     // 🏢 Multi-tenant: Crear Sale automáticamente para órdenes externas de tenants
     if (tenant) {
@@ -331,12 +418,18 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
   // Usar external_id para buscar (tu Sale.id)
   const externalId = order.external_id;
   const printfulOrderId = order.id;
+  const resolvedInternalSaleId = extractInternalSaleIdFromExternalId(externalId);
 
   console.log(`📦 External ID: ${externalId} | Printful ID: ${printfulOrderId}`);
+  console.log('📦 [WEBHOOK] Correlation input:', {
+    printfulExternalId: externalId,
+    printfulOrderId,
+    resolvedInternalSaleId
+  });
 
   // Buscar por external_id con includes para email
   let sale = await Sale.findOne({
-    where: { id: externalId },
+    where: { id: resolvedInternalSaleId || externalId },
     include: [
       {
         model: User,
@@ -386,6 +479,12 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
     console.log(`📦 [WEBHOOK] Orden #${sale.id} marcada como enviada`);
     console.log(`   📍 Tracking: ${shipment.tracking_number}`);
     console.log(`   🚚 Carrier: ${shipment.carrier}`);
+    console.log('✅ [WEBHOOK] Correlation success:', {
+      saleId: sale.id,
+      n_transaction: sale.n_transaction,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
     
     // 📧 Enviar email al cliente con tracking
     try {
@@ -505,6 +604,22 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
     
   } else {
     console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    console.warn('⚠️ [WEBHOOK] Correlation miss:', {
+      saleId: null,
+      n_transaction: null,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
+
+    if (looksLikeInternalCheckoutExternalId(externalId)) {
+      console.error('🚨 [WEBHOOK] Internal checkout external_id not found on package_shipped. Blocking printful_external auto-create to avoid ghost sale.');
+      await webhookLog.update({
+        event_type: `orphan_internal_package_shipped`,
+        processed: false,
+        processing_error: `Internal external_id ${externalId} not found in database`
+      });
+      return null;
+    }
     
     // 🏢 Multi-tenant: Crear Sale automáticamente para órdenes externas de tenants
     if (tenant) {
