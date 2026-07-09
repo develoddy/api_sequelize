@@ -1158,12 +1158,36 @@ async function handleOrderUpdated(data, webhookLog) {
   const externalId = order.external_id;
   const printfulOrderId = order.id;
   const newStatus = order.status;
+  const resolvedInternalSaleId = extractInternalSaleIdFromExternalId(externalId);
 
   console.log(`🔄 External ID: ${externalId} | Nuevo estado: ${newStatus}`);
-
-  const sale = await Sale.findOne({
-    where: { id: externalId }
+  console.log('🔄 [WEBHOOK] Correlation input:', {
+    printfulExternalId: externalId,
+    printfulOrderId,
+    resolvedInternalSaleId
   });
+
+  let sale = await Sale.findOne({
+    where: { id: resolvedInternalSaleId || externalId }
+  });
+
+  if (!sale && externalId) {
+    sale = await Sale.findOne({
+      where: { n_transaction: String(externalId) }
+    });
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Correlated by n_transaction: ${sale.n_transaction}`);
+    }
+  }
+
+  if (!sale && printfulOrderId) {
+    sale = await Sale.findOne({
+      where: { printfulOrderId: String(printfulOrderId) }
+    });
+    if (sale) {
+      console.log(`✅ [WEBHOOK] Correlated by printfulOrderId: ${printfulOrderId}`);
+    }
+  }
 
   if (sale) {
     const oldStatus = sale.printfulStatus;
@@ -1190,15 +1214,29 @@ async function handleOrderUpdated(data, webhookLog) {
     }
     
     console.log(`✅ [WEBHOOK] Orden #${sale.id}: ${oldStatus} → ${newStatus}`);
+    console.log('✅ [WEBHOOK] Correlation success:', {
+      saleId: sale.id,
+      n_transaction: sale.n_transaction,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
     
     return true; // Procesado exitosamente
     
   } else {
     console.warn(`⚠️ [WEBHOOK] Orden con external_id ${externalId} no encontrada en DB`);
+    console.warn('⚠️ [WEBHOOK] Correlation miss:', {
+      saleId: null,
+      n_transaction: null,
+      printfulExternalId: externalId,
+      printfulOrderId
+    });
     
     // Actualizar el log actual como orphan
     await webhookLog.update({
-      event_type: `orphan_order_updated`,
+      event_type: looksLikeInternalCheckoutExternalId(externalId)
+        ? `orphan_internal_order_updated`
+        : `orphan_order_updated`,
       processed: false,
       processing_error: `Sale with ID ${externalId} not found in database`
     });
