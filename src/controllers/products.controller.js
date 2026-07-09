@@ -65,6 +65,64 @@ export const syncPrintfulProducts = async (req, res) => {
     }
 }
 
+export const syncPrintfulProductsStream = async (req, res) => {
+    const sendEvent = (event, data) => {
+        try {
+            res.write(`event: ${event}\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch (error) {
+            console.warn('⚠️ [SYNC-STREAM] No se pudo enviar evento SSE:', error.message);
+        }
+    };
+
+    try {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        if (typeof res.flushHeaders === 'function') {
+            res.flushHeaders();
+        }
+
+        const startTime = Date.now();
+        sendEvent('start', {
+            message: '🚀 Iniciando sincronización con Printful...'
+        });
+
+        const result = await getPrintfulProducts({
+            onProgress: (payload) => {
+                sendEvent('progress', payload);
+            }
+        });
+
+        const duration = Date.now() - startTime;
+        sendEvent('complete', {
+            sync: true,
+            productsProcessed: result.total || 0,
+            created: result.created || 0,
+            updated: result.updated || 0,
+            deleted: result.deleted || 0,
+            skipped: result.skipped || 0,
+            errors: result.errors || [],
+            duration: `${(duration / 1000).toFixed(2)}s`,
+            timestamp: new Date().toISOString()
+        });
+
+        res.end();
+    } catch (error) {
+        console.error('❌ [SYNC-STREAM] Error crítico en sincronización:', error);
+
+        sendEvent('error', {
+            sync: false,
+            message: 'Error al sincronizar productos de Printful',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+
+        res.end();
+    }
+}
+
 export const syncGelatoProducts = async (req, res) => {
     try {
         await getGelatoProducts();

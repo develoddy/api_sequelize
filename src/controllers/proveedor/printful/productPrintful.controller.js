@@ -109,7 +109,17 @@ export const show = async( req, res ) => {
  * =================================================================================================*/
 
 
-export const getPrintfulProducts = async () => {
+export const getPrintfulProducts = async (options = {}) => {
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const emitProgress = (payload) => {
+    if (onProgress) {
+      onProgress({
+        timestamp: new Date().toISOString(),
+        ...payload
+      });
+    }
+  };
+
   // Estadísticas de sincronización
   const stats = {
     total: 0,
@@ -124,6 +134,7 @@ export const getPrintfulProducts = async () => {
   
   try {
     console.log('📥 [STEP 1] Obteniendo productos de Printful...');
+    emitProgress({ type: 'phase', phase: 'fetching', message: '📥 Obteniendo productos desde Printful...' });
     
     // 1️⃣ OBTENER PRODUCTOS DE PRINTFUL
     const printfulProducts = await getPrintfulProductsService();
@@ -131,18 +142,22 @@ export const getPrintfulProducts = async () => {
     // Validar que obtuvimos productos
     if (!printfulProducts || printfulProducts.length === 0) {
       console.warn('⚠️ No se obtuvieron productos de Printful');
+      emitProgress({ type: 'phase', phase: 'empty', message: '⚠️ Printful devolvió 0 productos' });
       return stats;
     }
     
     stats.total = printfulProducts.length;
     console.log(`✅ [STEP 1] Obtenidos ${stats.total} productos de Printful`);
+    emitProgress({ type: 'phase', phase: 'fetched', total: stats.total, message: `✅ Productos obtenidos: ${stats.total}` });
 
     // 2️⃣ INICIAR TRANSACCIÓN
     console.log('💾 [STEP 2] Iniciando transacción SQL...');
+    emitProgress({ type: 'phase', phase: 'transaction_start', message: '💾 Iniciando transacción de base de datos...' });
     transaction = await sequelize.transaction();
 
     // 3️⃣ IDENTIFICAR PRODUCTOS OBSOLETOS
     console.log('🔍 [STEP 3] Identificando productos obsoletos en DB...');
+    emitProgress({ type: 'phase', phase: 'detecting_obsolete', message: '🔍 Buscando productos obsoletos...' });
     const printfulProductIds = printfulProducts.map(product => product.id);
     
     // Productos que:
@@ -160,6 +175,7 @@ export const getPrintfulProducts = async () => {
     });
 
     console.log(`🗑️ [STEP 3] Productos obsoletos encontrados: ${productsToDelete.length}`);
+    emitProgress({ type: 'phase', phase: 'obsolete_detected', obsolete: productsToDelete.length, message: `🗑️ Productos obsoletos: ${productsToDelete.length}` });
     if (productsToDelete.length > 0) {
       console.log(`   Productos a eliminar:`, productsToDelete.map(p => `${p.title} (ID Printful: ${p.idProduct})`));
     }
@@ -167,12 +183,21 @@ export const getPrintfulProducts = async () => {
     // 4️⃣ ELIMINAR PRODUCTOS OBSOLETOS
     if (productsToDelete.length > 0) {
       console.log('🧹 [STEP 4] Eliminando productos obsoletos...');
+      emitProgress({ type: 'phase', phase: 'deleting_obsolete', message: '🧹 Eliminando productos obsoletos...' });
       
       for (const product of productsToDelete) {
         try {
           console.log(`  🗑️ Eliminando: ${product.title} (ID: ${product.id})`);
           await deleteProductAndRelatedComponents(product, transaction);
           stats.deleted++;
+          emitProgress({
+            type: 'delete',
+            deleted: stats.deleted,
+            obsoleteTotal: productsToDelete.length,
+            productId: product.idProduct,
+            productName: product.title,
+            message: `🗑️ Eliminado obsoleto: ${product.title}`
+          });
         } catch (error) {
           console.error(`  ❌ Error eliminando producto ${product.id}:`, error.message);
           stats.errors.push({
@@ -192,6 +217,7 @@ export const getPrintfulProducts = async () => {
     // 5️⃣ PROCESAR PRODUCTOS DE PRINTFUL (CREATE/UPDATE)
     console.log(`🔄 [STEP 5] Procesando ${printfulProducts.length} productos de Printful...`);
     console.log(`   Estos productos se crearán (si son nuevos) o se actualizarán (si ya existen)`);
+    emitProgress({ type: 'phase', phase: 'processing_products', total: printfulProducts.length, message: `🔄 Procesando ${printfulProducts.length} productos...` });
     
     for (let i = 0; i < printfulProducts.length; i++) {
       const product = printfulProducts[i];
@@ -213,6 +239,15 @@ export const getPrintfulProducts = async () => {
           console.log(`  ➕ [${i + 1}/${printfulProducts.length}] CREAR NUEVO: "${product.name}" (Printful ID: ${product.id})`);
           await processPrintfulProduct(product, transaction);
           stats.created++;
+          emitProgress({
+            type: 'product',
+            action: 'created',
+            processed: i + 1,
+            total: printfulProducts.length,
+            productId: product.id,
+            productName: product.name,
+            message: `➕ ${i + 1}/${printfulProducts.length} creado: ${product.name}`
+          });
           
         } else {
           // PRODUCTO EXISTE - VERIFICAR SI HAY CAMBIOS
@@ -223,9 +258,27 @@ export const getPrintfulProducts = async () => {
             console.log(`  🔄 [${i + 1}/${printfulProducts.length}] ACTUALIZAR: "${product.name}" (cambios detectados - ver detalles arriba)`);
             await processPrintfulProduct(product, transaction);
             stats.updated++;
+            emitProgress({
+              type: 'product',
+              action: 'updated',
+              processed: i + 1,
+              total: printfulProducts.length,
+              productId: product.id,
+              productName: product.name,
+              message: `🔄 ${i + 1}/${printfulProducts.length} actualizado: ${product.name}`
+            });
           } else {
             console.log(`  ✅ [${i + 1}/${printfulProducts.length}] SIN CAMBIOS: "${product.name}" (producto idéntico - SKIP)`);
             stats.skipped++;
+            emitProgress({
+              type: 'product',
+              action: 'skipped',
+              processed: i + 1,
+              total: printfulProducts.length,
+              productId: product.id,
+              productName: product.name,
+              message: `✅ ${i + 1}/${printfulProducts.length} sin cambios: ${product.name}`
+            });
           }
         }
         
@@ -247,11 +300,13 @@ export const getPrintfulProducts = async () => {
 
     // 6️⃣ COMMIT TRANSACCIÓN
     console.log('💾 [STEP 6] Realizando commit de transacción...');
+    emitProgress({ type: 'phase', phase: 'commit', message: '💾 Guardando cambios en base de datos...' });
     await transaction.commit();
     console.log('✅ [STEP 6] Transacción completada exitosamente');
     
     // 7️⃣ VALIDAR INTEGRIDAD
     console.log('🔍 [STEP 7] Validando integridad de base de datos...');
+    emitProgress({ type: 'phase', phase: 'integrity_check', message: '🔍 Validando integridad de base de datos...' });
     await validateDatabaseIntegrity();
     console.log('✅ [STEP 7] Validación completada');
 
@@ -263,6 +318,7 @@ export const getPrintfulProducts = async () => {
     console.log(`   🗑️ Eliminados: ${stats.deleted}`);
     console.log(`   ⏭️ Sin cambios: ${stats.skipped}`);
     console.log(`   ❌ Errores: ${stats.errors.length}`);
+    emitProgress({ type: 'summary', stats, message: '📊 Resumen de sincronización generado' });
 
     return stats;
 
@@ -278,6 +334,7 @@ export const getPrintfulProducts = async () => {
     }
     
     console.error('❌ Error crítico en sincronización:', error);
+    emitProgress({ type: 'error', message: `❌ Error crítico: ${error.message}` });
     throw new Error(`Error en sincronización Printful: ${error.message}`);
   }
 };

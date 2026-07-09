@@ -13,6 +13,7 @@ import {
     show,
     show_admin_product,
     syncPrintfulProducts,
+    syncPrintfulProductsStream,
     syncGelatoProducts,
 } from "../controllers/products.controller.js";
 
@@ -50,6 +51,7 @@ router.get("/uploads/product/:img", getImage);
 router.get("/show/:id", show);
 router.get("/show_admin/:id", auth.verifyAdmin, show_admin_product);
 router.get("/synPrintfulProducts", auth.verifyAdmin, syncPrintfulProducts);
+router.get("/synPrintfulProducts/stream", auth.verifyAdmin, syncPrintfulProductsStream);
 router.get("/synGelatoProducts", auth.verifyAdmin, syncGelatoProducts);
 
 
