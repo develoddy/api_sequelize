@@ -2,38 +2,74 @@ import { Op } from 'sequelize';
 import { AddressGuest } from "../models/AddressGuest.js";
 import { Guest } from "../models/Guest.js";
 
+const normalizeText = (value) => {
+    if (value === null || value === undefined) return null;
+    const trimmed = String(value).trim();
+    return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeEmail = (value) => {
+    const normalized = normalizeText(value);
+    return normalized ? normalized.toLowerCase() : null;
+};
+
+const resolveGuestId = (body = {}) => {
+    const rawGuestId = body.guest ?? body.guest_id ?? body.guestId ?? body.user?._id ?? body.user?.id ?? body.user;
+    const guestId = Number(rawGuestId);
+    return Number.isFinite(guestId) && guestId > 0 ? guestId : null;
+};
+
+const resolveGuestSessionId = (body = {}) => {
+    return normalizeText(body.guestSessionId ?? body.guest_session_id ?? body.session_id ?? body.user?.session_id);
+};
+
+const isValidEmail = (email) => {
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 
 export const register = async (req, res) => {
     try {
 
-        const { guest: guest_id, usual_shipping_address, email, name, zipcode, phone, ...addressData } = req.body;
+        const { usual_shipping_address, ...payload } = req.body;
+        const guest_id = resolveGuestId(req.body);
 
-        const guest = await Guest.findByPk(req.body.guest);
+        if (!guest_id) {
+            return res.status(400).json({ message: "guest_id inválido o faltante" });
+        }
+
+        const guest = await Guest.findByPk(guest_id);
 
         if ( !guest ) {
             return res.status(404).json({message: "Guest no encontrado"});
         }
 
-        // ACTUALIZAR EL EMAIL DEL GUEST SI SE PROPORCIONA 
-        // if ( email && !guest.email ) {
-        //     await guest.update({ email });
-        // }
-        // 🔧 ACTUALIZAR LOS DATOS DEL GUEST SI SE PROPORCIONAN
+        const name = normalizeText(payload.name);
+        const email = normalizeEmail(payload.email);
+        const zipcode = normalizeText(payload.zipcode);
+        const phone = normalizeText(payload.phone);
+
+        if (email && !isValidEmail(email)) {
+            return res.status(400).json({ message: "Email inválido" });
+        }
+
+        // 🔧 ACTUALIZAR LOS DATOS DEL GUEST SI SE PROPORCIONAN (primer guardado)
         const updateData = {};
 
-        if (name && (!guest.name || guest.name !== name)) {
+        if (name && guest.name !== name) {
             updateData.name = name;
         }
 
-        if (email && (!guest.email || guest.email !== email)) {
+        if (email && guest.email !== email) {
             updateData.email = email;
         }
 
-        if (zipcode && (!guest.zipcode || guest.zipcode !== zipcode)) {
+        if (zipcode && guest.zipcode !== zipcode) {
             updateData.zipcode = zipcode;
         }
 
-        if (phone && (!guest.phone || guest.phone !== phone)) {
+        if (phone && guest.phone !== phone) {
             updateData.phone = phone;
         }
 
@@ -50,12 +86,18 @@ export const register = async (req, res) => {
         }
 
         // Si la nueva dirección es marcada como habitual, actualiza las anteriores a false
-        const addressGuest = await AddressGuest.create({ 
-            ...addressData, 
+        const addressGuest = await AddressGuest.create({
+            surname: normalizeText(payload.surname) || '',
+            pais: normalizeText(payload.pais) || '',
+            address: normalizeText(payload.address) || '',
             email,
             name,
             zipcode,
             phone,
+            poblacion: normalizeText(payload.poblacion) || '',
+            ciudad: normalizeText(payload.ciudad) || '',
+            referencia: normalizeText(payload.referencia),
+            nota: normalizeText(payload.nota),
             usual_shipping_address: usual_shipping_address || false,
             guest_id ,
         });
@@ -76,7 +118,17 @@ export const register = async (req, res) => {
 
 export const list = async (req, res) => {
     try {
-        const addresses = await AddressGuest.findAll();
+        const guestIdParam = req.query.guest_id ?? req.query.guestId;
+        const guestId = Number(guestIdParam);
+
+        if (!Number.isFinite(guestId) || guestId <= 0) {
+            return res.status(400).json({ message: "El parámetro guest_id es requerido y debe ser válido" });
+        }
+
+        const addresses = await AddressGuest.findAll({
+            where: { guest_id: guestId },
+            order: [[ 'updatedAt', 'DESC' ]]
+        });
         res.status(200).json({ status: 200, addresses });
     } catch (error) {
         console.error("Error al listar direcciones de invitados:", error);
@@ -104,21 +156,131 @@ export const remove = async (req, res) => {
 
 export const update = async (req, res) => {
     try {
+        const id = Number(req.body._id ?? req.body.id);
+        const guestIdFromPayload = resolveGuestId(req.body);
+        const guestSessionId = resolveGuestSessionId(req.body);
 
-        let data = req.body;
-        const id = req.body._id;
-
-        // Actualizar el registro
-        const [updatedRows] = await AddressGuest.update(data, { where: { id } });
-
-        if (!updatedRows) {
-            return res.status(404).json({ 
+        if (!Number.isFinite(id) || id <= 0) {
+            return res.status(400).json({
                 status: 400,
-                message: "Dirección no encontrada o sin cambios" 
+                message: "ID de dirección inválido"
             });
         }
 
-        // Recuperar el registro actualizado
+        const addressGuest = await AddressGuest.findByPk(id);
+
+        if (!addressGuest) {
+            return res.status(404).json({ 
+                status: 404,
+                message: "Dirección no encontrada" 
+            });
+        }
+
+        const effectiveGuestId = guestIdFromPayload || addressGuest.guest_id;
+
+        if (guestIdFromPayload && Number(addressGuest.guest_id) !== Number(guestIdFromPayload)) {
+            return res.status(403).json({
+                status: 403,
+                message: "La dirección no pertenece al guest indicado"
+            });
+        }
+
+        const guest = effectiveGuestId ? await Guest.findByPk(effectiveGuestId) : null;
+
+        if (effectiveGuestId && !guest) {
+            return res.status(404).json({
+                status: 404,
+                message: "Guest no encontrado para la dirección"
+            });
+        }
+
+        if (guestSessionId && guest && guest.session_id !== guestSessionId) {
+            return res.status(403).json({
+                status: 403,
+                message: "Sesión de guest inválida para actualizar la dirección"
+            });
+        }
+
+        const nextName = normalizeText(req.body.name);
+        const nextEmail = normalizeEmail(req.body.email);
+        const nextZipcode = normalizeText(req.body.zipcode);
+        const nextPhone = normalizeText(req.body.phone);
+
+        if (nextEmail && !isValidEmail(nextEmail)) {
+            return res.status(400).json({
+                status: 400,
+                message: "Email inválido"
+            });
+        }
+
+        const updateAddressData = {
+            name: nextName,
+            surname: normalizeText(req.body.surname),
+            pais: normalizeText(req.body.pais),
+            address: normalizeText(req.body.address),
+            zipcode: nextZipcode,
+            poblacion: normalizeText(req.body.poblacion),
+            ciudad: normalizeText(req.body.ciudad),
+            email: nextEmail,
+            phone: nextPhone,
+            referencia: normalizeText(req.body.referencia),
+            nota: normalizeText(req.body.nota)
+        };
+
+        // Usual shipping: mantener una sola dirección habitual por guest.
+        if (typeof req.body.usual_shipping_address === 'boolean') {
+            updateAddressData.usual_shipping_address = req.body.usual_shipping_address;
+            if (req.body.usual_shipping_address === true && effectiveGuestId) {
+                await AddressGuest.update(
+                    { usual_shipping_address: false },
+                    {
+                        where: {
+                            guest_id: effectiveGuestId,
+                            id: { [Op.ne]: id },
+                            usual_shipping_address: true
+                        }
+                    }
+                );
+            }
+        }
+
+        const addressBeforeEmail = addressGuest.email;
+        await addressGuest.update(updateAddressData);
+
+        let guestRowsUpdated = 0;
+        let guestBeforeEmail = null;
+        let guestAfterEmail = null;
+
+        // 🔄 Sincronización crítica: al editar address de invitado también actualizar Guest.
+        if (guest) {
+            guestBeforeEmail = guest.email;
+            const guestUpdateData = {};
+
+            if (nextName && guest.name !== nextName) guestUpdateData.name = nextName;
+            if (nextEmail && guest.email !== nextEmail) guestUpdateData.email = nextEmail;
+            if (nextZipcode && guest.zipcode !== nextZipcode) guestUpdateData.zipcode = nextZipcode;
+            if (nextPhone && guest.phone !== nextPhone) guestUpdateData.phone = nextPhone;
+
+            if (Object.keys(guestUpdateData).length > 0) {
+                await guest.update(guestUpdateData);
+                guestRowsUpdated = 1;
+            }
+
+            guestAfterEmail = guestUpdateData.email || guest.email;
+        }
+
+        console.log('[AddressGuest.update] Sync summary', {
+            addressId: id,
+            guestId: effectiveGuestId || null,
+            guestSessionId: guestSessionId || null,
+            addressEmailOld: addressBeforeEmail || null,
+            addressEmailNew: nextEmail || addressGuest.email || null,
+            guestEmailOld: guestBeforeEmail,
+            guestEmailNew: guestAfterEmail,
+            addressRowsUpdated: 1,
+            guestRowsUpdated
+        });
+
         const updatedAddressGuest = await AddressGuest.findByPk(id);
 
         res.status(200).json({
@@ -193,10 +355,14 @@ export const setGuestUsualShippingAddress = async (req, res) => {
     );
 
     // 2) Poner la seleccionada como habitual
-    await AddressGuest.update(
+        const [updatedRows] = await AddressGuest.update(
       { usual_shipping_address: true },
-      { where: { id: addressId } }
+            { where: { id: addressId, guest_id: guestId } }
     );
+
+        if (!updatedRows) {
+            return res.status(404).json({ message: 'Dirección no encontrada para el guest indicado' });
+        }
 
     const updated = await AddressGuest.findByPk(addressId);
 
