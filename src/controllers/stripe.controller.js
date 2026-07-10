@@ -53,14 +53,31 @@ const formatPrice = (price) => {
  */
 export const createCheckoutSession = async (req, res) => {
   try {
-    const { cart, userId, guestId, address, country, locale, moduleId, moduleKey } = req.body;
+    const { cart, userId: bodyUserId, guestId: bodyGuestId, address, country, locale, moduleId, moduleKey } = req.body;
+    
+    // 🔒 SEGURIDAD: Determinar identidad de forma segura
+    // Si req.user existe, FORZAR userId desde token e IGNORAR frontend
+    const authenticatedUserId = req.user?.id ? Number(req.user.id) : null;
+    let userId, guestId;
+    
+    if (authenticatedUserId) {
+      // Usuario autenticado: FORZAR userId desde token, anular guestId
+      userId = authenticatedUserId;
+      guestId = null;
+      console.log('🔒 [Stripe Security] Usuario autenticado detectado - forzando userId desde req.user.id, ignorando bodyUserId');
+    } else {
+      // Guest checkout: usar userId/guestId del body
+      userId = bodyUserId || null;
+      guestId = bodyGuestId || null;
+      console.log('🔓 [Stripe Security] Guest checkout detectado - usando userId/guestId del body');
+    }
     
     // 🐛 DEBUG: Log completo del request body
     console.log('🔍 [Stripe] Request body recibido:', JSON.stringify({
       hasCart: !!cart,
       cartLength: cart?.length,
-      userId,
-      guestId,
+      bodyUserId,
+      bodyGuestId,
       moduleId,
       moduleKey,
       country,
@@ -74,6 +91,16 @@ export const createCheckoutSession = async (req, res) => {
         pais: address.pais
       } : null
     }, null, 2));
+
+    console.log('[Stripe] Identity resolution for checkout session', {
+      reqUserId: authenticatedUserId,
+      bodyUserId,
+      bodyGuestId,
+      finalUserId: userId,
+      finalGuestId: guestId,
+      mode: authenticatedUserId ? 'authenticated' : 'guest-or-anonymous',
+      securityAction: authenticatedUserId ? 'FORCED_FROM_TOKEN' : 'USING_BODY_VALUES'
+    });
     
     // 🚨 VALIDACIÓN CRÍTICA: Detectar address incompleto o null
     if (address && (!address.name || !address.email || !address.address)) {

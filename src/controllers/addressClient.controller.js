@@ -2,14 +2,52 @@ import { Op } from 'sequelize';
 import { AddressClient } from "../models/AddressClient.js";
 import { User } from "../models/User.js";
 
+const getAuthenticatedUserId = (req) => {
+    const userId = Number(req.user?.id);
+    return Number.isFinite(userId) && userId > 0 ? userId : null;
+};
+
+const getOwnedAddressById = async (addressId, userId) => {
+    return await AddressClient.findOne({
+        where: {
+            id: addressId,
+            userId,
+        }
+    });
+};
+
+const getSanitizedAddressPayload = (body = {}) => {
+    const {
+        _id,
+        id,
+        user,
+        userId,
+        idUser,
+        ...addressData
+    } = body;
+
+    return addressData;
+};
+
 
 export const register = async (req, res) => {
 
     try {
-        // Verifica si el usuario existe antes de crear la dirección
-        const { user: userId, usual_shipping_address, ...addressData } = req.body;
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const bodyUserId = req.body.user ?? req.body.userId ?? req.body.idUser ?? null;
+        const { usual_shipping_address, ...addressData } = getSanitizedAddressPayload(req.body);
 
-        const user = await User.findByPk(req.body.user);
+        console.log('[AddressClient.register] Incoming request', {
+            reqUserId: authenticatedUserId,
+            bodyUserId,
+            usualShippingAddress: usual_shipping_address === true
+        });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: "Usuario autenticado inválido" });
+        }
+
+        const user = await User.findByPk(authenticatedUserId);
         if (!user) {
             return res.status(404).json({message: "Usuario no encontrado"});
         }
@@ -18,16 +56,21 @@ export const register = async (req, res) => {
         if (usual_shipping_address === true) {
             await AddressClient.update(
                 { usual_shipping_address: false },
-                { where: { userId, usual_shipping_address: true } }
+                { where: { userId: authenticatedUserId, usual_shipping_address: true } }
             );
         }
 
-        // Si la nueva dirección es marcada como habitual, actualiza las anteriores a false
-        
         const addressClient = await AddressClient.create({ 
             ...addressData, 
             usual_shipping_address: usual_shipping_address || false,
-            userId ,
+            userId: authenticatedUserId,
+        });
+
+        console.log('[AddressClient.register] Address created', {
+            reqUserId: authenticatedUserId,
+            bodyUserId,
+            addressId: addressClient.id,
+            ownership: 'created-for-authenticated-user'
         });
         
 
@@ -48,12 +91,29 @@ export const register = async (req, res) => {
 
 export const list = async (req, res) => {
     try {
-        const userId = req.query.user_id;
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const bodyUserId = req.body?.user ?? req.body?.userId ?? req.body?.idUser ?? null;
+        const queryUserId = req.query.user_id ?? req.query.userId ?? req.query.idUser ?? null;
 
-        // Busca las direcciones del cliente del usuario especificado
+        console.log('[AddressClient.list] Incoming request', {
+            reqUserId: authenticatedUserId,
+            bodyUserId,
+            queryUserId
+        });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: "Usuario autenticado inválido" });
+        }
+
         const addressClients = await AddressClient.findAll({
-            where: { userId: userId },
+            where: { userId: authenticatedUserId },
             order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
+        });
+
+        console.log('[AddressClient.list] Ownership result', {
+            reqUserId: authenticatedUserId,
+            returnedCount: addressClients.length,
+            ownership: 'scoped-to-authenticated-user'
         });
 
         res.status(200).json({
@@ -69,11 +129,34 @@ export const list = async (req, res) => {
 
 export const remove = async (req, res) => {
     try {
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const id = Number(req.params.id);
 
-        const id = req.params.id;
+        console.log('[AddressClient.remove] Incoming request', {
+            reqUserId: authenticatedUserId,
+            addressId: id
+        });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: "Usuario autenticado inválido" });
+        }
+
+        const ownedAddress = await getOwnedAddressById(id, authenticatedUserId);
+
+        console.log('[AddressClient.remove] Ownership result', {
+            reqUserId: authenticatedUserId,
+            addressId: id,
+            ownership: !!ownedAddress
+        });
+
+        if (!ownedAddress) {
+            return res.status(404).json({
+                message: "Ups! La dirección del cliente no fue encontrada"
+            });
+        }
 
         const result = await AddressClient.destroy({
-            where: { id: id }
+            where: { id, userId: authenticatedUserId }
         });
 
         if ( result ) {
@@ -95,10 +178,36 @@ export const remove = async (req, res) => {
 
 export const update = async (req, res) => {
     try {
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const id = Number(req.body._id ?? req.body.id);
+        const bodyUserId = req.body.user ?? req.body.userId ?? req.body.idUser ?? null;
+        const data = getSanitizedAddressPayload(req.body);
+        const { usual_shipping_address } = data;
 
-        let data = req.body;
-        const id = req.body._id;
-        const { usual_shipping_address, user } = data;
+        console.log('[AddressClient.update] Incoming request', {
+            reqUserId: authenticatedUserId,
+            bodyUserId,
+            addressId: id
+        });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: "Usuario autenticado inválido" });
+        }
+
+        const ownedAddress = await getOwnedAddressById(id, authenticatedUserId);
+
+        console.log('[AddressClient.update] Ownership result', {
+            reqUserId: authenticatedUserId,
+            addressId: id,
+            ownership: !!ownedAddress
+        });
+
+        if (!ownedAddress) {
+            return res.status(404).json({
+                status: 404,
+                message: "La dirección del cliente no fue encontrada"
+            });
+        }
 
         // Si se marca esta dirección como habitual, desmarcar otras del mismo usuario
         if (usual_shipping_address === true) {
@@ -106,7 +215,7 @@ export const update = async (req, res) => {
             { usual_shipping_address: false },
             {
               where: {
-                userId: user,
+                userId: authenticatedUserId,
                 id: { [Op.ne]: id }, // Excluir esta dirección
                 usual_shipping_address: true,
               },
@@ -115,11 +224,21 @@ export const update = async (req, res) => {
         }
 
         // Actualizar el registro
-        const [updated] = await AddressClient.update(data, {where: { id: id }});
+        const [updated] = await AddressClient.update(data, {
+            where: {
+                id,
+                userId: authenticatedUserId,
+            }
+        });
 
         if (updated) {
             // Recuperar el registro actualizado
-            const updatedAddressClient = await AddressClient.findByPk(id);
+            const updatedAddressClient = await AddressClient.findOne({
+                where: {
+                    id,
+                    userId: authenticatedUserId,
+                }
+            });
 
             res.status(200).json({
                 status: 200,
@@ -143,14 +262,31 @@ export const update = async (req, res) => {
 
 export const listone = async (req, res) => {
     try {
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const id = Number(req.query.id);
 
-        const id = req.query.id;
-
-        // Busca las direcciones del cliente del usuario especificado
-        const addressClient = await AddressClient.findOne({
-            where: { id: id },
-            order: [['createdAt', 'DESC']], // Ordena por fecha de creación descendente
+        console.log('[AddressClient.listone] Incoming request', {
+            reqUserId: authenticatedUserId,
+            addressId: id
         });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: "Usuario autenticado inválido" });
+        }
+
+        const addressClient = await getOwnedAddressById(id, authenticatedUserId);
+
+        console.log('[AddressClient.listone] Ownership result', {
+            reqUserId: authenticatedUserId,
+            addressId: id,
+            ownership: !!addressClient
+        });
+
+        if (!addressClient) {
+            return res.status(404).json({
+                message: "La dirección del cliente no fue encontrada"
+            });
+        }
 
         res.status(200).json({
             address_client: addressClient, // Ajusta el nombre de la propiedad según sea necesario
@@ -165,25 +301,53 @@ export const listone = async (req, res) => {
 
 export const setAsUserAuthenticatedUsualShippingAddress = async (req, res) => {
   try {
-    const { addressId, userId } = req.body;
+        const authenticatedUserId = getAuthenticatedUserId(req);
+        const addressId = Number(req.body.addressId);
+        const bodyUserId = req.body.userId ?? req.body.user ?? req.body.idUser ?? null;
 
-    if (!addressId || !userId) {
+        console.log('[AddressClient.setUsual] Incoming request', {
+            reqUserId: authenticatedUserId,
+            bodyUserId,
+            addressId
+        });
+
+        if (!authenticatedUserId) {
+            return res.status(401).json({ message: 'Usuario autenticado inválido' });
+        }
+
+        if (!addressId) {
       return res.status(400).json({ message: 'Faltan parámetros' });
     }
+
+        const ownedAddress = await getOwnedAddressById(addressId, authenticatedUserId);
+
+        console.log('[AddressClient.setUsual] Ownership result', {
+            reqUserId: authenticatedUserId,
+            addressId,
+            ownership: !!ownedAddress
+        });
+
+        if (!ownedAddress) {
+            return res.status(404).json({ message: 'La dirección del cliente no fue encontrada' });
+        }
 
     // 1) Poner todas las direcciones del usuario como NO habituales
     await AddressClient.update(
       { usual_shipping_address: false },
-      { where: { userId } }
+            { where: { userId: authenticatedUserId } }
     );
 
     // 2) Poner la seleccionada como habitual
-    await AddressClient.update(
+        const [updatedRows] = await AddressClient.update(
       { usual_shipping_address: true },
-      { where: { id: addressId } }
+            { where: { id: addressId, userId: authenticatedUserId } }
     );
 
-    const updated = await AddressClient.findByPk(addressId);
+        if (!updatedRows) {
+            return res.status(404).json({ message: 'La dirección del cliente no fue encontrada' });
+        }
+
+        const updated = await getOwnedAddressById(addressId, authenticatedUserId);
 
     res.status(200).json({
         status: 200,
