@@ -39,9 +39,12 @@ if ($LASTEXITCODE -eq 0) {
 # ===================== PASO 2 =====================
 Write-Host "`nPASO 2: Actualizar en el servidor remoto" -ForegroundColor $Cyan
 
+# Ruta de la clave SSH en Windows
+$sshKey = "$env:USERPROFILE\.ssh\id_droplet"
+
 $sshCommand = "cd /var/www/api_sequelize && git stash push -m 'auto-stash' -- backups/** logs/** metrics/** 2>/dev/null || true && git pull --rebase origin main || git reset --hard origin/main && git stash pop 2>/dev/null || true && echo 'Actualizacion completada'"
 
-ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 $sshCommand
+ssh -i $sshKey root@64.226.123.91 $sshCommand
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Servidor remoto actualizado correctamente" -ForegroundColor $Green
@@ -55,7 +58,7 @@ Write-Host "`nPASO 3: Reiniciar PM2 y validar" -ForegroundColor $Cyan
 
 $pm2Command = "export NVM_DIR=`$HOME/.nvm && [ -s `$NVM_DIR/nvm.sh ] && . `$NVM_DIR/nvm.sh && cd /var/www/api_sequelize && chmod +x scripts/*.sh && pm2 restart api_sequelize && sleep 3 && pm2 list | grep api_sequelize"
 
-ssh -i ~/.ssh/id_rsa_do root@64.226.123.91 $pm2Command
+ssh -i $sshKey root@64.226.123.91 $pm2Command
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "PM2 reiniciado correctamente" -ForegroundColor $Green
