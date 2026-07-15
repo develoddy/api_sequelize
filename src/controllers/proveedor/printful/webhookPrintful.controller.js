@@ -463,6 +463,9 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
   }
 
   if (sale) {
+    // 🔒 IDEMPOTENCIA: Detectar si ya estaba enviada (evita emails duplicados)
+    const wasAlreadyShipped = sale.syncStatus === 'shipped' && !!sale.trackingNumber;
+    
     // ✅ Actualización completa con tracking info
     await sale.update({
       printfulOrderId: printfulOrderId,
@@ -584,13 +587,18 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
           tenant: tenantData // 🏢 Tenant para personalización (objeto plano)
         };
 
-        // Enviar email
-        const emailResult = await sendOrderShippedEmail(emailData);
-        
-        if (emailResult.success) {
-          console.log(`📧 [WEBHOOK] Email enviado a ${customerEmail}`);
+        // 🔒 IDEMPOTENCIA: Solo enviar email si es el primer package_shipped
+        if (!wasAlreadyShipped) {
+          // Enviar email
+          const emailResult = await sendOrderShippedEmail(emailData);
+          
+          if (emailResult.success) {
+            console.log(`📧 [WEBHOOK] Email enviado a ${customerEmail}`);
+          } else {
+            console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+          }
         } else {
-          console.error(`❌ [WEBHOOK] Error enviando email: ${emailResult.error}`);
+          console.log(`ℹ️ [WEBHOOK] package_shipped duplicado - email omitido (orden #${sale.id})`);
         }
       } else {
         console.warn(`⚠️ [WEBHOOK] No se encontró email del cliente para orden #${sale.id}`);
