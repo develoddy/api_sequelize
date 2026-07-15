@@ -12,25 +12,61 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const tableExists = async (tableName, transaction) => {
+      try {
+        await queryInterface.describeTable(tableName, { transaction });
+        return true;
+      } catch (error) {
+        // Si la tabla no existe, describeTable lanza error - retornamos false
+        return false;
+      }
+    };
+
+    const columnExists = async (tableName, columnName, transaction) => {
+      const definition = await queryInterface.describeTable(tableName, { transaction });
+      return Boolean(definition[columnName]);
+    };
+
+    const indexExists = async (tableName, indexName, transaction) => {
+      const indexes = await queryInterface.showIndex(tableName, { transaction });
+      return indexes.some((index) => index.name === indexName);
+    };
+
     const transaction = await queryInterface.sequelize.transaction();
     
     try {
-      // 1. Agregar tenant_id a chat_conversations
-      await queryInterface.addColumn('chat_conversations', 'tenant_id', {
-        type: Sequelize.INTEGER,
-        allowNull: true,  // Temporalmente null para migrar datos existentes
-        comment: 'ID del tenant propietario de la conversación'
-      }, { transaction });
-      
-      // 2. Agregar tenant_id a chat_messages
-      await queryInterface.addColumn('chat_messages', 'tenant_id', {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        comment: 'ID del tenant propietario del mensaje'
-      }, { transaction });
+      const hasChatConversations = await tableExists('chat_conversations', transaction);
+      const hasChatMessages = await tableExists('chat_messages', transaction);
+
+      if (hasChatConversations) {
+        // 1. Agregar tenant_id a chat_conversations
+        if (!(await columnExists('chat_conversations', 'tenant_id', transaction))) {
+          await queryInterface.addColumn('chat_conversations', 'tenant_id', {
+            type: Sequelize.INTEGER,
+            allowNull: true,  // Temporalmente null para migrar datos existentes
+            comment: 'ID del tenant propietario de la conversación'
+          }, { transaction });
+        }
+      } else {
+        console.warn('⚠️ Tabla chat_conversations no existe. Se omiten cambios sobre esa tabla.');
+      }
+
+      if (hasChatMessages) {
+        // 2. Agregar tenant_id a chat_messages
+        if (!(await columnExists('chat_messages', 'tenant_id', transaction))) {
+          await queryInterface.addColumn('chat_messages', 'tenant_id', {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            comment: 'ID del tenant propietario del mensaje'
+          }, { transaction });
+        }
+      } else {
+        console.warn('⚠️ Tabla chat_messages no existe. Se omiten cambios sobre esa tabla.');
+      }
       
       // 3. Crear tabla de configuración por tenant
-      await queryInterface.createTable('tenant_chat_config', {
+      if (!(await tableExists('tenant_chat_config', transaction))) {
+        await queryInterface.createTable('tenant_chat_config', {
         id: {
           type: Sequelize.INTEGER,
           primaryKey: true,
@@ -119,10 +155,12 @@ module.exports = {
           type: Sequelize.DATE,
           defaultValue: Sequelize.NOW
         }
-      }, { transaction });
+        }, { transaction });
+      }
       
       // 4. Crear tabla de agentes por tenant
-      await queryInterface.createTable('tenant_agents', {
+      if (!(await tableExists('tenant_agents', transaction))) {
+        await queryInterface.createTable('tenant_agents', {
         id: {
           type: Sequelize.INTEGER,
           primaryKey: true,
@@ -177,75 +215,102 @@ module.exports = {
           type: Sequelize.DATE,
           defaultValue: Sequelize.NOW
         }
-      }, { transaction });
+        }, { transaction });
+      }
       
       // 5. Crear índices para optimizar queries multi-tenant
-      await queryInterface.addIndex('chat_conversations', ['tenant_id', 'status', 'updated_at'], {
-        name: 'idx_tenant_status_updated',
-        transaction
-      });
-      
-      await queryInterface.addIndex('chat_conversations', ['tenant_id', 'session_id'], {
-        name: 'idx_tenant_session',
-        transaction
-      });
-      
-      await queryInterface.addIndex('chat_messages', ['tenant_id', 'conversation_id', 'created_at'], {
-        name: 'idx_tenant_conv_created',
-        transaction
-      });
-      
-      await queryInterface.addIndex('tenant_chat_config', ['tenant_id'], {
-        name: 'idx_config_tenant',
-        unique: true,
-        transaction
-      });
-      
-      await queryInterface.addIndex('tenant_agents', ['tenant_id', 'status'], {
-        name: 'idx_agents_tenant_status',
-        transaction
-      });
-      
-      await queryInterface.addIndex('tenant_agents', ['agent_email'], {
-        name: 'idx_agents_email',
-        transaction
-      });
+      if (hasChatConversations && !(await indexExists('chat_conversations', 'idx_tenant_status_updated', transaction))) {
+        await queryInterface.addIndex('chat_conversations', ['tenant_id', 'status', 'updated_at'], {
+          name: 'idx_tenant_status_updated',
+          transaction
+        });
+      }
+
+      if (hasChatConversations && !(await indexExists('chat_conversations', 'idx_tenant_session', transaction))) {
+        await queryInterface.addIndex('chat_conversations', ['tenant_id', 'session_id'], {
+          name: 'idx_tenant_session',
+          transaction
+        });
+      }
+
+      if (hasChatMessages && !(await indexExists('chat_messages', 'idx_tenant_conv_created', transaction))) {
+        await queryInterface.addIndex('chat_messages', ['tenant_id', 'conversation_id', 'created_at'], {
+          name: 'idx_tenant_conv_created',
+          transaction
+        });
+      }
+
+      if (!(await indexExists('tenant_chat_config', 'idx_config_tenant', transaction))) {
+        await queryInterface.addIndex('tenant_chat_config', ['tenant_id'], {
+          name: 'idx_config_tenant',
+          unique: true,
+          transaction
+        });
+      }
+
+      if (!(await indexExists('tenant_agents', 'idx_agents_tenant_status', transaction))) {
+        await queryInterface.addIndex('tenant_agents', ['tenant_id', 'status'], {
+          name: 'idx_agents_tenant_status',
+          transaction
+        });
+      }
+
+      if (!(await indexExists('tenant_agents', 'idx_agents_email', transaction))) {
+        await queryInterface.addIndex('tenant_agents', ['agent_email'], {
+          name: 'idx_agents_email',
+          transaction
+        });
+      }
       
       // 6. Migrar datos existentes: Asignar tenant_id = 1 (tu ecommerce actual)
       // Como es tu primer tenant, asumimos que todo lo existente es del ecommerce principal
-      await queryInterface.sequelize.query(
-        'UPDATE chat_conversations SET tenant_id = 1 WHERE tenant_id IS NULL',
-        { transaction }
-      );
-      
-      await queryInterface.sequelize.query(
-        'UPDATE chat_messages SET tenant_id = 1 WHERE tenant_id IS NULL',
-        { transaction }
-      );
+      if (hasChatConversations && (await columnExists('chat_conversations', 'tenant_id', transaction))) {
+        await queryInterface.sequelize.query(
+          'UPDATE chat_conversations SET tenant_id = 1 WHERE tenant_id IS NULL',
+          { transaction }
+        );
+      }
+
+      if (hasChatMessages && (await columnExists('chat_messages', 'tenant_id', transaction))) {
+        await queryInterface.sequelize.query(
+          'UPDATE chat_messages SET tenant_id = 1 WHERE tenant_id IS NULL',
+          { transaction }
+        );
+      }
       
       // 7. Crear configuración por defecto para tenant 1
-      await queryInterface.bulkInsert('tenant_chat_config', [{
-        tenant_id: 1,
-        widget_color: '#4F46E5',
-        welcome_message: '👋 ¡Hola! ¿En qué podemos ayudarte?',
-        auto_response_enabled: true,
-        capture_leads: true,
-        integration_type: 'native',
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      }], { transaction });
+      const [existingConfig] = await queryInterface.sequelize.query(
+        'SELECT id FROM tenant_chat_config WHERE tenant_id = 1 LIMIT 1',
+        { transaction }
+      );
+      if (!existingConfig.length) {
+        await queryInterface.bulkInsert('tenant_chat_config', [{
+          tenant_id: 1,
+          widget_color: '#4F46E5',
+          welcome_message: '👋 ¡Hola! ¿En qué podemos ayudarte?',
+          auto_response_enabled: true,
+          capture_leads: true,
+          integration_type: 'native',
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        }], { transaction });
+      }
       
       // 8. Hacer tenant_id obligatorio después de migrar datos
-      await queryInterface.changeColumn('chat_conversations', 'tenant_id', {
-        type: Sequelize.INTEGER,
-        allowNull: false
-      }, { transaction });
-      
-      await queryInterface.changeColumn('chat_messages', 'tenant_id', {
-        type: Sequelize.INTEGER,
-        allowNull: false
-      }, { transaction });
+      if (hasChatConversations && (await columnExists('chat_conversations', 'tenant_id', transaction))) {
+        await queryInterface.changeColumn('chat_conversations', 'tenant_id', {
+          type: Sequelize.INTEGER,
+          allowNull: false
+        }, { transaction });
+      }
+
+      if (hasChatMessages && (await columnExists('chat_messages', 'tenant_id', transaction))) {
+        await queryInterface.changeColumn('chat_messages', 'tenant_id', {
+          type: Sequelize.INTEGER,
+          allowNull: false
+        }, { transaction });
+      }
       
       await transaction.commit();
       console.log('✅ Migración multi-tenant completada');
@@ -258,19 +323,62 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    const tableExists = async (tableName, transaction) => {
+      try {
+        await queryInterface.describeTable(tableName, { transaction });
+        return true;
+      } catch (error) {
+        // Si la tabla no existe, describeTable lanza error - retornamos false
+        return false;
+      }
+    };
+
+    const columnExists = async (tableName, columnName, transaction) => {
+      const definition = await queryInterface.describeTable(tableName, { transaction });
+      return Boolean(definition[columnName]);
+    };
+
+    const indexExists = async (tableName, indexName, transaction) => {
+      const indexes = await queryInterface.showIndex(tableName, { transaction });
+      return indexes.some((index) => index.name === indexName);
+    };
+
     const transaction = await queryInterface.sequelize.transaction();
     
     try {
       // Revertir cambios
-      await queryInterface.removeIndex('chat_conversations', 'idx_tenant_status_updated', { transaction });
-      await queryInterface.removeIndex('chat_conversations', 'idx_tenant_session', { transaction });
-      await queryInterface.removeIndex('chat_messages', 'idx_tenant_conv_created', { transaction });
-      
-      await queryInterface.dropTable('tenant_agents', { transaction });
-      await queryInterface.dropTable('tenant_chat_config', { transaction });
-      
-      await queryInterface.removeColumn('chat_conversations', 'tenant_id', { transaction });
-      await queryInterface.removeColumn('chat_messages', 'tenant_id', { transaction });
+      if (await tableExists('chat_conversations', transaction)) {
+        if (await indexExists('chat_conversations', 'idx_tenant_status_updated', transaction)) {
+          await queryInterface.removeIndex('chat_conversations', 'idx_tenant_status_updated', { transaction });
+        }
+        if (await indexExists('chat_conversations', 'idx_tenant_session', transaction)) {
+          await queryInterface.removeIndex('chat_conversations', 'idx_tenant_session', { transaction });
+        }
+      }
+
+      if (await tableExists('chat_messages', transaction)) {
+        if (await indexExists('chat_messages', 'idx_tenant_conv_created', transaction)) {
+          await queryInterface.removeIndex('chat_messages', 'idx_tenant_conv_created', { transaction });
+        }
+      }
+
+      if (await tableExists('tenant_agents', transaction)) {
+        await queryInterface.dropTable('tenant_agents', { transaction });
+      }
+      if (await tableExists('tenant_chat_config', transaction)) {
+        await queryInterface.dropTable('tenant_chat_config', { transaction });
+      }
+
+      if (await tableExists('chat_conversations', transaction)) {
+        if (await columnExists('chat_conversations', 'tenant_id', transaction)) {
+          await queryInterface.removeColumn('chat_conversations', 'tenant_id', { transaction });
+        }
+      }
+      if (await tableExists('chat_messages', transaction)) {
+        if (await columnExists('chat_messages', 'tenant_id', transaction)) {
+          await queryInterface.removeColumn('chat_messages', 'tenant_id', { transaction });
+        }
+      }
       
       await transaction.commit();
       console.log('✅ Rollback multi-tenant completado');

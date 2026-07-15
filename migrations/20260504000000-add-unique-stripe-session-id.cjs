@@ -11,6 +11,15 @@ module.exports = {
     console.log('📌 [Migration] Añadiendo índice UNIQUE a stripeSessionId...');
     
     try {
+      // Verificar si la columna stripeSessionId existe
+      const tableDescription = await queryInterface.describeTable('sales');
+      if (!tableDescription['stripeSessionId']) {
+        console.warn('⚠️ [Migration] La columna stripeSessionId no existe en la tabla sales.');
+        console.warn('⚠️ [Migration] Esta columna se crea por sync() en desarrollo o debe agregarse con una migración.');
+        console.warn('⚠️ [Migration] Omitiendo creación de índice...');
+        return;
+      }
+      
       // Verificar si ya existe el índice
       const [results] = await queryInterface.sequelize.query(
         "SHOW INDEX FROM sales WHERE Key_name = 'idx_stripe_session_id'"
@@ -58,10 +67,25 @@ module.exports = {
     console.log('🔄 [Migration] Eliminando índice UNIQUE de stripeSessionId...');
     
     try {
+      // Verificar si el índice existe antes de intentar eliminarlo
+      const [results] = await queryInterface.sequelize.query(
+        "SHOW INDEX FROM sales WHERE Key_name = 'idx_stripe_session_id'"
+      );
+      
+      if (results.length === 0) {
+        console.log('⚠️ [Migration] Índice idx_stripe_session_id no existe, omitiendo...');
+        return;
+      }
+      
       await queryInterface.removeIndex('sales', 'idx_stripe_session_id');
       console.log('✅ [Migration] Índice UNIQUE eliminado');
     } catch (error) {
       console.error('❌ [Migration] Error eliminando índice:', error.message);
+      // No lanzar error si el índice simplemente no existe
+      if (error.message.includes('check that it exists')) {
+        console.log('⚠️ [Migration] El índice no existe, continuando...');
+        return;
+      }
       throw error;
     }
   }
