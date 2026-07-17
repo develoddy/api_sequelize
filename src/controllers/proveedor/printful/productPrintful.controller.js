@@ -29,6 +29,7 @@ import  {
   generateSlug        ,
   removeRepeatedColors,
   processGalleryImage,
+  processGalleryImageVersioned,
 } from "./helper.js";
 
 // controllers/productPrintful.controller.js
@@ -352,7 +353,7 @@ const productDetailSyncPrice = (product) => {
 
 /**
  * Verifica si un producto tiene cambios que requieren actualización
- * Compara: título, estado, precio, tags
+ * Compara: título, estado, precio, tags, variantes, mockups/imágenes
  */
 const checkProductChanges = async (existingProduct, printfulProduct) => {
   try {
@@ -420,6 +421,86 @@ const checkProductChanges = async (existingProduct, printfulProduct) => {
       console.log(`    🔄 ⚠️ CAMBIO DETECTADO: cantidad de variantes diferente`);
       return true;
     }
+
+    // 🆕 7. Comparar mockups/imágenes de variantes
+    console.log(`    🖼️ Comparando mockups de variantes...`);
+    const existingVariants = await Variedad.findAll({
+      where: { productId: existingProduct.id },
+      include: [
+        { 
+          model: File, 
+          required: false,
+          attributes: ['idFile', 'hash', 'type', 'url', 'preview_url', 'thumbnail_url']
+        },
+        {
+          model: ProductVariants,
+          required: false,
+          attributes: ['image']
+        }
+      ]
+    });
+
+    // Crear un mapa de variantes existentes por variant_id para comparación rápida
+    const existingVariantsMap = new Map();
+    existingVariants.forEach(v => {
+      if (v.variant_id) {
+        existingVariantsMap.set(v.variant_id, v);
+      }
+    });
+
+    // Comparar cada variante de Printful con la existente
+    for (const printfulVariant of productDetail.sync_variants) {
+      const existingVariant = existingVariantsMap.get(printfulVariant.variant_id);
+      
+      if (!existingVariant) {
+        // Variante nueva detectada (ya se detecta en paso 6, pero por seguridad)
+        console.log(`    🔄 ⚠️ CAMBIO DETECTADO: Nueva variante ${printfulVariant.variant_id}`);
+        return true;
+      }
+
+      // Comparar imagen principal de ProductVariants
+      const newVariantImage = printfulVariant.product?.image || '';
+      const existingVariantImage = existingVariant.productVariant?.image || '';
+      
+      if (newVariantImage !== existingVariantImage) {
+        console.log(`    🔄 ⚠️ CAMBIO DETECTADO: Imagen principal variante ${printfulVariant.variant_id} cambió`);
+        console.log(`       Anterior: ${existingVariantImage}`);
+        console.log(`       Nueva: ${newVariantImage}`);
+        return true;
+      }
+
+      // Comparar archivos/mockups de la variante
+      const existingFiles = existingVariant.files || [];
+      const printfulFiles = printfulVariant.files || [];
+
+      // Si la cantidad de archivos cambió
+      if (existingFiles.length !== printfulFiles.length) {
+        console.log(`    🔄 ⚠️ CAMBIO DETECTADO: Cantidad de archivos cambió en variante ${printfulVariant.variant_id}`);
+        console.log(`       Anterior: ${existingFiles.length} archivos`);
+        console.log(`       Nueva: ${printfulFiles.length} archivos`);
+        return true;
+      }
+
+      // Crear firmas de archivos para comparación (ordenadas por idFile)
+      const existingFileSignatures = existingFiles
+        .map(f => `${f.idFile}-${f.hash || f.url}-${f.type}`)
+        .sort()
+        .join('|');
+      
+      const printfulFileSignatures = printfulFiles
+        .map(f => `${f.id}-${f.hash || f.url}-${f.type}`)
+        .sort()
+        .join('|');
+
+      if (existingFileSignatures !== printfulFileSignatures) {
+        console.log(`    🔄 ⚠️ CAMBIO DETECTADO: Mockups modificados en variante ${printfulVariant.variant_id}`);
+        console.log(`       Firma anterior: ${existingFileSignatures.substring(0, 100)}...`);
+        console.log(`       Firma nueva: ${printfulFileSignatures.substring(0, 100)}...`);
+        return true;
+      }
+    }
+
+    console.log(`    ✅ Mockups verificados - Sin cambios`);
     
     // No hay cambios detectados
     console.log(`    ✅ NO HAY CAMBIOS - Producto idéntico`);
@@ -428,9 +509,9 @@ const checkProductChanges = async (existingProduct, printfulProduct) => {
   } catch (error) {
     console.error(`    ❌ ERROR en checkProductChanges:`, error.message);
     console.error(`    ⚠️ Stack:`, error.stack);
-    // En caso de error, retornar false y hacer skip (mejor perder una actualización que forzar una innecesaria)
-    console.log(`    ⏭️ Por seguridad, marcando como SIN CAMBIOS debido al error`);
-    return false;
+    // En caso de error, retornar true para forzar actualización (mejor actualizar de más que perder cambios)
+    console.log(`    ⚠️ Por seguridad, marcando como CON CAMBIOS debido al error`);
+    return true;
   }
 };
 
@@ -775,6 +856,119 @@ const handleProductImage = async (imageUrl, existingImageName = null) => {
 
 
 /**
+ * Sincroniza los archivos/mockups de una variante existente
+ * Hace upsert: crea nuevos, actualiza modificados, elimina obsoletos
+ */
+const syncVariantFiles = async (varietyId, printfulFiles, transaction) => {
+  try {
+    console.log(`      📁 Sincronizando ${printfulFiles.length} archivos para variante ${varietyId}...`);
+
+    // Obtener archivos existentes en DB
+    const existingFiles = await File.findAll({
+      where: { varietyId },
+      transaction
+    });
+
+    // Crear mapa de archivos existentes por idFile
+    const existingFilesMap = new Map();
+    existingFiles.forEach(file => {
+      existingFilesMap.set(file.idFile, file);
+    });
+
+    // Set de IDs de archivos actuales en Printful (para detectar obsoletos)
+    const printfulFileIds = new Set();
+
+    let created = 0;
+    let updated = 0;
+
+    // Procesar cada archivo de Printful
+    for (const printfulFile of printfulFiles) {
+      printfulFileIds.add(printfulFile.id);
+      
+      const existingFile = existingFilesMap.get(printfulFile.id);
+
+      if (!existingFile) {
+        // 🆕 CREAR archivo nuevo
+        await File.create({
+          idFile: printfulFile.id,
+          type: printfulFile.type,
+          hash: printfulFile.hash || '',
+          url: printfulFile.url,
+          filename: printfulFile.filename,
+          mime_type: printfulFile.mime_type,
+          size: printfulFile.size,
+          width: printfulFile.width,
+          height: printfulFile.height,
+          dpi: printfulFile.dpi,
+          status: printfulFile.status,
+          created: printfulFile.created,
+          thumbnail_url: printfulFile.thumbnail_url,
+          preview_url: printfulFile.preview_url,
+          visible: printfulFile.visible !== undefined ? printfulFile.visible : true,
+          is_temporary: printfulFile.is_temporary,
+          message: printfulFile.message,
+          varietyId: varietyId,
+          optionVarietyId: printfulFile.id,
+        }, { transaction });
+
+        created++;
+        console.log(`        ➕ Archivo creado: ${printfulFile.filename} (tipo: ${printfulFile.type})`);
+
+      } else {
+        // 🔄 ACTUALIZAR archivo si cambió
+        const fileUpdates = {};
+        
+        // Comparar campos relevantes
+        if (existingFile.type !== printfulFile.type) fileUpdates.type = printfulFile.type;
+        if (existingFile.hash !== (printfulFile.hash || '')) fileUpdates.hash = printfulFile.hash || '';
+        if (existingFile.url !== printfulFile.url) fileUpdates.url = printfulFile.url;
+        if (existingFile.filename !== printfulFile.filename) fileUpdates.filename = printfulFile.filename;
+        if (existingFile.mime_type !== printfulFile.mime_type) fileUpdates.mime_type = printfulFile.mime_type;
+        if (existingFile.size !== printfulFile.size) fileUpdates.size = printfulFile.size;
+        if (existingFile.width !== printfulFile.width) fileUpdates.width = printfulFile.width;
+        if (existingFile.height !== printfulFile.height) fileUpdates.height = printfulFile.height;
+        if (existingFile.status !== printfulFile.status) fileUpdates.status = printfulFile.status;
+        if (existingFile.thumbnail_url !== printfulFile.thumbnail_url) fileUpdates.thumbnail_url = printfulFile.thumbnail_url;
+        if (existingFile.preview_url !== printfulFile.preview_url) fileUpdates.preview_url = printfulFile.preview_url;
+        
+        const visibleValue = printfulFile.visible !== undefined ? printfulFile.visible : true;
+        if (existingFile.visible !== visibleValue) fileUpdates.visible = visibleValue;
+        
+        if (existingFile.is_temporary !== printfulFile.is_temporary) fileUpdates.is_temporary = printfulFile.is_temporary;
+        if (existingFile.message !== printfulFile.message) fileUpdates.message = printfulFile.message;
+
+        if (Object.keys(fileUpdates).length > 0) {
+          await existingFile.update(fileUpdates, { transaction });
+          updated++;
+          console.log(`        🔄 Archivo actualizado: ${printfulFile.filename} (campos: ${Object.keys(fileUpdates).join(', ')})`);
+        } else {
+          console.log(`        ✅ Archivo sin cambios: ${printfulFile.filename}`);
+        }
+      }
+    }
+
+    // 🗑️ ELIMINAR archivos obsoletos (ya no existen en Printful)
+    let deleted = 0;
+    for (const existingFile of existingFiles) {
+      if (!printfulFileIds.has(existingFile.idFile)) {
+        await existingFile.destroy({ transaction });
+        deleted++;
+        console.log(`        🗑️ Archivo eliminado (obsoleto): ${existingFile.filename}`);
+      }
+    }
+
+    console.log(`      ✅ Sincronización de archivos completada: ${created} creados, ${updated} actualizados, ${deleted} eliminados`);
+
+    return { created, updated, deleted };
+
+  } catch (error) {
+    console.error(`      ❌ Error sincronizando archivos de variante ${varietyId}:`, error.message);
+    throw error;
+  }
+};
+
+
+/**
   Mejoras aplicadas:
   Evita la creación de variantes nuevas: Solo actualiza las existentes si se encuentran en syncVariants.
   Usa Map para búsqueda rápida: Reduce el tiempo de búsqueda de variantes existentes.
@@ -791,23 +985,77 @@ const createOrUpdateVariants = async (productId, syncVariants, transaction) => {
     where: { productId },
     transaction
   });
-  const variantMap = new Map(existingVariants.map(v => [v.sku, v]));
+  const variantMap = new Map(existingVariants.map(v => [v.variant_id, v])); // 🔥 Usar variant_id en lugar de sku
   const newGalleryImages = new Set();
 
+  console.log(`    📦 Sincronizando ${syncVariants.length} variantes para producto ${productId}...`);
+
   for (const variant of syncVariants) {
-    const existingVariant = variantMap.get(variant.sku);
+    const existingVariant = variantMap.get(variant.variant_id); // 🔥 Buscar por variant_id
 
     if (existingVariant) {
+      // 🔄 VARIANTE EXISTENTE - Actualizar
+      console.log(`      🔄 Actualizando variante existente: ${variant.name} (variant_id: ${variant.variant_id})`);
+      
       const variantUpdates = {};
-      ["valor", "color", "external_id", "sync_product_id", "name", "synced", "variant_id", "main_category_id", "warehouse_product_id", "warehouse_product_variant_id", "retail_price", "currency"].forEach(field => {
-        if (existingVariant[field] !== variant[field]) variantUpdates[field] = variant[field];
-      });
+      
+      // Comparar campos y solo actualizar si hay cambios
+      if (existingVariant.valor !== variant.size) variantUpdates.valor = variant.size;
+      if (existingVariant.color !== (variant.color || 'no hay color')) variantUpdates.color = variant.color || 'no hay color';
+      if (existingVariant.external_id !== variant.external_id) variantUpdates.external_id = variant.external_id;
+      if (existingVariant.sync_product_id !== variant.sync_product_id) variantUpdates.sync_product_id = variant.sync_product_id;
+      if (existingVariant.name !== variant.name) variantUpdates.name = variant.name;
+      if (existingVariant.synced !== variant.synced) variantUpdates.synced = variant.synced;
+      if (existingVariant.main_category_id !== variant.main_category_id) variantUpdates.main_category_id = variant.main_category_id;
+      if (existingVariant.warehouse_product_id !== variant.warehouse_product_id) variantUpdates.warehouse_product_id = variant.warehouse_product_id;
+      if (existingVariant.warehouse_product_variant_id !== variant.warehouse_product_variant_id) variantUpdates.warehouse_product_variant_id = variant.warehouse_product_variant_id;
+      if (existingVariant.retail_price !== variant.retail_price) variantUpdates.retail_price = variant.retail_price;
+      if (existingVariant.sku !== variant.sku) variantUpdates.sku = variant.sku;
+      if (existingVariant.currency !== variant.currency) variantUpdates.currency = variant.currency;
       
       if (Object.keys(variantUpdates).length > 0) {
         await existingVariant.update(variantUpdates, { transaction });
+        console.log(`        📝 Campos actualizados: ${Object.keys(variantUpdates).join(', ')}`);
+      } else {
+        console.log(`        ✅ Sin cambios en campos básicos`);
       }
+
+      // 🆕 Actualizar ProductVariants.image si cambió
+      const productVariant = await ProductVariants.findOne({
+        where: { varietyId: existingVariant.id },
+        transaction
+      });
+
+      const newImage = variant.product?.image || '';
+      
+      if (productVariant) {
+        if (productVariant.image !== newImage) {
+          await productVariant.update({ image: newImage }, { transaction });
+          console.log(`        🖼️ ProductVariants.image actualizada`);
+        }
+      } else {
+        // Crear ProductVariants si no existe (caso de migración)
+        await ProductVariants.create({
+          variant_id: existingVariant.variant_id,
+          product_id: existingVariant.productId,
+          image: newImage,
+          name: existingVariant.name,
+          varietyId: existingVariant.id
+        }, { transaction });
+        console.log(`        ➕ ProductVariants creado (migración)`);
+      }
+
+      // 🆕 Sincronizar archivos/mockups de la variante
+      if (variant.files && variant.files.length > 0) {
+        await syncVariantFiles(existingVariant.id, variant.files, transaction);
+      } else {
+        console.log(`        ⚠️ Sin archivos en Printful para esta variante`);
+      }
+
     } else {
-      // CREAR NUEVA VARIANTE
+      // ➕ VARIANTE NUEVA - Crear
+      console.log(`      ➕ Creando nueva variante: ${variant.name} (variant_id: ${variant.variant_id})`);
+      
       const newVariant = await Variedad.create({
         valor: variant.size,
         stock: 10,
@@ -830,54 +1078,59 @@ const createOrUpdateVariants = async (productId, syncVariants, transaction) => {
       await ProductVariants.create({
         variant_id: newVariant.variant_id,
         product_id: newVariant.productId,
-        image: variant.product?.image,
+        image: variant.product?.image || '',
         name: newVariant.name,
         varietyId: newVariant.id
       }, { transaction });
 
       // CREAR ARCHIVOS ASOCIADOS A LA VARIANTE
-      for ( const file of variant.files ) {
+      for (const file of variant.files) {
         try {
-            await File.create({
-              idFile          : file.id,
-              type            : file.type,
-              hash            : file.hash || '',
-              url             : file.url,
-              filename        : file.filename,
-              mime_type       : file.mime_type,
-              size            : file.size,
-              width           : file.width,
-              height          : file.height,
-              dpi             : file.dpi,
-              status          : file.status,
-              created         : file.created,
-              thumbnail_url   : file.thumbnail_url,
-              preview_url     : file.preview_url,
-              visible         : file.visible,
-              is_temporary    : file.is_temporary,
-              message         : file.message,
-              varietyId       : newVariant.id,
-              optionVarietyId : newVariant.variant_id,
-            }, { transaction });
-        } catch ( error ) {
-          console.error('Error creating file record:', error, file);
+          await File.create({
+            idFile: file.id,
+            type: file.type,
+            hash: file.hash || '',
+            url: file.url,
+            filename: file.filename,
+            mime_type: file.mime_type,
+            size: file.size,
+            width: file.width,
+            height: file.height,
+            dpi: file.dpi,
+            status: file.status,
+            created: file.created,
+            thumbnail_url: file.thumbnail_url,
+            preview_url: file.preview_url,
+            visible: file.visible !== undefined ? file.visible : true,
+            is_temporary: file.is_temporary,
+            message: file.message,
+            varietyId: newVariant.id,
+            optionVarietyId: file.id,
+          }, { transaction });
+        } catch (error) {
+          console.error('        ❌ Error creando archivo:', error.message);
         }
       }
 
       // CREAR OPCIONES PARA LA NUEVA VARIANTE
-      for ( const option of variant.options ) {
+      for (const option of variant.options) {
         await Option.create({
-          idOption  : option.id     ,
-          value     : option.value  ,
-          varietyId : newVariant.id ,
+          idOption: option.id,
+          value: option.value,
+          varietyId: newVariant.id,
         }, { transaction });
       }
+
+      console.log(`        ✅ Nueva variante creada con ${variant.files.length} archivos y ${variant.options.length} opciones`);
     }
 
-    // PROCESAR IMÁGENES DE GALERÍA
+    // 🖼️ PROCESAR IMÁGENES DE GALERÍA con versionado
     for (const file of variant.files) {
       if (file.type === 'preview' && file.preview_url) {
-        const galleryName = await processGalleryImage(file.preview_url);
+        // 🆕 Usar hash o idFile para crear nombre único con versionado
+        const fileHash = file.hash ? file.hash.substring(0, 12) : `file${file.id}`;
+        const galleryName = await processGalleryImageVersioned(file.preview_url, fileHash, variant.variant_id);
+        
         newGalleryImages.add(galleryName);
 
         if (!existingGalleries.some(g => g.imagen === galleryName)) {
@@ -886,15 +1139,19 @@ const createOrUpdateVariants = async (productId, syncVariants, transaction) => {
             color: variant.color || 'no hay color', 
             productId 
           }, { transaction });
+          console.log(`        🖼️ Galería creada: ${galleryName}`);
         }
       }
     }
   }
 
-  // ELIMINAR VARIANTES QUE YA NO EXISTEN
+  // 🗑️ ELIMINAR VARIANTES QUE YA NO EXISTEN
+  const printfulVariantIds = new Set(syncVariants.map(v => v.variant_id));
   for (const existingVariant of existingVariants) {
-    if (!syncVariants.some(v => v.sku === existingVariant.sku)) {
-      // Eliminar opciones asociadas antes de eliminar la variedad
+    if (!printfulVariantIds.has(existingVariant.variant_id)) {
+      console.log(`      🗑️ Eliminando variante obsoleta: ${existingVariant.name} (variant_id: ${existingVariant.variant_id})`);
+      
+      // Eliminar relaciones primero
       await Option.destroy({ where: { varietyId: existingVariant.id }, transaction });
       await ProductVariants.destroy({ where: { varietyId: existingVariant.id }, transaction });
       await File.destroy({ where: { varietyId: existingVariant.id }, transaction });
@@ -902,13 +1159,15 @@ const createOrUpdateVariants = async (productId, syncVariants, transaction) => {
     }
   }
 
-  // ELIMINAR GALERÍAS QUE YA NO ESTÁN ASOCIADAS
+  // 🗑️ ELIMINAR GALERÍAS QUE YA NO ESTÁN ASOCIADAS
   for (const existingGallery of existingGalleries) {
     if (!newGalleryImages.has(existingGallery.imagen)) {
       await existingGallery.destroy({ transaction });
+      console.log(`      🗑️ Galería eliminada (obsoleta): ${existingGallery.imagen}`);
     }
   }
 
+  console.log(`    ✅ Sincronización de variantes completada`);
 };
 
 /*

@@ -22,7 +22,30 @@ export default {
             });
         }
 
-        
+        // 🆕 Procesar variedades para incluir Files y ProductVariants
+        const processedVariedades = variedades.map(variedad => {
+            const variedadData = variedad.toJSON ? variedad.toJSON() : variedad;
+            
+            // Procesar Files para construir URLs completas
+            if (variedadData.files && Array.isArray(variedadData.files)) {
+                variedadData.files = variedadData.files.map(file => ({
+                    ...file,
+                    // Construir URLs completas si son relativas
+                    url: file.url?.startsWith('http') ? file.url : (file.url ? `${process.env.URL_BACKEND}/api/products/uploads/product/${file.url}` : null),
+                    preview_url: file.preview_url?.startsWith('http') ? file.preview_url : (file.preview_url ? `${process.env.URL_BACKEND}/api/products/uploads/product/${file.preview_url}` : null),
+                    thumbnail_url: file.thumbnail_url?.startsWith('http') ? file.thumbnail_url : (file.thumbnail_url ? `${process.env.URL_BACKEND}/api/products/uploads/product/${file.thumbnail_url}` : null),
+                }));
+            }
+
+            // Añadir imagen de ProductVariants
+            if (variedadData.productVariant && variedadData.productVariant.image) {
+                variedadData.imagen = variedadData.productVariant.image.startsWith('http') 
+                    ? variedadData.productVariant.image 
+                    : `${process.env.URL_BACKEND}/api/products/uploads/product/${variedadData.productVariant.image}`;
+            }
+
+            return variedadData;
+        });
 
         return {
             _id: product.id,
@@ -45,7 +68,7 @@ export default {
             state: product.state,
             logo_position: product.logo_position,
             idProduct: product.idProduct, // 📏 ¡PRINTFUL ID AÑADIDO!
-            variedades: variedades,
+            variedades: processedVariedades, // 🆕 Variedades con Files y ProductVariants
             imagen_two: IMAGEN_TWO,
             galerias: GALERIAS,
             avg_review:avg_review,

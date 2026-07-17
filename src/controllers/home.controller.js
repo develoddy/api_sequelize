@@ -6,6 +6,7 @@ import { Categorie } from "../models/Categorie.js";
 import { Discount } from "../models/Discount.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
+import { File } from "../models/File.js";
 import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
 import { Galeria } from "../models/Galeria.js";
@@ -269,7 +270,19 @@ export const show_landing_product = async (req, res) => {
 
             // Obtener variedades del producto
             let variedades = await Variedad.findAll({
-                where: { productId: product.id }
+                where: { productId: product.id },
+                include: [
+                    {
+                        model: File,
+                        required: false,
+                        attributes: ['id', 'idFile', 'type', 'hash', 'url', 'filename', 'preview_url', 'thumbnail_url', 'visible', 'width', 'height']
+                    },
+                    {
+                        model: ProductVariants,
+                        required: false,
+                        attributes: ['id', 'variant_id', 'image', 'name']
+                    }
+                ]
             });
 
             // Obtener reviews del producto junto con los usuarios
@@ -314,7 +327,21 @@ export const show_landing_product = async (req, res) => {
 
         
         // Obtener variedades del producto si hay slug
-        let variedades = product ? await Variedad.findAll({ where: { productId: product.id } }) : [];
+        let variedades = product ? await Variedad.findAll({ 
+            where: { productId: product.id },
+            include: [
+                {
+                    model: File,
+                    required: false,
+                    attributes: ['id', 'idFile', 'type', 'hash', 'url', 'filename', 'preview_url', 'thumbnail_url', 'visible', 'width', 'height']
+                },
+                {
+                    model: ProductVariants,
+                    required: false,
+                    attributes: ['id', 'variant_id', 'image', 'name']
+                }
+            ]
+        }) : [];
 
         // Obtener reviews del producto si hay slug
         let reviews = product ? await Review.findAll({ where: { productId: product.id }, include: [{ model: User }] }) : [];

@@ -118,3 +118,47 @@ export const processGalleryImage = async (galleryImagePath) => {
 
   return galleryName;
 };
+
+/**
+ * 🆕 Procesa y descarga una imagen de galería con versionado
+ * Añade un identificador único (hash o variant_id) para evitar colisiones
+ * y permitir la detección de cambios en el contenido
+ */
+export const processGalleryImageVersioned = async (galleryImagePath, uniqueId, variantId) => {
+  try {
+    // Extraer extensión y nombre base
+    const urlParts = galleryImagePath.split('/');
+    const originalName = urlParts[urlParts.length - 1];
+    const extension = originalName.split('.').pop();
+    const baseName = originalName.replace(`.${extension}`, '').replace(/\?.*$/, ''); // Quitar query params
+    
+    // Crear nombre único: baseName-uniqueId-variantId.ext
+    // Ejemplo: preview-abc123def456-12345.jpg
+    const versionedName = `${baseName}-${uniqueId}-v${variantId}.${extension}`;
+    
+    const galleryUploadDir = path.resolve('./src/uploads/product');
+
+    if (!fs.existsSync(galleryUploadDir)) {
+      fs.mkdirSync(galleryUploadDir, { recursive: true });
+    }
+
+    const galleryImageFilePath = path.join(galleryUploadDir, versionedName);
+    
+    // Si el archivo ya existe con ese hash/versión, no descargarlo de nuevo
+    if (fs.existsSync(galleryImageFilePath)) {
+      console.log(`        ♻️ Imagen ya existe (usando caché): ${versionedName}`);
+      return versionedName;
+    }
+
+    // Descargar nueva imagen
+    await downloadImage(galleryImagePath, galleryImageFilePath);
+    console.log(`        ⬇️ Imagen descargada: ${versionedName}`);
+
+    return versionedName;
+    
+  } catch (error) {
+    console.error(`        ❌ Error procesando imagen de galería:`, error.message);
+    // Fallback al método antiguo sin versionado
+    return await processGalleryImage(galleryImagePath);
+  }
+};
