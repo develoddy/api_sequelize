@@ -13,7 +13,7 @@
  */
 
 import { getActiveMvps, getMvpDetailedMetrics, checkPromotionCriteria } from '../services/mvpMetrics.service.js';
-import { Module } from '../models/Module.js';
+import { Module } from '../domains/platform/models/Module.js';
 
 /**
  * GET /api/mvp-hub/modules

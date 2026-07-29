@@ -1,6 +1,6 @@
-import { Tenant } from '../models/Tenant.js';
-import { Module } from '../models/Module.js';
-import { TenantNote } from '../models/TenantNote.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
+import { Module } from '../domains/platform/models/Module.js';
+import { TenantNote } from '../domains/platform/models/TenantNote.js';
 import { TrackingEvent } from '../models/TrackingEvent.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../database/database.js';

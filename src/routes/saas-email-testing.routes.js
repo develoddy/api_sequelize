@@ -9,7 +9,7 @@ import {
   testEmailConfiguration
 } from '../controllers/saas-email.controller.js';
 import { runTrialNotificationsNow } from '../cron/trial-notifications.cron.js';
-import { Tenant } from '../models/Tenant.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
 
 const router = express.Router();
 

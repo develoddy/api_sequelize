@@ -8,7 +8,7 @@ import { Variedad } from "../../../models/Variedad.js";
 import { User } from "../../../models/User.js";
 import { Guest } from "../../../models/Guest.js";
 import { Receipt } from "../../../models/Receipt.js";
-import { Tenant } from "../../../models/Tenant.js";
+import { Tenant } from "../../../domains/platform/models/Tenant.js";
 import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
 
 const INTERNAL_TX_REGEX = /^sale_(\d+)_\d+$/;

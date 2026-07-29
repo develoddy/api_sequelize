@@ -10,7 +10,7 @@
  */
 
 import { TrackingEvent } from '../models/TrackingEvent.js';
-import { Module } from '../models/Module.js';
+import { Module } from '../domains/platform/models/Module.js';
 import { Op } from 'sequelize';
 
 // ==========================================

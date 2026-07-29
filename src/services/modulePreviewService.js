@@ -11,7 +11,7 @@
  * @module services/modulePreviewService
  */
 
-import { Module } from '../models/Module.js';
+import { Module } from '../domains/platform/models/Module.js';
 import { sequelize } from '../database/database.js';
 
 /**

@@ -15,8 +15,8 @@ import { Option } from "../models/Option.js";
 import { ProductVariants } from "../models/ProductVariants.js";
 import { File } from "../models/File.js";
 import { Cupone } from "../models/Cupone.js";
-import { Module } from "../models/Module.js"; // 🆕 Importar Module
-import { Tenant } from "../models/Tenant.js"; // 🏢 Importar Tenant para multi-tenant
+import { Module } from "../domains/platform/models/Module.js"; // 🆕 Importar Module
+import { Tenant } from "../domains/platform/models/Tenant.js"; // 🏢 Importar Tenant para multi-tenant
 import fs from 'fs';
 import path from "path";
 import http from 'http';
@@ -125,7 +125,7 @@ export const registerGuest = async (req, res) => {
         if (isModulePurchase) {
             console.log('[Sale Controller GUEST] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
             
-            const { Module } = await import('../models/Module.js');
+            const { Module } = await import('../domains/platform/models/Module.js');
             const module = await Module.findByPk(moduleId);
             
             if (!module) {
@@ -401,7 +401,7 @@ export const register = async (req, res) => {
         if (isModulePurchase) {
             console.log('[Sale Controller] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
             
-            const { Module } = await import('../models/Module.js');
+            const { Module } = await import('../domains/platform/models/Module.js');
             const module = await Module.findByPk(moduleId);
             
             if (!module) {

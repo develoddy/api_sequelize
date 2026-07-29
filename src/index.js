@@ -245,9 +245,9 @@ import './models/chat/TenantChatConfig.js'; // 🚀 Multi-Tenant Chat Config
 import './models/chat/TenantAgent.js';       // 🚀 Tenant Agents
 import './models/ReturnRequest.js';
 import './models/Notification.js';
-import './models/Module.js';
-import './models/Tenant.js';
-import './models/TenantNote.js';
+import './domains/platform/models/Module.js';
+import './domains/platform/models/Tenant.js';
+import './domains/platform/models/TenantNote.js';
 import './models/StripeWebhookLog.js';
 import './models/MailflowSequence.js';
 import './models/MailflowContact.js';

@@ -1,4 +1,4 @@
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../database/database.js';
 import { DataTypes, Op } from 'sequelize';
 import bcrypt from 'bcrypt';
 

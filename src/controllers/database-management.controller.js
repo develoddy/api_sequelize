@@ -7,8 +7,8 @@ import fs from 'fs';
 import path from 'path';
 
 // Importar TODOS los modelos para asegurar que se registren en sequelize.sync()
-import { Tenant } from '../models/Tenant.js';
-import { Module } from '../models/Module.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
+import { Module } from '../domains/platform/models/Module.js';
 
 const execAsync = promisify(exec);
 

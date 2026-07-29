@@ -15,8 +15,8 @@ import { SaleAddress } from '../models/SaleAddress.js';
 import { File } from '../models/File.js';
 import { Option } from '../models/Option.js';
 import { Cupone } from '../models/Cupone.js';
-import { Tenant } from '../models/Tenant.js';
-import { Module } from '../models/Module.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
+import { Module } from '../domains/platform/models/Module.js';
 import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
 
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
@@ -174,7 +174,7 @@ export const createCheckoutSession = async (req, res) => {
     
     if (isModulePurchase) {
       // Compra de módulo: crear line item desde el módulo
-      const { Module } = await import('../models/Module.js');
+      const { Module } = await import('../domains/platform/models/Module.js');
       const module = await Module.findByPk(moduleId);
       
       if (!module) {
@@ -465,7 +465,7 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
     });
     
     try {
-      const { Tenant } = await import('../models/Tenant.js');
+      const { Tenant } = await import('../domains/platform/models/Tenant.js');
       const tenant = await Tenant.findByPk(tenantId);
       
       if (!tenant) {
@@ -667,7 +667,7 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
       }
       
       // Crear SaleDetail simple para el módulo
-      const { Module } = await import('../models/Module.js');
+      const { Module } = await import('../domains/platform/models/Module.js');
       const module = await Module.findByPk(moduleId);
       
       if (module) {
@@ -1688,7 +1688,7 @@ async function handleInvoicePaid(event, res, webhookLog) {
     }
 
     // Buscar tenant y actualizar
-    const { Tenant } = await import('../models/Tenant.js');
+    const { Tenant } = await import('../domains/platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1752,7 +1752,7 @@ async function handleSubscriptionUpdated(event, res, webhookLog) {
       return res.json({ received: true });
     }
 
-    const { Tenant } = await import('../models/Tenant.js');
+    const { Tenant } = await import('../domains/platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1821,7 +1821,7 @@ async function handleSubscriptionDeleted(event, res, webhookLog) {
       return res.json({ received: true });
     }
 
-    const { Tenant } = await import('../models/Tenant.js');
+    const { Tenant } = await import('../domains/platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1890,7 +1890,7 @@ export const createSubscriptionCheckout = async (req, res) => {
     }
 
     // Buscar tenant
-    const { Tenant } = await import('../models/Tenant.js');
+    const { Tenant } = await import('../domains/platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -2009,7 +2009,7 @@ export const cancelSubscription = async (req, res) => {
     }
 
     // Buscar tenant
-    const { Tenant } = await import('../models/Tenant.js');
+    const { Tenant } = await import('../domains/platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {

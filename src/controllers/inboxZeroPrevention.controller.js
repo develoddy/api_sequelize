@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { Tenant } from '../models/Tenant.js';
-import { Module } from '../models/Module.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
+import { Module } from '../domains/platform/models/Module.js';
 import emailService from '../services/emailNotification.service.js';
 import { sendTrialWelcomeEmail } from './saas-email.controller.js';
 

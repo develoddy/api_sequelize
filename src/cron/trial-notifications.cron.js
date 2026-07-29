@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { Op } from 'sequelize';
-import { Tenant } from '../models/Tenant.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
 import { sendTrialExpiringEmail, sendTrialExpiredEmail } from '../controllers/saas-email.controller.js';
 
 /**

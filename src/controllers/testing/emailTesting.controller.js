@@ -11,7 +11,7 @@ import { SaleAddress } from '../../models/SaleAddress.js';
 import { SaleDetail } from '../../models/SaleDetail.js';
 import { Product } from '../../models/Product.js';
 import { Variedad } from '../../models/Variedad.js';
-import { Tenant } from '../../models/Tenant.js';
+import { Tenant } from '../../domains/platform/models/Tenant.js';
 import { 
     sendOrderShippedEmail, 
     sendOrderPrintingEmail, 

@@ -5,7 +5,7 @@ import { SaleDetail } from "../models/SaleDetail.js";
 import { Product } from "../models/Product.js";
 import { Variedad } from "../models/Variedad.js";
 import { File } from "../models/File.js";
-import { Tenant } from "../models/Tenant.js";
+import { Tenant } from "../domains/platform/models/Tenant.js";
 
 const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN;
 const PRINTFUL_API_URL = 'https://api.printful.com';

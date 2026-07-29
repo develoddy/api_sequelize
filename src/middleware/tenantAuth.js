@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { Tenant } from '../models/Tenant.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
 
 /**
  * Middleware: Autenticación de Tenants (clientes SaaS)

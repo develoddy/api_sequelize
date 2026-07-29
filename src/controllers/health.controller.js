@@ -1,6 +1,6 @@
 import { sequelize } from '../database/database.js';
 import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
-import { Tenant } from '../models/Tenant.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
 import { Op } from 'sequelize';
 import Stripe from 'stripe';
 

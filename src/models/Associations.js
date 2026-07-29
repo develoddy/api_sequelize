@@ -19,9 +19,9 @@ import { PrintfulWebhookLog } from './PrintfulWebhookLog.js';
 import RetryQueue from './RetryQueue.js';
 import AnalyticsCache from './AnalyticsCache.js';
 import ProductAnalytics from './ProductAnalytics.js';
-import { Module } from './Module.js';
-import { Tenant } from './Tenant.js';
-import { TenantNote } from './TenantNote.js';
+import { Module } from '../domains/platform/models/Module.js';
+import { Tenant } from '../domains/platform/models/Tenant.js';
+import { TenantNote } from '../domains/platform/models/TenantNote.js';
 
 /*
  * RELACIÓN TENANT -> MODULE
