@@ -1,7 +1,7 @@
 import express from 'express';
-import * as saasController from '../controllers/saas.controller.js';
-import { authenticateTenant, authenticateTenantOnly, optionalTenantAuth } from '../middleware/tenantAuth.js';
-import { registerLimiter, loginLimiter } from '../middlewares/rate-limit.middleware.js';
+import * as saasController from './saas.controller.js';
+import { authenticateTenant, authenticateTenantOnly, optionalTenantAuth } from './tenantAuth.js';
+import { registerLimiter, loginLimiter } from '../../../middlewares/rate-limit.middleware.js';
 
 const router = express.Router();
 

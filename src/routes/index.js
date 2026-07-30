@@ -41,8 +41,8 @@ import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 import modulesRoutes from '../domains/platform/modules/modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
-import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
-import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
+import saasRoutes from '../domains/platform/tenants/saas.routes.js'; // 🚀 SaaS Tenants & Trials
+import saasEmailTestingRoutes from '../domains/platform/tenants/saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
 import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences

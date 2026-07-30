@@ -314,7 +314,7 @@ async function main() {
 
             // Inicializar cron de notificaciones SaaS trial
             try {
-                const { startTrialNotificationsCron } = await import('./cron/trial-notifications.cron.js');
+                const { startTrialNotificationsCron } = await import('./domains/platform/tenants/trial-notifications.cron.js');
                 startTrialNotificationsCron();
             } catch (error) {
                 console.error('❌ Error inicializando trial notifications cron:', error);

@@ -3,8 +3,8 @@ import path from 'path';
 import Handlebars from 'handlebars';
 import ejs from 'ejs';
 import nodemailer from 'nodemailer';
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
+import { Tenant } from '../models/Tenant.js';
+import { Module } from '../models/Module.js';
 
 /**
  * 📧 SaaS Email Controller

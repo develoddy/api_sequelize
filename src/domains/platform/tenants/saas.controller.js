@@ -1,6 +1,6 @@
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
-import { User } from '../models/User.js';
+import { Tenant } from '../models/Tenant.js';
+import { Module } from '../models/Module.js';
+import { User } from '../../../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';

@@ -26,7 +26,7 @@ import {
   sendPaymentSuccessEmail, 
   sendSubscriptionCancelledEmail, 
   sendAccessLostEmail 
-} from './saas-email.controller.js';
+} from '../domains/platform/tenants/saas-email.controller.js';
 
 import stripe from '../devtools/utils/stripe.js';
 

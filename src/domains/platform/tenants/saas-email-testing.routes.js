@@ -7,9 +7,9 @@ import {
   sendSubscriptionCancelledEmail,
   sendAccessLostEmail,
   testEmailConfiguration
-} from '../controllers/saas-email.controller.js';
-import { runTrialNotificationsNow } from '../cron/trial-notifications.cron.js';
-import { Tenant } from '../domains/platform/models/Tenant.js';
+} from './saas-email.controller.js';
+import { runTrialNotificationsNow } from './trial-notifications.cron.js';
+import { Tenant } from '../models/Tenant.js';
 
 const router = express.Router();
 
