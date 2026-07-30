@@ -1,8 +1,8 @@
-import { TrackingEvent } from '../../../models/TrackingEvent.js';
-import { Module } from '../../../domains/platform/models/Module.js';
-import { Op } from 'sequelize';
 import { capitalize } from '../../../utils/string.utils.js';
-
+import {
+  findModuleByKey,
+  findPublicTrackingEvents
+} from './repositories/mvp-analytics.repository.js';
 import { calculateKPIs } from './services/mvp-kpis.service.js';
 import { calculateHealthScore } from './services/mvp-health-score.service.js';
 import { generateRecommendation } from './services/mvp-recommendation.service.js';
@@ -44,10 +44,7 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   const dateTo = new Date();
   
   // 1. Buscar información del módulo en la DB
-  const module = await Module.findOne({
-    where: { key: moduleKey },
-    attributes: ['id', 'key', 'name', 'status', 'module_type', 'concept_name', 'phase_order', 'parent_module_id', 'launched_at', 'validation_days', 'validation_target_sales']
-  });
+  const module = await findModuleByKey(moduleKey);
 
   // Determinar tipo de validación: 'landing' (dolor/demanda) o 'wizard' (solución)
   const moduleType = module?.module_type || 'wizard';
@@ -56,36 +53,10 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
   // ✅ FILTRO CRÍTICO: Excluir tracking interno (admin, internal)
   // ✅ FILTRO CRÍTICO: Excluir bots/crawlers por user_agent
   // Solo contar eventos públicos de usuarios reales para métricas limpias
-  const events = await TrackingEvent.findAll({
-    where: {
-      module: moduleKey,
-      timestamp: { [Op.gte]: dateFrom },
-      source: { [Op.notIn]: ['admin', 'internal'] },  // ✅ Solo tracking público
-      // 🔧 FIX #3: Filtrar bots por user_agent
-      // IMPORTANTE: Incluir eventos con user_agent NULL (usuarios legítimos sin UA)
-      // SQL: (user_agent IS NULL) OR (user_agent NOT LIKE bot patterns)
-      [Op.or]: [
-        { user_agent: null },  // Incluir NULL = usuarios legítimos
-        { 
-          user_agent: {
-            [Op.and]: [
-              { [Op.notLike]: '%Googlebot%' },
-              { [Op.notLike]: '%googlebot%' },
-              { [Op.notLike]: '%bingbot%' },
-              { [Op.notLike]: '%bot/%' },
-              { [Op.notLike]: '%crawler%' },
-              { [Op.notLike]: '%Crawler%' },
-              { [Op.notLike]: '%spider%' },
-              { [Op.notLike]: '%Spider%' },
-              { [Op.notLike]: '%slurp%' },
-              { [Op.notLike]: '%crawl%' }
-            ]
-          }
-        }
-      ]
-    },
-    order: [['timestamp', 'ASC']]
-  });
+  const events = await findPublicTrackingEvents(
+    moduleKey,
+    dateFrom
+  );
   
   // 🐛 DEBUG: Log bot filter results
   const uniqueSessionsInEvents = new Set(events.map(e => e.session_id).filter(Boolean)).size;
