@@ -131,11 +131,19 @@ async function archiveModuleTrackingEvents(moduleKey) {
   );
 }
 
+/**
+ * Crear un módulo de plataforma desde los datos de un MVP.
+ */
+async function createModule(moduleData) {
+  return Module.create(moduleData);
+}
+
 
 export {
   findModuleByKey,
   findPublicTrackingEvents,
   findActiveAnalyticsModules,
   markModuleAsValidated,
-  archiveModuleTrackingEvents
+  archiveModuleTrackingEvents,
+  createModule
 };

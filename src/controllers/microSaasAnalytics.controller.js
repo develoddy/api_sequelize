@@ -10,8 +10,6 @@
  */
 
 import { calculateModuleAnalytics } from '../domains/analytics/mvp/mvp-analytics.service.js';
-import { capitalize } from '../utils/string.utils.js';
-import { Module } from '../domains/platform/models/Module.js';
 
 import {
   getAllModuleAnalytics,
@@ -23,6 +21,11 @@ import {
   executeMVPDecisionAction
 } from '../domains/analytics/mvp/services/mvp-decision.service.js';
 
+import {
+  createModuleFromValidatedMVP,
+  MVPModuleAlreadyExistsError,
+  MVPAnalyticsNotFoundError
+} from '../domains/analytics/mvp/services/mvp-module-creation.service.js';
 
 
 // ==========================================
@@ -104,94 +107,53 @@ export const getMicroSaasAnalytics = async (req, res) => {
 export const createModuleFromMVP = async (req, res) => {
   try {
     const { moduleKey } = req.params;
-    const { 
+
+    const {
       auto_activate = false,
       copy_preview_config = true,
       initial_status = 'testing'
     } = req.body;
-    
-    // 1. Verificar que no exista módulo con este key
-    const existingModule = await Module.findOne({ where: { key: moduleKey } });
-    if (existingModule) {
-      return res.status(409).json({
-        success: false,
-        error: 'Module with this key already exists',
-        module: existingModule
-      });
-    }
-    
-    // 2. Obtener analytics para usar como metadata
-    const analytics = await calculateModuleAnalytics(moduleKey, '30d');
-    
-    if (!analytics) {
-      return res.status(400).json({
-        success: false,
-        error: 'No tracking data found for this MVP'
-      });
-    }
-    
-    // 3. Generar configuración de preview basada en analytics
-    const previewConfig = copy_preview_config ? {
-      enabled: true,
-      route: `/preview/${moduleKey}`,
-      public_endpoint: `/api/${moduleKey}/preview`,
-      show_in_store: true,
-      demo_button_text: 'Try Demo - No signup required',
-      generator_function: `generate${capitalize(moduleKey)}Preview`,
-      conversion_config: {
-        recovery_key: `${moduleKey}_preview`,
-        redirect_route: `/${moduleKey}/onboarding`,
-        auto_activate: true
-      },
-      rate_limiting: {
-        max_requests: 10,
-        window_minutes: 15
-      }
-    } : null;
-    
-    // 🎯 Auto-calcular concept_name (remover sufijos de fase)
-    let conceptName = moduleKey;
-    if (moduleKey.endsWith('-landing')) {
-      conceptName = moduleKey.replace('-landing', '');
-    } else if (moduleKey.endsWith('-wizard')) {
-      conceptName = moduleKey.replace('-wizard', '');
-    }
-    
-    // 4. Crear módulo con datos del MVP
-    const module = await Module.create({
-      key: moduleKey,
-      name: capitalize(moduleKey.replace(/-/g, ' ')),
-      description: `Validated MVP - ${analytics.totalSessions} sessions, ${analytics.healthScore} score`,
-      type: 'saas',
-      concept_name: conceptName, // 🆕 Auto-asignado
-      status: initial_status,
-      is_active: auto_activate,
-      validation_days: 14,
-      validation_target_sales: 1,
-      icon: 'fa-rocket',
-      color: 'primary',
-      preview_config: previewConfig,
-      base_price: null, // Admin debe configurar
-      tagline: `Validated with ${analytics.helpful_rate}% positive feedback`
+
+    const result = await createModuleFromValidatedMVP({
+      moduleKey,
+      autoActivate: auto_activate,
+      copyPreviewConfig: copy_preview_config,
+      initialStatus: initial_status
     });
-    
-    console.log(`✅ Module created from MVP: ${moduleKey} (ID: ${module.id})`);
-    
-    res.json({
+
+    console.log(
+      `✅ Module created from MVP: ${moduleKey} (ID: ${result.module.id})`
+    );
+
+    return res.json({
       success: true,
-      module: module.toJSON(),
-      analytics,
-      message: `Module created successfully from MVP ${moduleKey}`,
-      next_steps: [
-        'Configure pricing in module settings',
-        'Add detailed description and screenshots',
-        'Set validation targets',
-        'Activate module when ready'
-      ]
+      module: result.module.toJSON(),
+      analytics: result.analytics,
+      message: result.message,
+      next_steps: result.next_steps
     });
   } catch (error) {
-    console.error(`❌ Error creating module from MVP ${req.params.moduleKey}:`, error);
-    res.status(500).json({
+    if (error instanceof MVPModuleAlreadyExistsError) {
+      return res.status(409).json({
+        success: false,
+        error: error.message,
+        module: error.module
+      });
+    }
+
+    if (error instanceof MVPAnalyticsNotFoundError) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    console.error(
+      `❌ Error creating module from MVP ${req.params.moduleKey}:`,
+      error
+    );
+
+    return res.status(500).json({
       success: false,
       error: error.message
     });
