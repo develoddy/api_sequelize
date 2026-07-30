@@ -93,8 +93,49 @@ async function findActiveAnalyticsModules() {
   });
 }
 
+/**
+ * Marcar un módulo como validado y publicado.
+ */
+async function markModuleAsValidated(moduleKey) {
+  return Module.update(
+    {
+      status: 'live',
+      launched_at: new Date()
+    },
+    {
+      where: {
+        key: moduleKey
+      }
+    }
+  );
+}
+
+/**
+ * Marcar los eventos de un MVP como archivados.
+ */
+async function archiveModuleTrackingEvents(moduleKey) {
+  return TrackingEvent.update(
+    {
+      properties: TrackingEvent.sequelize.fn(
+        'JSON_SET',
+        TrackingEvent.sequelize.col('properties'),
+        '$.archived',
+        true
+      )
+    },
+    {
+      where: {
+        module: moduleKey
+      }
+    }
+  );
+}
+
+
 export {
   findModuleByKey,
   findPublicTrackingEvents,
-  findActiveAnalyticsModules
+  findActiveAnalyticsModules,
+  markModuleAsValidated,
+  archiveModuleTrackingEvents
 };

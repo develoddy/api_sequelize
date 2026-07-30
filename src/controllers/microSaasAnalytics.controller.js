@@ -11,13 +11,17 @@
 
 import { calculateModuleAnalytics } from '../domains/analytics/mvp/mvp-analytics.service.js';
 import { capitalize } from '../utils/string.utils.js';
-import { TrackingEvent } from '../models/TrackingEvent.js';
 import { Module } from '../domains/platform/models/Module.js';
 
 import {
   getAllModuleAnalytics,
   getTrendingModuleAnalytics
 } from '../domains/analytics/mvp/services/mvp-analytics-list.service.js';
+
+import {
+  isValidMVPDecisionAction,
+  executeMVPDecisionAction
+} from '../domains/analytics/mvp/services/mvp-decision.service.js';
 
 
 
@@ -206,7 +210,7 @@ export const executeMVPDecision = async (req, res) => {
     const { moduleKey } = req.params;
     const { action, reason } = req.body;
     
-    if (!['continue', 'archive', 'validate'].includes(action)) {
+    if (!isValidMVPDecisionAction(action)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid action. Must be: continue, archive, or validate'
@@ -222,43 +226,11 @@ export const executeMVPDecision = async (req, res) => {
       });
     }
     
-    let result;
-    
-    switch (action) {
-      case 'validate':
-        // ✅ Cambiar status a 'live' (validar módulo)
-        await Module.update(
-          { 
-            status: 'live',
-            launched_at: new Date()
-          },
-          { where: { key: moduleKey } }
-        );
-        result = { validated: true, status: 'live', reason };
-        console.log(`✅ Módulo ${moduleKey} validado - status cambiado a 'live'`);
-        break;
-        
-      case 'archive':
-        // Marcar eventos como archived (soft delete)
-        await TrackingEvent.update(
-          { 
-            properties: TrackingEvent.sequelize.fn(
-              'JSON_SET',
-              TrackingEvent.sequelize.col('properties'),
-              '$.archived',
-              true
-            )
-          },
-          { where: { module: moduleKey } }
-        );
-        result = { archived: true, reason };
-        break;
-        
-      case 'continue':
-        // No hacer nada, solo registrar decisión
-        result = { continue: true, reason };
-        break;
-    }
+    const result = await executeMVPDecisionAction({
+      moduleKey,
+      action,
+      reason
+    });
     
     console.log(`📊 Decision executed for ${moduleKey}: ${action}`);
     
