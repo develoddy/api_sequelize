@@ -1,7 +1,7 @@
 import express from 'express';
-import * as modulesController from '../controllers/modules.controller.js';
-import * as uploadController from '../controllers/modules.upload.controller.js';
-import auth from '../middlewares/auth.js';
+import * as modulesController from './modules.controller.js';
+import * as uploadController from './modules.upload.controller.js';
+import auth from '../../../middlewares/auth.js';
 
 /**
  * Routes: Modules

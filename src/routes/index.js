@@ -40,7 +40,7 @@ import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
-import modulesRoutes from './modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
+import modulesRoutes from '../domains/platform/modules/modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
 import saasRoutes from './saas.routes.js'; // 🚀 SaaS Tenants & Trials
 import saasEmailTestingRoutes from './saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management

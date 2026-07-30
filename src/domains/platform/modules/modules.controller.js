@@ -1,7 +1,7 @@
-import { Module } from '../domains/platform/models/Module.js';
-import { Sale } from '../models/Sale.js';
-import { Product } from '../models/Product.js';
-import { SaleDetail } from '../models/SaleDetail.js';
+import { Module } from '../models/Module.js';
+import { Sale } from '../../../models/Sale.js';
+import { Product } from '../../../models/Product.js';
+import { SaleDetail } from '../../../models/SaleDetail.js';
 import { Op } from 'sequelize';
 
 /**

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import Module from '../domains/platform/models/Module.js';
+import Module from '../models/Module.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const moduleKey = req.params.moduleKey || 'temp';
-    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const uploadPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
     
     // Crear directorio si no existe
     if (!fs.existsSync(uploadPath)) {
@@ -61,7 +61,7 @@ export const upload = multer({
 const zipStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     const moduleKey = req.params.moduleKey || 'temp';
-    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const uploadPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
     
     // Crear directorio si no existe
     if (!fs.existsSync(uploadPath)) {
@@ -133,7 +133,7 @@ export const uploadModuleScreenshots = async (req, res) => {
     });
 
     // 🧹 Limpiar archivos basura de macOS (._*)
-    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const uploadPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
     if (fs.existsSync(uploadPath)) {
       const files = fs.readdirSync(uploadPath);
       files.forEach(file => {
@@ -174,7 +174,7 @@ export const uploadModuleScreenshots = async (req, res) => {
 export const deleteModuleScreenshot = async (req, res) => {
   try {
     const { moduleKey, filename } = req.params;
-    const dirPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const dirPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
     const filePath = path.join(dirPath, filename);
 
     console.log('🗑️ Deleting screenshot:', filename);
@@ -237,7 +237,7 @@ export const deleteModuleScreenshot = async (req, res) => {
 export const cleanModuleScreenshots = async (req, res) => {
   try {
     const { moduleKey } = req.params;
-    const dirPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const dirPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
 
     if (fs.existsSync(dirPath)) {
       fs.rmSync(dirPath, { recursive: true, force: true });
@@ -293,7 +293,7 @@ export const uploadModuleZip = async (req, res) => {
     console.log('   Size:', (req.file.size / 1024 / 1024).toFixed(2), 'MB');
 
     // 🧹 Limpiar archivos basura de macOS (._*)
-    const uploadPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const uploadPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
     if (fs.existsSync(uploadPath)) {
       const files = fs.readdirSync(uploadPath);
       files.forEach(file => {
@@ -335,7 +335,7 @@ export const uploadModuleZip = async (req, res) => {
 export const deleteModuleZip = async (req, res) => {
   try {
     const { moduleKey } = req.params;
-    const dirPath = path.join(__dirname, '../../public/uploads/modules', moduleKey);
+    const dirPath = path.join(__dirname, '../../../../public/uploads/modules', moduleKey);
 
     console.log('🗑️ Deleting ZIP for module:', moduleKey);
 
@@ -396,7 +396,7 @@ export const deleteModuleZip = async (req, res) => {
  */
 export const cleanMacOSJunkFiles = (modulesBasePath) => {
   try {
-    const basePath = modulesBasePath || path.join(__dirname, '../../public/uploads/modules');
+    const basePath = modulesBasePath || path.join(__dirname, '../../../../public/uploads/modules');
     
     if (!fs.existsSync(basePath)) {
       console.log('⚠️ Ruta de módulos no existe:', basePath);
