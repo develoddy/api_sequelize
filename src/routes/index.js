@@ -44,6 +44,7 @@ import modulesRoutes from '../domains/platform/modules/modules.routes.js'; // �
 import saasRoutes from '../domains/platform/tenants/saas.routes.js'; // 🚀 SaaS Tenants & Trials
 import tenantsAdminRoutes from '../domains/platform/tenants/admin/tenants-admin.routes.js'; // 🔧 Platform Tenants Admin
 import saasEmailTestingRoutes from '../domains/platform/tenants/saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
+import trackingAdminRoutes from '../domains/analytics/tracking/admin/tracking-admin.routes.js'; // 📊 Analytics Tracking Admin
 import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
 import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
@@ -102,7 +103,8 @@ app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing
 app.use("/admin/saas/tenants", tenantsAdminRoutes); // 🔧 Platform Tenants Admin (NUEVO - mount específico)
-app.use("/admin/saas", saasAdminRoutes); // 🔧 SaaS Admin Management (Tracking + MVP Analytics)
+app.use("/admin/saas/tracking-events", trackingAdminRoutes); // 📊 Analytics Tracking Admin (NUEVO - mount específico)
+app.use("/admin/saas", saasAdminRoutes); // 🔧 SaaS Admin Management (MVP Analytics)
 app.use("/api", healthRoutes); // 🏥 Health Check (GET /api/health)
 app.use("/mailflow", mailflowRoutes); // 📧 MailFlow - Onboarding Sequences
 app.use("/modules", modulePreviewRoutes); // 🎯 Generic Preview Mode (Public + Auth endpoints)

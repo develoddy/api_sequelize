@@ -1,6 +1,6 @@
-import { TrackingEvent } from '../models/TrackingEvent.js';
+import { TrackingEvent } from '../../../../models/TrackingEvent.js';
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 
 /**
  * ========================================
