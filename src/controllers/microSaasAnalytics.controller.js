@@ -9,11 +9,8 @@
  * @date 2026-02-09
  */
 
-import {
-    calculateModuleAnalytics,
-    capitalize
-} from '../domains/analytics/mvp/mvp-analytics.service.js';
-
+import { calculateModuleAnalytics } from '../domains/analytics/mvp/mvp-analytics.service.js';
+import { capitalize } from '../utils/string.utils.js';
 import { TrackingEvent } from '../models/TrackingEvent.js';
 import { Module } from '../domains/platform/models/Module.js';
 import { Op } from 'sequelize';

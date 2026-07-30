@@ -1,6 +1,7 @@
 import { TrackingEvent } from '../../../models/TrackingEvent.js';
 import { Module } from '../../../domains/platform/models/Module.js';
 import { Op } from 'sequelize';
+import { capitalize } from '../../../utils/string.utils.js';
 
 import { calculateKPIs } from './services/mvp-kpis.service.js';
 import { calculateHealthScore } from './services/mvp-health-score.service.js';
@@ -221,14 +222,6 @@ async function calculateModuleAnalytics(moduleKey, period = '30d') {
 }
 
 
-/**
- * Capitalizar primera letra
- */
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 export {
-    calculateModuleAnalytics,
-    capitalize
+    calculateModuleAnalytics
 }
