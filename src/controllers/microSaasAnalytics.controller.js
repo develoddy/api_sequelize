@@ -13,7 +13,11 @@ import { calculateModuleAnalytics } from '../domains/analytics/mvp/mvp-analytics
 import { capitalize } from '../utils/string.utils.js';
 import { TrackingEvent } from '../models/TrackingEvent.js';
 import { Module } from '../domains/platform/models/Module.js';
-import { Op } from 'sequelize';
+
+import {
+  getAllModuleAnalytics,
+  getTrendingModuleAnalytics
+} from '../domains/analytics/mvp/services/mvp-analytics-list.service.js';
 
 
 
@@ -34,65 +38,24 @@ import { Op } from 'sequelize';
 export const getAllMicroSaasAnalytics = async (req, res) => {
   try {
     const { period = '30d' } = req.query;
-    
-    console.log(`📊 Obteniendo analytics de módulos activos (período: ${period})...`);
-    
-    // ✅ 1. Obtener módulos DESDE la tabla modules (no desde tracking_events)
-    const activeModules = await Module.findAll({
-      where: {
-        status: { [Op.in]: ['testing', 'live'] },
-        is_active: true
-      },
-      attributes: ['key', 'name', 'status', 'launched_at', 'validation_days', 'validation_target_sales'],
-      order: [['created_at', 'DESC']]
-    });
-    
-    if (activeModules.length === 0) {
-      return res.json({
-        success: true,
-        analytics: [],
-        message: 'No active modules in testing or live',
-        summary: {
-          total_modules: 0,
-          avg_score: 0,
-          ready_to_promote: 0,
-          needs_improvement: 0,
-          to_archive: 0
-        }
-      });
-    }
-    
-    console.log(`✅ Encontrados ${activeModules.length} módulos activos`);
-    
-    // ✅ 2. Calcular analytics para cada módulo (LEFT JOIN implícito)
-    // Si no hay tracking_events, retorna métricas en 0
-    const analyticsPromises = activeModules.map(module => 
-      calculateModuleAnalytics(module.key, period)
+
+    console.log(
+      `📊 Obteniendo analytics de módulos activos (período: ${period})...`
     );
-    
-    const analytics = (await Promise.all(analyticsPromises)).filter(Boolean);
-    
-    // 3. Ordenar por health score descendente
-    analytics.sort((a, b) => b.healthScore - a.healthScore);
-    
-    const avgScore = analytics.length > 0
-      ? Math.round(analytics.reduce((sum, a) => sum + a.healthScore, 0) / analytics.length)
-      : 0;
-    
-    res.json({
+
+    const result = await getAllModuleAnalytics(period);
+
+    return res.json({
       success: true,
-      analytics,
-      summary: {
-        total_modules: analytics.length,
-        avg_score: avgScore,
-        ready_to_promote: analytics.filter(a => a.recommendation.action === 'validate').length,
-        needs_improvement: analytics.filter(a => a.recommendation.action === 'continue').length,
-        to_archive: analytics.filter(a => a.recommendation.action === 'archive').length
-      }
+      ...result
     });
   } catch (error) {
-    console.error('❌ Error getting all analytics:', error);
-    res.status(500).json({
+    console.error(
+      '❌ Error getting all analytics:',
+      error
+    );
+
+    return res.status(500).json({
       success: false,
       error: error.message
     });
@@ -320,23 +283,24 @@ export const executeMVPDecision = async (req, res) => {
  */
 export const getTrendingMVPs = async (req, res) => {
   try {
-    const analytics7d = await getAllMicroSaasAnalytics(
-      { query: { period: '7d' } },
-      { json: (data) => data }
-    );
-    
-    const trending = analytics7d.analytics
-      .filter(a => a.healthScore >= 60)
-      .slice(0, 5);
-    
-    res.json({
+    const trending = await getTrendingModuleAnalytics({
+      period: '7d',
+      minimumHealthScore: 60,
+      limit: 5
+    });
+
+    return res.json({
       success: true,
       trending,
       period: '7d'
     });
   } catch (error) {
-    console.error('❌ Error getting trending MVPs:', error);
-    res.status(500).json({
+    console.error(
+      '❌ Error getting trending MVPs:',
+      error
+    );
+
+    return res.status(500).json({
       success: false,
       error: error.message
     });

@@ -68,7 +68,33 @@ async function findPublicTrackingEvents(moduleKey, dateFrom) {
   });
 }
 
+/**
+ * Obtener módulos activos que participan en analytics.
+ */
+async function findActiveAnalyticsModules() {
+  return Module.findAll({
+    where: {
+      status: {
+        [Op.in]: ['testing', 'live']
+      },
+      is_active: true
+    },
+    attributes: [
+      'key',
+      'name',
+      'status',
+      'launched_at',
+      'validation_days',
+      'validation_target_sales'
+    ],
+    order: [
+      ['created_at', 'DESC']
+    ]
+  });
+}
+
 export {
   findModuleByKey,
-  findPublicTrackingEvents
+  findPublicTrackingEvents,
+  findActiveAnalyticsModules
 };
