@@ -9,7 +9,7 @@ export default {
                 sku: cart.product.sku,
                 slug: cart.product.slug,
                 imagen: process.env.URL_BACKEND+'/api/products/uploads/product/'+cart.product.portada, // Falta completar la ruta
-                categorie: cart.product.categorie,
+                categorie: cart.product.category,
                 price_eur: cart.product.price_usd, // Unified price in EUR
                 price: cart.product.price_usd, // Alias for consistency
                 currency: 'EUR',

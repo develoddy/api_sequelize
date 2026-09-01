@@ -1391,7 +1391,7 @@ const getSaleDetails = async (saleId) => {
     let saleDetails = await SaleDetail.findAll({
         where: { saleId },
         include: [
-            { model: Product },
+            { model: Product, include: { model: Categorie } },
             { model: Variedad, include: { model: File } }
         ]
     });
