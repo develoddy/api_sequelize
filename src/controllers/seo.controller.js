@@ -13,7 +13,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * 🌐 GENERAR Y SERVIR SITEMAP.XML (Endpoint Público)
+ * � Combinaciones país/locale soportadas actualmente por el ecommerce.
+ * Única fuente de verdad para generar/sincronizar URLs multiidioma del sitemap.
+ */
+const SUPPORTED_LOCALES = [
+    { country: 'es', locale: 'en' },
+    { country: 'es', locale: 'es' }
+];
+
+/**
+ * �🌐 GENERAR Y SERVIR SITEMAP.XML (Endpoint Público)
  */
 export const generateSitemap = async (req, res) => {
     try {
@@ -72,16 +81,18 @@ export const generateSitemap = async (req, res) => {
             const enabledUrls = new Set(enabledProductUrls.map(u => u.loc));
             
             for (const product of products) {
-                const productUrl = `${cleanBaseUrl}/es/es/shop/product/${product.slug}`;
-                
-                // Solo incluir si la URL está habilitada en sitemap_urls (o no existe aún en sitemap_urls)
-                if (!enabledUrls.size || enabledUrls.has(productUrl)) {
-                    urls.push({
-                        loc: productUrl,
-                        lastmod: product.updatedAt.toISOString().split('T')[0],
-                        changefreq: config.sitemapProductChangefreq,
-                        priority: config.sitemapProductPriority
-                    });
+                for (const { country, locale } of SUPPORTED_LOCALES) {
+                    const productUrl = `${cleanBaseUrl}/${country}/${locale}/shop/product/${product.slug}`;
+                    
+                    // Solo incluir si la URL está habilitada en sitemap_urls (o no existe aún en sitemap_urls)
+                    if (!enabledUrls.size || enabledUrls.has(productUrl)) {
+                        urls.push({
+                            loc: productUrl,
+                            lastmod: product.updatedAt.toISOString().split('T')[0],
+                            changefreq: config.sitemapProductChangefreq,
+                            priority: config.sitemapProductPriority
+                        });
+                    }
                 }
             }
 
@@ -121,20 +132,22 @@ export const generateSitemap = async (req, res) => {
                     .trim()
                     .replace(/\s+/g, '-'); // Reemplazar espacios por guiones
 
-                const categoryUrl = `${cleanBaseUrl}/es/es/shop/category/${categorySlug}`;
-                
-                // Solo incluir si la URL está habilitada en sitemap_urls (o no existe aún en sitemap_urls)
-                if (!enabledUrls.size || enabledUrls.has(categoryUrl)) {
-                    urls.push({
-                        loc: categoryUrl,
-                        lastmod: category.updatedAt.toISOString().split('T')[0],
-                        changefreq: 'weekly',
-                        priority: 0.7
-                    });
+                for (const { country, locale } of SUPPORTED_LOCALES) {
+                    const categoryUrl = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+                    
+                    // Solo incluir si la URL está habilitada en sitemap_urls (o no existe aún en sitemap_urls)
+                    if (!enabledUrls.size || enabledUrls.has(categoryUrl)) {
+                        urls.push({
+                            loc: categoryUrl,
+                            lastmod: category.updatedAt.toISOString().split('T')[0],
+                            changefreq: 'weekly',
+                            priority: 0.7
+                        });
+                    }
                 }
             }
 
-            console.log(`✅ [SEO] ${urls.filter(u => u.loc.includes('/shop/category/')).length} categorías añadidas al sitemap`);
+            console.log(`✅ [SEO] ${urls.filter(u => u.loc.includes('/shop/filter-products/')).length} categorías añadidas al sitemap`);
         }
 
         // Construir XML con namespaces correctos
@@ -540,28 +553,31 @@ export const syncProductsToSitemap = async (req, res) => {
         for (const product of products) {
             // Asegurar que no haya doble barra en la URL
             const cleanBaseUrl = baseUrl.replace(/\/$/, ''); // Remover barra final si existe
-            const loc = `${cleanBaseUrl}/es/es/shop/product/${product.slug}`;
-            
-            const [url, created] = await SitemapUrl.findOrCreate({
-                where: { loc },
-                defaults: {
-                    lastmod: product.updatedAt,
-                    changefreq: config.sitemapProductChangefreq,
-                    priority: config.sitemapProductPriority,
-                    type: 'product',
-                    enabled: true,
-                    metadata: { productId: product.id }
-                }
-            });
 
-            if (created) {
-                added++;
-            } else {
-                await url.update({
-                    lastmod: product.updatedAt,
-                    enabled: true
+            for (const { country, locale } of SUPPORTED_LOCALES) {
+                const loc = `${cleanBaseUrl}/${country}/${locale}/shop/product/${product.slug}`;
+
+                const [url, created] = await SitemapUrl.findOrCreate({
+                    where: { loc },
+                    defaults: {
+                        lastmod: product.updatedAt,
+                        changefreq: config.sitemapProductChangefreq,
+                        priority: config.sitemapProductPriority,
+                        type: 'product',
+                        enabled: true,
+                        metadata: { productId: product.id }
+                    }
                 });
-                updated++;
+
+                if (created) {
+                    added++;
+                } else {
+                    await url.update({
+                        lastmod: product.updatedAt,
+                        enabled: true
+                    });
+                    updated++;
+                }
             }
         }
 
@@ -571,7 +587,9 @@ export const syncProductsToSitemap = async (req, res) => {
         });
 
         const cleanBaseUrl = baseUrl.replace(/\/$/, ''); // Remover barra final si existe
-        const activeProductSlugs = products.map(p => `${cleanBaseUrl}/es/es/shop/product/${p.slug}`);
+        const activeProductSlugs = products.flatMap(p =>
+            SUPPORTED_LOCALES.map(({ country, locale }) => `${cleanBaseUrl}/${country}/${locale}/shop/product/${p.slug}`)
+        );
         let disabled = 0;
 
         for (const url of allProductUrls) {
@@ -607,32 +625,62 @@ export const syncProductsToSitemap = async (req, res) => {
                 .replace(/\s+/g, '-');
 
             const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-            const loc = `${cleanBaseUrl}/es/es/shop/category/${categorySlug}`;
-            
-            const [url, created] = await SitemapUrl.findOrCreate({
-                where: { loc },
-                defaults: {
-                    lastmod: category.updatedAt,
-                    changefreq: 'weekly',
-                    priority: 0.7,
-                    type: 'category',
-                    enabled: true,
-                    metadata: { categoryId: category.id }
-                }
-            });
 
-            if (created) {
-                catAdded++;
-            } else {
-                await url.update({
-                    lastmod: category.updatedAt,
-                    enabled: true
+            for (const { country, locale } of SUPPORTED_LOCALES) {
+                const loc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+
+                const [url, created] = await SitemapUrl.findOrCreate({
+                    where: { loc },
+                    defaults: {
+                        lastmod: category.updatedAt,
+                        changefreq: 'weekly',
+                        priority: 0.7,
+                        type: 'category',
+                        enabled: true,
+                        metadata: { categoryId: category.id }
+                    }
                 });
-                catUpdated++;
+
+                if (created) {
+                    catAdded++;
+                } else {
+                    await url.update({
+                        lastmod: category.updatedAt,
+                        enabled: true
+                    });
+                    catUpdated++;
+                }
             }
         }
 
-        console.log(`✅ [SEO] Categorías sincronizadas: ${catAdded} añadidas, ${catUpdated} actualizadas`);
+        // Deshabilitar URLs de categoría que ya no corresponden a categorías activas
+        // (incluye las antiguas /shop/category/ y cualquier variante fuera de SUPPORTED_LOCALES)
+        const allCategoryUrls = await SitemapUrl.findAll({
+            where: { type: 'category', enabled: true }
+        });
+
+        const activeCategorySlugs = categories.flatMap(category => {
+            const categorySlug = category.title
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-');
+
+            return SUPPORTED_LOCALES.map(({ country, locale }) => `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`);
+        });
+
+        let catDisabled = 0;
+
+        for (const url of allCategoryUrls) {
+            if (!activeCategorySlugs.includes(url.loc)) {
+                await url.update({ enabled: false });
+                catDisabled++;
+            }
+        }
+
+        console.log(`✅ [SEO] Categorías sincronizadas: ${catAdded} añadidas, ${catUpdated} actualizadas, ${catDisabled} deshabilitadas`);
 
         // 📁 Regenerar archivos físicos después de sincronizar (producción)
         if (process.env.NODE_ENV === 'production') {
@@ -783,21 +831,24 @@ const generateStaticSitemap = async () => {
 
             const cleanBaseUrl = baseUrl.replace(/\/$/, '');
             for (const product of products) {
-                const productUrl = await SitemapUrl.findOne({
-                    where: { 
-                        type: 'product',
-                        enabled: true,
-                        metadata: { productId: product.id }
-                    }
-                });
-
-                if (productUrl) {
-                    urls.push({
-                        loc: `${cleanBaseUrl}/es/es/shop/product/${product.slug}`,
-                        lastmod: product.updatedAt.toISOString().split('T')[0],
-                        changefreq: config.sitemapProductChangefreq || 'weekly',
-                        priority: config.sitemapProductPriority || 0.8
+                for (const { country, locale } of SUPPORTED_LOCALES) {
+                    const productLoc = `${cleanBaseUrl}/${country}/${locale}/shop/product/${product.slug}`;
+                    const productUrl = await SitemapUrl.findOne({
+                        where: { 
+                            type: 'product',
+                            enabled: true,
+                            loc: productLoc
+                        }
                     });
+
+                    if (productUrl) {
+                        urls.push({
+                            loc: productLoc,
+                            lastmod: product.updatedAt.toISOString().split('T')[0],
+                            changefreq: config.sitemapProductChangefreq || 'weekly',
+                            priority: config.sitemapProductPriority || 0.8
+                        });
+                    }
                 }
             }
         }
@@ -822,21 +873,24 @@ const generateStaticSitemap = async () => {
                     .trim()
                     .replace(/\s+/g, '-');
 
-                const categoryUrl = await SitemapUrl.findOne({
-                    where: {
-                        type: 'category',
-                        enabled: true,
-                        metadata: { categoryId: category.id }
-                    }
-                });
-
-                if (categoryUrl) {
-                    urls.push({
-                        loc: `${cleanBaseUrl}/es/es/shop/category/${categorySlug}`,
-                        lastmod: category.updatedAt.toISOString().split('T')[0],
-                        changefreq: config.sitemapCategoryChangefreq || 'weekly',
-                        priority: config.sitemapCategoryPriority || 0.7
+                for (const { country, locale } of SUPPORTED_LOCALES) {
+                    const categoryLoc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+                    const categoryUrl = await SitemapUrl.findOne({
+                        where: {
+                            type: 'category',
+                            enabled: true,
+                            loc: categoryLoc
+                        }
                     });
+
+                    if (categoryUrl) {
+                        urls.push({
+                            loc: categoryLoc,
+                            lastmod: category.updatedAt.toISOString().split('T')[0],
+                            changefreq: config.sitemapCategoryChangefreq || 'weekly',
+                            priority: config.sitemapCategoryPriority || 0.7
+                        });
+                    }
                 }
             }
         }
