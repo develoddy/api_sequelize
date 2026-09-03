@@ -1253,6 +1253,21 @@ const removeCartItem = async (cart) => {
 
 // Crear datos de la orden para Printful
 // Crear datos de la orden para Printful
+// Deriva el código ISO-2 de país a partir de SaleAddress.pais (código de 2 letras o nombre completo)
+const COUNTRY_NAME_TO_CODE = {
+    'españa': 'ES',
+    'francia': 'FR',
+    'italia': 'IT',
+    'alemania': 'DE'
+};
+
+const resolveCountryCode = (pais) => {
+    if (!pais) return 'ES';
+    const value = String(pais).trim();
+    if (value.length === 2) return value.toUpperCase();
+    return COUNTRY_NAME_TO_CODE[value.toLowerCase()] || 'ES';
+};
+
 const createPrintfulOrderData = (saleAddress, items, costs) => {
     // Feature flag para auto-confirm de órdenes de Printful
     const AUTO_CONFIRM = process.env.PRINTFUL_AUTO_CONFIRM === 'true';
@@ -1261,10 +1276,10 @@ const createPrintfulOrderData = (saleAddress, items, costs) => {
         recipient: {
             name: saleAddress.name,
             address1: saleAddress.address,
-            city: saleAddress.ciudad,
-            state_code: 'CA', // Ajustar según tus necesidades
-            country_code: 'ES', // Ajustar según tus necesidades
-            zip: '91311', // Ajustar según tus necesidades
+            city: saleAddress.region || saleAddress.ciudad, // region = población/localidad real (ver payment-checkout.component.ts)
+            state_code: saleAddress.ciudad, // ciudad = provincia real
+            country_code: resolveCountryCode(saleAddress.pais),
+            zip: saleAddress.zipcode,
             phone: saleAddress.telefono,
             email: saleAddress.email,
         },
