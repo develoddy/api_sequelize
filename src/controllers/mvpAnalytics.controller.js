@@ -37,11 +37,13 @@ export const getAllMvps = async (req, res) => {
         COUNT(DISTINCT session_id) as total_sessions,
         COUNT(CASE 
           WHEN module = 'inbox-zero-prevention' AND event = 'prevention_demo_viewed' THEN 1
-          WHEN module != 'inbox-zero-prevention' AND event LIKE '%wizard_started%' THEN 1
+          WHEN module = 'early_airport' AND event = 'availability_clicked' THEN 1
+          WHEN module NOT IN ('inbox-zero-prevention', 'early_airport') AND event LIKE '%wizard_started%' THEN 1
         END) as wizard_starts,
         COUNT(CASE 
           WHEN module = 'inbox-zero-prevention' AND event = 'waitlist_success' THEN 1
-          WHEN module != 'inbox-zero-prevention' AND event = 'wizard_completed' THEN 1
+          WHEN module = 'early_airport' AND event = 'email_submitted' THEN 1
+          WHEN module NOT IN ('inbox-zero-prevention', 'early_airport') AND event = 'wizard_completed' THEN 1
         END) as wizard_completions,
         COUNT(CASE WHEN event = 'preview_generated' THEN 1 END) as preview_generated,
         COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,
@@ -188,11 +190,13 @@ export const getMvpDetail = async (req, res) => {
         COUNT(DISTINCT user_id) as unique_users,
         COUNT(CASE 
           WHEN module = 'inbox-zero-prevention' AND event = 'prevention_demo_viewed' THEN 1
-          WHEN module != 'inbox-zero-prevention' AND event LIKE '%wizard_started%' THEN 1
+          WHEN module = 'early_airport' AND event = 'availability_clicked' THEN 1
+          WHEN module NOT IN ('inbox-zero-prevention', 'early_airport') AND event LIKE '%wizard_started%' THEN 1
         END) as wizard_starts,
         COUNT(CASE 
           WHEN module = 'inbox-zero-prevention' AND event = 'waitlist_success' THEN 1
-          WHEN module != 'inbox-zero-prevention' AND event = 'wizard_completed' THEN 1
+          WHEN module = 'early_airport' AND event = 'email_submitted' THEN 1
+          WHEN module NOT IN ('inbox-zero-prevention', 'early_airport') AND event = 'wizard_completed' THEN 1
         END) as wizard_completions,
         COUNT(CASE WHEN event LIKE '%download%' THEN 1 END) as downloads,
         COUNT(CASE WHEN event LIKE '%feedback%' AND event NOT LIKE '%comment%' THEN 1 END) as total_feedback,

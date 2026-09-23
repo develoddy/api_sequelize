@@ -12,12 +12,13 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
   if (kpis.insufficient_data) {
     const missingData = [];
     if (kpis.totalSessions < 5) missingData.push(`${kpis.totalSessions} sessions (min: 5)`);
-    if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} wizard starts (min: 3)`);
-    // Para landing: validar waitlist signups en lugar de feedbacks
     if (moduleType === 'landing') {
+      if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} views (min: 3)`);
+      // Para landing: validar waitlist signups en lugar de feedbacks
       const signups = kpis.landing_metrics?.waitlist_signups ?? 0;
       if (signups < 3) missingData.push(`${signups} waitlist signups (min: 3)`);
     } else {
+      if (kpis.wizard_starts < 3) missingData.push(`${kpis.wizard_starts} wizard starts (min: 3)`);
       if (kpis.total_feedback < 3) missingData.push(`${kpis.total_feedback} feedbacks (min: 3)`);
     }
     
@@ -30,41 +31,45 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
     });
   }
   
-  // 🔧 FIX #4: Alert UX Issue - Usuarios reloading wizard múltiples veces
+  // 🔧 FIX #4: Alert UX Issue - Usuarios reloading wizard/landing múltiples veces
   if (kpis._sessions_multiple_starts && kpis._sessions_multiple_starts.count > 0) {
     const confusedRate = kpis._meta.confused_user_rate;
+    const reloadedWhat = moduleType === 'landing' ? 'the page' : 'wizard';
     if (confusedRate >= 15) { // >15% usuarios confundidos
       alerts.push({
         type: 'warning',
         title: '🔄 UX Issue Detected',
-        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded wizard ${kpis._sessions_multiple_starts.maxReloads}+ times. Possible UX confusion or technical errors.`,
-        action: 'review_wizard_ux',
+        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded ${reloadedWhat} ${kpis._sessions_multiple_starts.maxReloads}+ times. Possible UX confusion or technical errors.`,
+        action: moduleType === 'landing' ? 'review_landing_ux' : 'review_wizard_ux',
         priority: 'high'
       });
     } else if (confusedRate >= 5) {
       alerts.push({
         type: 'info',
         title: '🔄 Multiple Reloads Detected',
-        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded wizard multiple times. Monitor UX.`,
+        message: `${kpis._sessions_multiple_starts.count} users (${confusedRate}%) reloaded ${reloadedWhat} multiple times. Monitor UX.`,
         action: 'monitor_ux',
         priority: 'medium'
       });
     }
   }
   
-  // ⚠️ Alert: Inconsistent metrics (wizard starts > sessions)
+  // ⚠️ Alert: Inconsistent metrics (starts > sessions)
   if (kpis.wizard_starts > kpis.totalSessions * 3) {
+    const startsLabel = moduleType === 'landing' ? 'views' : 'wizard starts';
     alerts.push({
       type: 'info',
       title: '⚠️ Inconsistent Metric',
-      message: `${kpis.wizard_starts} wizard starts vs ${kpis.totalSessions} sessions. Check session_id tracking.`,
+      message: `${kpis.wizard_starts} ${startsLabel} vs ${kpis.totalSessions} sessions. Check session_id tracking.`,
       action: 'check_tracking',
       priority: 'medium'
     });
   }
   
   // ✅ Alert: Ready to validate (change to 'live')
+  // Downloads no aplica a landing pages (no hay artefacto descargable)
   if (
+    moduleType !== 'landing' &&
     !kpis.insufficient_data &&
     healthScore >= DECISION_THRESHOLDS.create_module_score &&
     kpis.downloads >= DECISION_THRESHOLDS.create_module_downloads
@@ -80,10 +85,13 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
   
   // ⚠️ Alert: Low conversion
   if (kpis.conversion_rate < 50 && kpis.wizard_starts >= 20) {
+    const conversionMessage = moduleType === 'landing'
+      ? `Only ${kpis.conversion_rate}% convert into a lead. Review CTA/UX.`
+      : `Only ${kpis.conversion_rate}% complete the wizard. Review UX.`;
     alerts.push({
       type: 'warning',
       title: '⚠️ Low Conversion',
-      message: `Only ${kpis.conversion_rate}% complete the wizard. Review UX.`,
+      message: conversionMessage,
       action: 'improve_ux',
       priority: 'medium'
     });
@@ -111,8 +119,8 @@ function generateAlerts(kpis, healthScore, events, moduleType = 'wizard') {
     });
   }
   
-  // ℹ️ Alert: Low downloads
-  if (kpis.download_rate < 50 && kpis.wizard_completions >= 20) {
+  // ℹ️ Alert: Low downloads (no aplica a landing pages, no hay descarga)
+  if (moduleType !== 'landing' && kpis.download_rate < 50 && kpis.wizard_completions >= 20) {
     alerts.push({
       type: 'info',
       title: 'ℹ️ Low Downloads',

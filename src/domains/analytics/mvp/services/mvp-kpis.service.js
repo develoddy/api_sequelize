@@ -18,7 +18,8 @@
  */
 function isStartEvent(event, moduleType) {
   if (moduleType === 'landing') {
-    return event.event === 'prevention_demo_viewed';
+    // 'landing_viewed' = canonical contract; 'prevention_demo_viewed' = legacy compatibility
+    return event.event === 'landing_viewed' || event.event === 'prevention_demo_viewed';
   }
   return event.event.includes('wizard_started') || event.event.includes('preview_started');
 }
@@ -32,7 +33,8 @@ function isStartEvent(event, moduleType) {
  */
 function isCompletionEvent(event, moduleType) {
   if (moduleType === 'landing') {
-    return event.event === 'waitlist_success';
+    // 'landing_lead_captured' = canonical contract; 'waitlist_success' = legacy compatibility
+    return event.event === 'landing_lead_captured' || event.event === 'waitlist_success';
   }
   
   try {
@@ -288,14 +290,16 @@ function calculateKPIs(events, moduleType) {
   let landing_metrics = null;
   if (moduleType === 'landing') {
     // 🔧 FIX: Engagement incluye múltiples tipos de interacción, no solo metric_clicked
+    // 'landing_engaged' = canonical contract (any future landing); resto = legacy compatibility
     const engagementEvents = events.filter(e => 
+      e.event === 'landing_engaged' ||          // Canonical landing engagement contract
       e.event === 'metric_clicked' ||           // Click en tarjetas de métricas
       e.event === 'cta_clicked' ||              // Click en CTAs de pricing
       e.event === 'faq_expanded' ||             // Expansión de FAQ
       e.event === 'chat_opened' ||              // Apertura de chat widget
       e.event === 'setup_request_submitted'     // Envío de formulario setup
     );
-    const waitlistSignups = events.filter(e => e.event === 'waitlist_success').length;
+    const waitlistSignups = events.filter(e => isCompletionEvent(e, moduleType)).length;
     const demoViews = wizardStartEvents.length; // prevention_demo_viewed
 
     // 🔧 FIX: Engagement Rate = % de usuarios que hicieron al menos 1 click (max 100%)
