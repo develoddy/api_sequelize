@@ -12,7 +12,7 @@ export default router;
 
 
 import { Router } from "express";
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import { 
 	register,
 	update,

@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
+import { Review } from "../../../../models/Review.js";
+import { User } from "../../../../models/User.js";
 
 
 export const register = async (req, res) => {
