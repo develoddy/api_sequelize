@@ -1,8 +1,8 @@
 import { Op, Sequelize } from 'sequelize';
-import { ReturnRequest } from '../models/ReturnRequest.js';
-import { Guest } from "../models/Guest.js";
-import { Sale } from "../models/Sale.js";
-import { User} from "../models/User.js";
+import { ReturnRequest } from '../../../../models/ReturnRequest.js';
+import { Guest } from "../../../../models/Guest.js";
+import { Sale } from "../../../../models/Sale.js";
+import { User} from "../../../../models/User.js";
 
 // import { User } from "../models/User.js";
 

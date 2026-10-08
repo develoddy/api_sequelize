@@ -24,7 +24,7 @@ import paypalRoutes from "./paypal.routes.js";
 import chatRoutes from './chat/chat.routes.js';
 import chatTenantRoutes from './chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS
 import saleRoutes  from '../domains/commerce/orders/routes/sale.routes.js';
-import ReturnRoutes from './returns.routes.js';
+import ReturnRoutes from '../domains/commerce/returns/routes/returns.routes.js';
 import Inbox from './inbox.routes.js';
 import receiptRoutes from './receipt.routes.js';
 // Webhook de Printful
