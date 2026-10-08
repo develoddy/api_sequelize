@@ -1,8 +1,8 @@
 
 import { Op, Sequelize } from 'sequelize';
-import resources from "../resources/index.js";
-import { Guest } from "../models/Guest.js";
-import { AddressGuest } from "../models/AddressGuest.js";
+import GuestResource from "../resources/guest.js";
+import { Guest } from "../../../../models/Guest.js";
+import { AddressGuest } from "../../../../models/AddressGuest.js";
 
 // Valida si un guest existe por session_id
 export const validateGuest = async (req, res) => {
@@ -88,7 +88,7 @@ export const list = async( req, res ) => {
         }
 
         guests = guests.map( ( guest ) => {
-            return resources.Guest.guest_list( guest );
+            return GuestResource.guest_list( guest );
         });
 
         res.status(200).json({
