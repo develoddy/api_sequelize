@@ -8,28 +8,28 @@
  * - Editar datos y re-sync
  * - Cancelar jobs en queue
  * 
- * @file src/controllers/proveedor/adminRetry.controller.js
+ * @file src/domains/commerce/integrations/printful/controllers/adminRetry.controller.js
  * @module AdminRetryController
  * @version 1.0.0
  * @sprint Sprint 6D - Intelligent Error Handling & Recovery
  */
 
-import { Sale } from '../../models/Sale.js';
-import { SaleDetail } from '../../models/SaleDetail.js';
-import { SaleAddress } from '../../models/SaleAddress.js';
-import { User } from '../../models/User.js';
-import { Guest } from '../../models/Guest.js';
-import { Product } from '../../models/Product.js';
-import { Variedad } from '../../models/Variedad.js';
-import RetryQueue from '../../models/RetryQueue.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { SaleDetail } from '../../../../../models/SaleDetail.js';
+import { SaleAddress } from '../../../../../models/SaleAddress.js';
+import { User } from '../../../../../models/User.js';
+import { Guest } from '../../../../../models/Guest.js';
+import { Product } from '../../../../../models/Product.js';
+import { Variedad } from '../../../../../models/Variedad.js';
+import RetryQueue from '../../../../../models/RetryQueue.js';
 import {
   getFailedJobs,
   getJobHistory,
   resetJobForRetry,
   cancelJob,
   markAsResolved
-} from '../../services/retryQueue.service.js';
-import { autoSyncOrderToPrintful } from '../../domains/commerce/integrations/printful/services/autoSyncPrintful.service.js';
+} from '../../../../../services/retryQueue.service.js';
+import { autoSyncOrderToPrintful } from '../services/autoSyncPrintful.service.js';
 
 /**
  * GET /api/printful/admin/failed-orders

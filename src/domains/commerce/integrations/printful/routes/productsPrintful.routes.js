@@ -82,7 +82,7 @@ import {
     cancelRetryJob,
     editAndRetry,
     getRetryStats
-} from "../../../../../controllers/proveedor/adminRetry.controller.js";
+} from "../controllers/adminRetry.controller.js";
 
 const router = Router();
 
@@ -166,7 +166,7 @@ router.post("/test/run-retry-queue", async (req, res) => {
 
 router.get("/test/retry-stats", async (req, res) => {
   try {
-    const { getRetryStats } = await import("../controllers/proveedor/adminRetry.controller.js");
+    const { getRetryStats } = await import("../controllers/adminRetry.controller.js");
     await getRetryStats(req, res);
   } catch (error) {
     res.status(500).json({
@@ -179,7 +179,7 @@ router.get("/test/retry-stats", async (req, res) => {
 
 router.get("/test/failed-orders", async (req, res) => {
   try {
-    const { getFailedOrders } = await import("../controllers/proveedor/adminRetry.controller.js");
+    const { getFailedOrders } = await import("../controllers/adminRetry.controller.js");
     await getFailedOrders(req, res);
   } catch (error) {
     res.status(500).json({
