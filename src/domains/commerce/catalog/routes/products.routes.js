@@ -1,6 +1,6 @@
 import { Router } from "express";
 import fs from 'fs';
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import multer from 'multer';
 import { 
     register,
@@ -22,7 +22,7 @@ import {
     variedad_register,
     variedad_update,
     variedad_remove,
-} from "../controllers/variedades.controller.js";
+} from "../../../../controllers/variedades.controller.js";
 
 
 // Configurar el almacenamiento de archivos con Multer

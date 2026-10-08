@@ -1,25 +1,25 @@
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
-import resources from "../resources/index.js";
-import { Product } from "../models/Product.js";
-import { Categorie } from "../models/Categorie.js";
-import { Variedad } from "../models/Variedad.js";
-import { Galeria } from "../models/Galeria.js";
-import { File } from "../models/File.js";
-import { Option } from "../models/Option.js";
-import { Cart } from "../models/Cart.js";
-import { Wishlist } from "../models/Wishlist.js";
-import { SaleDetail } from "../models/SaleDetail.js";
-import { ProductVariants } from "../models/ProductVariants.js";
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
-import { Discount } from "../models/Discount.js";
-import { DiscountProduct } from "../models/DiscountProduct.js";
-import { DiscountCategorie } from "../models/DiscountCategorie.js";
+import { sequelize } from '../../../../database/database.js';
+import resources from "../../../../resources/index.js";
+import { Product } from "../../../../models/Product.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { Galeria } from "../../../../models/Galeria.js";
+import { File } from "../../../../models/File.js";
+import { Option } from "../../../../models/Option.js";
+import { Cart } from "../../../../models/Cart.js";
+import { Wishlist } from "../../../../models/Wishlist.js";
+import { SaleDetail } from "../../../../models/SaleDetail.js";
+import { ProductVariants } from "../../../../models/ProductVariants.js";
+import { Review } from "../../../../models/Review.js";
+import { User } from "../../../../models/User.js";
+import { Discount } from "../../../../models/Discount.js";
+import { DiscountProduct } from "../../../../models/DiscountProduct.js";
+import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
 import fs from 'fs';
 import path from "path";
-import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
-import { getGelatoProducts } from './proveedor/gelato/productGelato.controller.js';
+import { getPrintfulProducts } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
+import { getGelatoProducts } from '../../../../controllers/proveedor/gelato/productGelato.controller.js';
 
 
 /* ----------------------------- START PROVEDORES ---------------------------- */
