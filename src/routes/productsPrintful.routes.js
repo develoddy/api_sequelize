@@ -21,7 +21,7 @@ import {
     getFinancialStats,
     getProductsRanking,
     getTimeline
-} from "../controllers/proveedor/printful/analyticsPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/analyticsPrintful.controller.js";
 
 import {
     calculateShippingRates,
