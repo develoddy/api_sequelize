@@ -26,7 +26,7 @@ import chatTenantRoutes from './chat-tenant.routes.js'; // 🚀 Multi-Tenant Cha
 import saleRoutes  from '../domains/commerce/orders/routes/sale.routes.js';
 import ReturnRoutes from '../domains/commerce/returns/routes/returns.routes.js';
 import Inbox from './inbox.routes.js';
-import receiptRoutes from './receipt.routes.js';
+import receiptRoutes from '../domains/commerce/receipts/routes/receipt.routes.js';
 // Webhook de Printful
 import printfulWebhook from './printfulWebhook.routes.js';
 import notifications from './notifications.routes.js';

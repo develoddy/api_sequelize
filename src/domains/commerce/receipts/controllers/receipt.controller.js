@@ -1,15 +1,15 @@
-import { Receipt } from '../models/Receipt.js';
-import { User } from '../models/User.js';
-import { Guest } from '../models/Guest.js';
-import { Sale } from '../models/Sale.js';
-import { SaleDetail } from '../models/SaleDetail.js';
-import { File } from '../models/File.js';
-import { Product } from '../models/Product.js'; 
-import { Variedad } from '../models/Variedad.js';
-import { SaleAddress } from '../models/SaleAddress.js';
+import { Receipt } from '../../../../models/Receipt.js';
+import { User } from '../../../../models/User.js';
+import { Guest } from '../../../../models/Guest.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { File } from '../../../../models/File.js';
+import { Product } from '../../../../models/Product.js'; 
+import { Variedad } from '../../../../models/Variedad.js';
+import { SaleAddress } from '../../../../models/SaleAddress.js';
 
 // Resource for formatting receipt data
-import ReceiptResource from '../resources/receipt.js'; 
+import ReceiptResource from '../../../../resources/receipt.js'; 
 
 // PDF generation libraries
 import puppeteer from 'puppeteer';
