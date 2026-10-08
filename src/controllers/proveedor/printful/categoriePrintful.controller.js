@@ -5,7 +5,7 @@ import { sequelize } from '../../../database/database.js';
 
 import { 
     getPrintfulCategory,
-} from '../../../services/proveedor/printful/printfulService.js'; 
+} from '../../../domains/commerce/integrations/printful/services/printfulService.js'; 
 
 export const getPrintfulCategory = async(categoryId) =>  {
     try {

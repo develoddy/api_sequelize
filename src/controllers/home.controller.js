@@ -28,7 +28,7 @@ import ProductResource from "../domains/commerce/catalog/resources/product.js";
 import bcrypt from 'bcryptjs';
 
 // PRINTFUL SERVICES
-import { getPrintfulSizeGuideService } from '../services/proveedor/printful/printfulService.js';
+import { getPrintfulSizeGuideService } from '../domains/commerce/integrations/printful/services/printfulService.js';
 
 
 export const list = async (req, res) => {

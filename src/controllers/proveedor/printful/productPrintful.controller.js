@@ -19,7 +19,7 @@ import {
   getPrintfulCatalogProductDetail,
   getPrintfulCategory,
   createPrintfulOrderService,
-} from '../../../services/proveedor/printful/printfulService.js';
+} from '../../../domains/commerce/integrations/printful/services/printfulService.js';
 
 import  {
   removeImageVersion  ,

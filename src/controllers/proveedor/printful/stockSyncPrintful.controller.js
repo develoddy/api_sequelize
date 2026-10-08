@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 import { 
   getPrintfulProductsService,
   getPrintfulProductDetail 
-} from "../../../services/proveedor/printful/printfulService.js";
+} from "../../../domains/commerce/integrations/printful/services/printfulService.js";
 
 /**
  * 🔄 Sincronización completa de stock

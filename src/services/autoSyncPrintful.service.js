@@ -8,7 +8,7 @@ import { File } from '../models/File.js';
 import { Option } from '../models/Option.js';
 import { User } from '../models/User.js';
 import { Guest } from '../models/Guest.js';
-import { createPrintfulOrderService } from './proveedor/printful/printfulService.js';
+import { createPrintfulOrderService } from '../domains/commerce/integrations/printful/services/printfulService.js';
 import { sendAdminSyncFailedAlert } from './emailNotification.service.js';
 import { addToQueue } from './retryQueue.service.js';
 import { classifyError } from './errorClassification.service.js';
