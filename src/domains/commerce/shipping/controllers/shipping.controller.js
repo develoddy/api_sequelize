@@ -1,12 +1,12 @@
-import { Shipment } from '../models/Shipment.js';
-import { Sale } from '../models/Sale.js';
-import { SaleDetail } from '../models/SaleDetail.js';
-import { SaleAddress } from '../models/SaleAddress.js';
-import { Product } from '../models/Product.js';
-import { Variedad } from '../models/Variedad.js';
-import { File } from '../models/File.js';
-import { User } from '../models/User.js';
-import { Guest } from '../models/Guest.js';
+import { Shipment } from '../../../../models/Shipment.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { SaleAddress } from '../../../../models/SaleAddress.js';
+import { Product } from '../../../../models/Product.js';
+import { Variedad } from '../../../../models/Variedad.js';
+import { File } from '../../../../models/File.js';
+import { User } from '../../../../models/User.js';
+import { Guest } from '../../../../models/Guest.js';
 import { Op } from 'sequelize';
 
 

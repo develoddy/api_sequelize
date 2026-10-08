@@ -12,13 +12,13 @@ import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.
 import addressClient from "../domains/commerce/addresses/routes/addressClient.routes.js";
 import addressGuest from "../domains/commerce/addresses/routes/addressGuest.routes.js"; // Guest
 import sale from "../domains/commerce/orders/routes/sale.routes.js";
-import shipping from "./shipping.routes.js";
+import shipping from "../domains/commerce/shipping/routes/shipping.routes.js";
 import review from "./review.routes.js";
 import productsPrintfulRoutes from "./productsPrintful.routes.js";
 import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
 import wishlistRoutes from "../domains/commerce/wishlist/routes/wishlist.routes.js";
-import shippingratesRoutes from "./shippingrates.route.js";
+import shippingratesRoutes from "../domains/commerce/shipping/routes/shippingrates.route.js";
 import stripeRoutes from "./stripe.routes.js";
 import paypalRoutes from "./paypal.routes.js";
 import chatRoutes from './chat/chat.routes.js';

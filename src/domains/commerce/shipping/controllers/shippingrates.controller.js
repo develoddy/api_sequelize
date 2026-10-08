@@ -1,8 +1,8 @@
 import { Op } from 'sequelize';
-import { AddressClient } from "../models/AddressClient.js";
-import { User } from "../models/User.js";
+import { AddressClient } from "../../../../models/AddressClient.js";
+import { User } from "../../../../models/User.js";
 
-import { getShippingRates } from './proveedor/printful/shippingratesPrintful.controller.js';
+import { getShippingRates } from '../../../../controllers/proveedor/printful/shippingratesPrintful.controller.js';
 
 export const shippingRates = async (req, res) => {
     try {
