@@ -204,7 +204,7 @@ export const testSimulatePackageShipped = async (req, res) => {
         };
 
         // Llamar al webhook handler (importar dinámicamente para evitar circular deps)
-        const { handleWebhook } = await import('../proveedor/printful/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
         
         // Simular request
         const fakeReq = {
@@ -415,7 +415,7 @@ export const testSimulateOrderCreated = async (req, res) => {
         };
 
         // Llamar al webhook handler (importar dinámicamente para evitar circular deps)
-        const { handleWebhook } = await import('../proveedor/printful/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
         
         // Simular request
         const fakeReq = {
@@ -631,7 +631,7 @@ export const testSimulateOrderFailed = async (req, res) => {
         console.log('📤 [TEST] Enviando webhook simulado a handleWebhook...');
 
         // Importar dinámicamente para evitar dependencias circulares
-        const { handleWebhook } = await import('../proveedor/printful/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
 
         const fakeReq = {
             body: simulatedWebhookPayload,

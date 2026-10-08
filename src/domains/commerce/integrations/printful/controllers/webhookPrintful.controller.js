@@ -1,15 +1,15 @@
 import crypto from 'crypto';
-import { PrintfulWebhookLog } from "../../../models/PrintfulWebhookLog.js";
-import { Sale } from "../../../models/Sale.js";
-import { SaleDetail } from "../../../models/SaleDetail.js";
-import { SaleAddress } from "../../../models/SaleAddress.js";
-import { Product } from "../../../models/Product.js";
-import { Variedad } from "../../../models/Variedad.js";
-import { User } from "../../../models/User.js";
-import { Guest } from "../../../models/Guest.js";
-import { Receipt } from "../../../models/Receipt.js";
-import { Tenant } from "../../../domains/platform/models/Tenant.js";
-import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../services/emailNotification.service.js";
+import { PrintfulWebhookLog } from "../../../../../models/PrintfulWebhookLog.js";
+import { Sale } from "../../../../../models/Sale.js";
+import { SaleDetail } from "../../../../../models/SaleDetail.js";
+import { SaleAddress } from "../../../../../models/SaleAddress.js";
+import { Product } from "../../../../../models/Product.js";
+import { Variedad } from "../../../../../models/Variedad.js";
+import { User } from "../../../../../models/User.js";
+import { Guest } from "../../../../../models/Guest.js";
+import { Receipt } from "../../../../../models/Receipt.js";
+import { Tenant } from "../../../../platform/models/Tenant.js";
+import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../../../services/emailNotification.service.js";
 
 const INTERNAL_TX_REGEX = /^sale_(\d+)_\d+$/;
 

@@ -41,7 +41,7 @@ import {
     handleWebhook,
     getWebhookLogs,
     getWebhookStats
-} from "../controllers/proveedor/printful/webhookPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js";
 
 import {
     syncOrderToPrintful

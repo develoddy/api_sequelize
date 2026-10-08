@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { 
     handleWebhook
-} from '../controllers/proveedor/printful/webhookPrintful.controller.js';
+} from '../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js';
 
 const router = Router();
 
