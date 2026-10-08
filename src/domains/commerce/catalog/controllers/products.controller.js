@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../../../../database/database.js';
-import resources from "../../../../resources/index.js";
+import ProductResource from "../resources/product.js";
 import { Product } from "../../../../models/Product.js";
 import { Categorie } from "../../../../models/Categorie.js";
 import { Variedad } from "../../../../models/Variedad.js";
@@ -288,7 +288,7 @@ export const list = async (req, res) => {
     products = products.map(product => {
       // Obtener las variantes del producto
       const variedades = product.variedades || [];
-      return resources.Product.product_list(product, variedades);
+      return ProductResource.product_list(product, variedades);
     });
 
     res.status(200).json({ 
@@ -331,7 +331,7 @@ export const list = async (req, res) => {
 //             });
 
 //             products = products.map( product => {
-//                 return resources.Product.product_list( product );
+//                 return ProductResource.product_list( product );
 //             });
 //         } else {
 //             // BUSCAR LAS CATEGORIAS
@@ -342,7 +342,7 @@ export const list = async (req, res) => {
 //             });
 
 //             products = products.map( product => {
-//                 return resources.Product.product_list( product );
+//                 return ProductResource.product_list( product );
 //             });
 //         }
 
@@ -533,7 +533,7 @@ export const show = async(req, res) => {
         });
 
         res.status(200).json({
-            product: resources.Product.product_list(product, variedades)
+            product: ProductResource.product_list(product, variedades)
         });
     } catch (error) {
         res.status(500).send({
@@ -634,7 +634,7 @@ export const show_admin_product = async (req, res) => {
                 }
             }
 
-            objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
+            objectRelateProducts.push(ProductResource.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
         }
 
         // Productos de interés (distintos a la categoría del producto)
@@ -658,7 +658,7 @@ export const show_admin_product = async (req, res) => {
                 }
             }
 
-            objectInterestProducts.push(resources.Product.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount));
+            objectInterestProducts.push(ProductResource.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount));
         }
 
         // Flash sales (SALE_FLASH)
@@ -689,7 +689,7 @@ export const show_admin_product = async (req, res) => {
             }
         }
 
-        const finalProduct = resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST);
+        const finalProduct = ProductResource.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST);
         console.log("[DEBUG Admin] Producto final:", finalProduct && finalProduct._id);
 
         res.status(200).json({

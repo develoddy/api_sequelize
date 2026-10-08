@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import resources from "../../../../resources/index.js";
+import CategorieResource from "../resources/categorie.js";
 import { Categorie } from "../../../../models/Categorie.js";
 import fs from 'fs';
 import path from "path";
@@ -88,7 +88,7 @@ export const update = async(req, res) => {
 
         res.status(200).json({
             message: "¡Success! La categoria se ha modificado correctamente",
-            categorie: resources.Categorie.categorie_list(CategorieT),
+            categorie: CategorieResource.categorie_list(CategorieT),
         });
     } catch (error) {
         res.status(500).send({
@@ -113,7 +113,7 @@ export const list = async (req, res) => {
         });
 
         categories = categories.map((categorie) => {
-            return resources.Categorie.categorie_list(categorie);
+            return CategorieResource.categorie_list(categorie);
         });
 
         res.status(200).json({

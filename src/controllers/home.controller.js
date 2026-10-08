@@ -22,7 +22,9 @@ import { ProductVariants } from "../models/ProductVariants.js";
 // Shipment not needed - tracking data is directly in Sale model
 
 // RESOURCES
-import resources from "../resources/index.js";
+import SliderResource from "../resources/slider.js";
+import CategorieResource from "../domains/commerce/catalog/resources/categorie.js";
+import ProductResource from "../domains/commerce/catalog/resources/product.js";
 import bcrypt from 'bcryptjs';
 
 // PRINTFUL SERVICES
@@ -53,11 +55,11 @@ export const list = async (req, res) => {
 
         // Obtener sliders
         let Sliders = await Slider.findAll({ where: { state: 1 } });
-        Sliders = Sliders.map(slider => resources.Slider.slider_list(slider));
+        Sliders = Sliders.map(slider => SliderResource.slider_list(slider));
 
         // Obtener categorías
         let Categories = await Categorie.findAll({ where: { state: 1 } });
-        Categories = Categories.map(categorie => resources.Categorie.categorie_list(categorie));
+        Categories = Categories.map(categorie => CategorieResource.categorie_list(categorie));
 
         // Obtener descuentos de campaña con sus productos y categorías
         let CampaingDiscount = await Discount.findOne({
@@ -104,7 +106,7 @@ export const list = async (req, res) => {
                 }
             }
 
-            ObjectBestProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            ObjectBestProducts.push(ProductResource.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
         }
 
         // Obtener nuestros productos
@@ -183,8 +185,8 @@ export const list = async (req, res) => {
                 }
             }
 
-            // ObjectOurProducts.push(resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
-            let productObject = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
+            // ObjectOurProducts.push(ProductResource.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            let productObject = ProductResource.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
             //ObjectOurProducts.push(productObject);
 
             // Normalizar el nombre de categoría
@@ -205,7 +207,7 @@ export const list = async (req, res) => {
                     let ObjectT = discountProduct.product;
                     let variedades = await Variedad.findAll({ where: { productId: ObjectT.id } });
 
-                    ProductList.push(resources.Product.product_list(ObjectT, variedades));
+                    ProductList.push(ProductResource.product_list(ObjectT, variedades));
                 }
             }
             
@@ -414,7 +416,7 @@ export const show_landing_product = async (req, res) => {
                     }
                 }
             }
-            objectRelateProducts.push(resources.Product.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
+            objectRelateProducts.push(ProductResource.product_list(relatedProduct, relatedVariedades, relatedAvgReview, relatedCountReview, relatedDiscount));
         }
 
         // Crear lista de productos de interés con el mismo formato
@@ -438,7 +440,7 @@ export const show_landing_product = async (req, res) => {
             }
 
             objectInterestProducts.push(
-                resources.Product.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount)
+                ProductResource.product_list(interestProduct, interestVariedades, interestAvgReview, interestCountReview, interestDiscount)
             );
         }
 
@@ -473,7 +475,7 @@ export const show_landing_product = async (req, res) => {
         }
 
         res.status(200).json({
-            product: resources.Product.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST),
+            product: ProductResource.product_list(product, variedades, avg_review, count_review, DISCOUNT_EXIST),
             related_products: objectRelateProducts,
             interest_products: objectInterestProducts,
             SALE_FLASH: saleFlash,
@@ -713,7 +715,7 @@ export const search_product = async (req, res) => {
                     }
                 }
             }
-            Products.push(resources.Product.product_list(Product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
+            Products.push(ProductResource.product_list(Product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST));
         }
 
         res.status(200).json({
@@ -749,10 +751,10 @@ export const config_initial = async (req, res) => {
         const variedades = await Variedad.findAll();
 
         //categories = categories.map((categorie) => {
-        //    return resources.Categorie.categorie_list(categorie);
+        //    return CategorieResource.categorie_list(categorie);
         //});
         categories = categories.map((categorie) => {
-            const formattedCategorie = resources.Categorie.categorie_list(categorie);
+            const formattedCategorie = CategorieResource.categorie_list(categorie);
             formattedCategorie.total_products = categorie.dataValues.total_products; // Añadimos el total
             return formattedCategorie;
         });
@@ -931,7 +933,7 @@ export const filters_products = async (req, res) => {
                 }
             }
 
-            const finalProduct = resources.Product.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
+            const finalProduct = ProductResource.product_list(product, variedades, AVG_REVIEW, COUNT_REVIEW, DISCOUNT_EXIST);
             Products.push(finalProduct);
         }
 
