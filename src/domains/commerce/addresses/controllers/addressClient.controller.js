@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
-import { AddressClient } from "../models/AddressClient.js";
-import { User } from "../models/User.js";
+import { AddressClient } from "../../../../models/AddressClient.js";
+import { User } from "../../../../models/User.js";
 
 const getAuthenticatedUserId = (req) => {
     const userId = Number(req.user?.id);

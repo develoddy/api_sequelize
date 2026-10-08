@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
-import { AddressGuest } from "../models/AddressGuest.js";
-import { Guest } from "../models/Guest.js";
+import { AddressGuest } from "../../../../models/AddressGuest.js";
+import { Guest } from "../../../../models/Guest.js";
 
 const normalizeText = (value) => {
     if (value === null || value === undefined) return null;

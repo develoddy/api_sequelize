@@ -9,8 +9,8 @@ import discountsRoutes from "../domains/commerce/promotions/routes/discount.rout
 import homeRoutes from "./home.routes.js";
 import cartsRoutes from "../domains/commerce/cart/routes/carts.routes.js";
 import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.js"; // Guest
-import addressClient from "./addressClient.routes.js";
-import addressGuest from "./addressGuest.routes.js"; // Guest
+import addressClient from "../domains/commerce/addresses/routes/addressClient.routes.js";
+import addressGuest from "../domains/commerce/addresses/routes/addressGuest.routes.js"; // Guest
 import sale from "../domains/commerce/orders/routes/sale.routes.js";
 import shipping from "./shipping.routes.js";
 import review from "./review.routes.js";

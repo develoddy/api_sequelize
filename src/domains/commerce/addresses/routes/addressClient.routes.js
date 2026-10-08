@@ -1,6 +1,6 @@
 import { Router } from "express";
 import fs from 'fs';
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import multer from 'multer';
 
 import {
