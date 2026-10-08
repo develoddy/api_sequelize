@@ -14,7 +14,7 @@ import {
 	authenticateDropi,
 	getDropiProductsService,
 	getDropiCategoriesService,
-} from '../../../services/proveedor/dropi/dropiService.js';
+} from '../../../domains/commerce/integrations/dropi/services/dropiService.js';
 
 import  { 
   generateSlug,
