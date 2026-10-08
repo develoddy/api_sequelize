@@ -5,7 +5,7 @@ import auth from '../middlewares/auth.js';
 import { 
     list,
     getGelatoProducts,
-} from "../controllers/proveedor/gelato/productGelato.controller.js";
+} from "../domains/commerce/integrations/gelato/controllers/productGelato.controller.js";
 
 const router = Router();
 

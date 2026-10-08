@@ -1,18 +1,18 @@
 import axios from "axios";
 import { Op } from 'sequelize';
-import { Product } from "../../../models/Product.js";
-import { Categorie } from "../../../models/Categorie.js";
-import { sequelize } from '../../../database/database.js';
-import { Galeria } from "../../../models/Galeria.js";
-import { Variedad } from "../../../models/Variedad.js";
-import { ProductVariants } from "../../../models/ProductVariants.js";
-import { File } from "../../../models/File.js";
-import { Option } from "../../../models/Option.js";
+import { Product } from "../../../../../models/Product.js";
+import { Categorie } from "../../../../../models/Categorie.js";
+import { sequelize } from '../../../../../database/database.js';
+import { Galeria } from "../../../../../models/Galeria.js";
+import { Variedad } from "../../../../../models/Variedad.js";
+import { ProductVariants } from "../../../../../models/ProductVariants.js";
+import { File } from "../../../../../models/File.js";
+import { Option } from "../../../../../models/Option.js";
 import { 
   getGelatiProductsService,
   getGelatoProductDetail,
   getGelatoPriceProduct,
-} from '../../../domains/commerce/integrations/gelato/services/gelatoService.js';
+} from '../services/gelatoService.js';
 import fs from 'fs';
 import path from "path";
 
@@ -27,7 +27,7 @@ import  {
   processGalleryImage,
   formatPrice,
   generateImageName,
-} from "../../../domains/commerce/integrations/printful/helpers/helper.js";
+} from "../../printful/helpers/helper.js";
 
 export const list = async( req, res ) => {
   try{
