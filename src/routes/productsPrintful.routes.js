@@ -27,7 +27,7 @@ import {
     calculateShippingRates,
     getShippingCountries,
     getCountryStates
-} from "../controllers/proveedor/printful/shippingPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/shippingPrintful.controller.js";
 
 import {
     syncStock,
