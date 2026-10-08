@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
-import resources from "../resources/index.js";
-import { Categorie } from "../models/Categorie.js";
+import resources from "../../../../resources/index.js";
+import { Categorie } from "../../../../models/Categorie.js";
 import fs from 'fs';
 import path from "path";
 

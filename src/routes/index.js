@@ -2,7 +2,7 @@ import express from "express";
 import productsRoutes from './products.routes.js';
 import usersRoutes from './users.routes.js';
 import guestsRoutes from './guests.routes.js';
-import categoriesRoutes from "./categories.routes.js";
+import categoriesRoutes from "../domains/commerce/catalog/routes/categories.routes.js";
 import slidersRoutes from "./sliders.routes.js";
 import cuponesRoutes from "./cupone.routes.js";
 import discountsRoutes from "./discount.routes.js";
