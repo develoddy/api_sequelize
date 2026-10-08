@@ -3,7 +3,7 @@ import fs from 'fs';
 //import auth from '../middlewares/auth.js';
 import { 
     login_dropi,
-} from "../controllers/proveedor/dropi/productDropi.controller.js";
+} from "../domains/commerce/integrations/dropi/controllers/productDropi.controller.js";
 
 const router = Router();
 

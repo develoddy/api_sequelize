@@ -1,25 +1,25 @@
 import axios from "axios";
 import { Op } from 'sequelize';
-import { Product } from "../../../models/Product.js";
-import { Categorie } from "../../../models/Categorie.js";
-import { sequelize } from '../../../database/database.js';
-import { Galeria } from "../../../models/Galeria.js";
-import { Variedad } from "../../../models/Variedad.js";
-import { ProductVariants } from "../../../models/ProductVariants.js";
-import { SaleDetail } from "../../../models/SaleDetail.js";
-import { File } from "../../../models/File.js";
-import { Option } from "../../../models/Option.js";
-import { Cart } from "../../../models/Cart.js";
+import { Product } from "../../../../../models/Product.js";
+import { Categorie } from "../../../../../models/Categorie.js";
+import { sequelize } from '../../../../../database/database.js';
+import { Galeria } from "../../../../../models/Galeria.js";
+import { Variedad } from "../../../../../models/Variedad.js";
+import { ProductVariants } from "../../../../../models/ProductVariants.js";
+import { SaleDetail } from "../../../../../models/SaleDetail.js";
+import { File } from "../../../../../models/File.js";
+import { Option } from "../../../../../models/Option.js";
+import { Cart } from "../../../../../models/Cart.js";
 import {
 	authenticateDropi,
 	getDropiProductsService,
 	getDropiCategoriesService,
-} from '../../../domains/commerce/integrations/dropi/services/dropiService.js';
+} from '../services/dropiService.js';
 
 import  { 
   generateSlug,
   downloadImage,
-} from "./helper.js";
+} from "../helpers/helper.js";
 
 import fs from 'fs';
 import path from "path";
