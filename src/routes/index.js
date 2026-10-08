@@ -14,7 +14,7 @@ import addressGuest from "../domains/commerce/addresses/routes/addressGuest.rout
 import sale from "../domains/commerce/orders/routes/sale.routes.js";
 import shipping from "../domains/commerce/shipping/routes/shipping.routes.js";
 import review from "../domains/commerce/reviews/routes/review.routes.js";
-import productsPrintfulRoutes from "./productsPrintful.routes.js";
+import productsPrintfulRoutes from "../domains/commerce/integrations/printful/routes/productsPrintful.routes.js";
 import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
 import wishlistRoutes from "../domains/commerce/wishlist/routes/wishlist.routes.js";
@@ -28,7 +28,7 @@ import ReturnRoutes from '../domains/commerce/returns/routes/returns.routes.js';
 import Inbox from './inbox.routes.js';
 import receiptRoutes from '../domains/commerce/receipts/routes/receipt.routes.js';
 // Webhook de Printful
-import printfulWebhook from './printfulWebhook.routes.js';
+import printfulWebhook from '../domains/commerce/integrations/printful/routes/printfulWebhook.routes.js';
 import notifications from './notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';

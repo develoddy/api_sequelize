@@ -1,11 +1,11 @@
 import { Router } from "express";
-import auth from '../middlewares/auth.js';
+import auth from '../../../../../middlewares/auth.js';
 
 import { 
     list,
     show,
     getDashboardStats,
-} from "../domains/commerce/integrations/printful/controllers/productPrintful.controller.js";
+} from "../controllers/productPrintful.controller.js";
 
 import {
     getOrders,
@@ -15,19 +15,19 @@ import {
     retryOrder,
     getOrderShipments,
     estimateOrderCosts
-} from "../domains/commerce/integrations/printful/controllers/orderPrintful.controller.js";
+} from "../controllers/orderPrintful.controller.js";
 
 import {
     getFinancialStats,
     getProductsRanking,
     getTimeline
-} from "../domains/commerce/integrations/printful/controllers/analyticsPrintful.controller.js";
+} from "../controllers/analyticsPrintful.controller.js";
 
 import {
     calculateShippingRates,
     getShippingCountries,
     getCountryStates
-} from "../domains/commerce/integrations/printful/controllers/shippingPrintful.controller.js";
+} from "../controllers/shippingPrintful.controller.js";
 
 import {
     syncStock,
@@ -35,34 +35,34 @@ import {
     getPriceChanges,
     updateProduct,
     getStockStats
-} from "../domains/commerce/integrations/printful/controllers/stockSyncPrintful.controller.js";
+} from "../controllers/stockSyncPrintful.controller.js";
 
 import {
     handleWebhook,
     getWebhookLogs,
     getWebhookStats
-} from "../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js";
+} from "../controllers/webhookPrintful.controller.js";
 
 import {
     syncOrderToPrintful
-} from "../domains/commerce/integrations/printful/controllers/autoSyncPrintful.controller.js";
+} from "../controllers/autoSyncPrintful.controller.js";
 
 import {
     createTestReceipt,
     updateReceiptStatus
-} from "../controllers/helpers/testReceipt.controller.js";
+} from "../../../../../controllers/helpers/testReceipt.controller.js";
 
 import {
     createTestSale
-} from "../controllers/helpers/testSale.controller.js";
+} from "../../../../../controllers/helpers/testSale.controller.js";
 
 import {
     resetTestSale
-} from "../controllers/helpers/resetSale.controller.js";
+} from "../../../../../controllers/helpers/resetSale.controller.js";
 
 import {
     runRetryQueueNow
-} from "../cron/cronJobs.js";
+} from "../../../../../cron/cronJobs.js";
 
 import {
     testSendShippedEmail,
@@ -73,7 +73,7 @@ import {
     testSimulateOrderFailed,
     testSendDeliveredEmail,
     testSendDailyReport
-} from "../controllers/helpers/testEmailNotifications.controller.js";
+} from "../../../../../controllers/helpers/testEmailNotifications.controller.js";
 
 import {
     getFailedOrders,
@@ -82,7 +82,7 @@ import {
     cancelRetryJob,
     editAndRetry,
     getRetryStats
-} from "../controllers/proveedor/adminRetry.controller.js";
+} from "../../../../../controllers/proveedor/adminRetry.controller.js";
 
 const router = Router();
 
