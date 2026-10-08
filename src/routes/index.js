@@ -4,8 +4,8 @@ import usersRoutes from './users.routes.js';
 import guestsRoutes from './guests.routes.js';
 import categoriesRoutes from "../domains/commerce/catalog/routes/categories.routes.js";
 import slidersRoutes from "./sliders.routes.js";
-import cuponesRoutes from "./cupone.routes.js";
-import discountsRoutes from "./discount.routes.js";
+import cuponesRoutes from "../domains/commerce/promotions/routes/cupone.routes.js";
+import discountsRoutes from "../domains/commerce/promotions/routes/discount.routes.js";
 import homeRoutes from "./home.routes.js";
 import cartsRoutes from "../domains/commerce/cart/routes/carts.routes.js";
 import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.js"; // Guest

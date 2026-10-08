@@ -1,9 +1,9 @@
 import { Op } from 'sequelize';
-import { Product } from "../models/Product.js";
-import { Categorie } from "../models/Categorie.js";
-import { Cupone } from "../models/Cupone.js";
-import { CuponeProduct } from "../models/CuponeProduct.js";
-import { CuponeCategorie } from "../models/CuponeCategorie.js";
+import { Product } from "../../../../models/Product.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Cupone } from "../../../../models/Cupone.js";
+import { CuponeProduct } from "../../../../models/CuponeProduct.js";
+import { CuponeCategorie } from "../../../../models/CuponeCategorie.js";
 import fs from 'fs';
 import path from "path";
 
