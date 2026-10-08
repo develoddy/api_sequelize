@@ -9,7 +9,7 @@ import { File } from "../../../../models/File.js";
 import { Guest } from "../../../../models/Guest.js";
 import { CartCache } from "../../../../models/CartCache.js";
 // RESOURCES
-import resources from "../../../../resources/index.js";
+import CartResource from "../resources/cart.js";
 
 
 export const register = async (req, res) => {
@@ -152,7 +152,7 @@ export const register = async (req, res) => {
         }
 
         res.status(200).json({
-            cart: resources.Cart.cart_list(cartObj),
+            cart: CartResource.cart_list(cartObj),
             message_text: "La cesta de compra ha sido registrado satisfactoriamente",
         });
     } catch (error) {
@@ -195,7 +195,7 @@ export const list = async (req, res) => {
                     }
                 }
                 
-                return resources.Cart.cart_list(cartObj);
+                return CartResource.cart_list(cartObj);
             }));
 
             // Enviando la respuesta.
@@ -329,7 +329,7 @@ export const update = async (req, res) => {
         });
 
         res.status(200).json({
-            cart: resources.Cart.cart_list(newCart),
+            cart: CartResource.cart_list(newCart),
             message_text: "La cesta se actualizó con éxito!",
         });
     } catch (error) {

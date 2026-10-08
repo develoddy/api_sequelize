@@ -26,7 +26,7 @@ import { CuponeProduct } from "../../../../models/CuponeProduct.js";
 import { CuponeCategorie } from "../../../../models/CuponeCategorie.js";
 
 // RESOURCES
-import resources from "../../../../resources/index.js";
+import CartResource from "../resources/cart.js";
 import bcrypt from 'bcryptjs';
 
 
@@ -62,7 +62,7 @@ export const list = async (req, res) => {
                     }
                 }
                 
-                return resources.Cart.cart_list(cartObj);
+                return CartResource.cart_list(cartObj);
             }));
 
 
@@ -206,7 +206,7 @@ export const register = async (req, res) => {
         }
 
         res.status(200).json({
-            cart: resources.Cart.cart_list(cartObj),
+            cart: CartResource.cart_list(cartObj),
             message_text: "La cesta de compra ha sido registrado satisfactoriamente",
         });
     } catch (error) {
@@ -339,7 +339,7 @@ export const update = async (req, res) => {
         }
 
         res.status(200).json({
-            cart: resources.Cart.cart_list(cartObj),
+            cart: CartResource.cart_list(cartObj),
             message_text: "La cesta se actualizó con éxito!",
         });
     } catch (error) {
@@ -687,7 +687,7 @@ export const mergeCart = async (req, res) => {
         });
 
         // Transformar los resultados para enviarlos al frontend
-        const CARTS = updatedCartItems.map(cart => resources.Cart.cart_list(cart));
+        const CARTS = updatedCartItems.map(cart => CartResource.cart_list(cart));
 
         res.status(200).json({
             carts: CARTS,
