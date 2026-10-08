@@ -16,7 +16,7 @@ import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
 import { SaleDetail } from '../../../../models/SaleDetail.js';
 import { Sale } from '../../../../models/Sale.js';
 // RESOURCES
-import resources from "../../../../resources/index.js";
+import WishlistResource from "../resources/wishlist.js";
 import bcrypt from 'bcryptjs';
 
 
@@ -78,7 +78,7 @@ export const list = async (req, res) => {
                          }
                     }
 
-                    return resources.Wishlist.product_list(item, product, variedades, avg_review, count_review, campaingDiscount);
+                    return WishlistResource.product_list(item, product, variedades, avg_review, count_review, campaingDiscount);
                     
                 } catch (error) {
                     console.error("Error fetching details for product", item.product.id, error);
@@ -106,7 +106,7 @@ export const list = async (req, res) => {
 
                     let variedades = await Variedad.findAll({ where: { productId: product.productId } });
 
-                    ProductList.push(resources.Wishlist.product_list(ObjectT, variedades));
+                    ProductList.push(WishlistResource.product_list(ObjectT, variedades));
                 }
             } else {
                 FlashSale = null;
@@ -213,7 +213,7 @@ export const register = async (req, res) => {
         let campaingDiscount = null;
 
         // Crear la respuesta final usando tu recurso `Wishlist`
-        let wishlistWithDetails = resources.Wishlist.product_list(
+        let wishlistWithDetails = WishlistResource.product_list(
             newWishlistWithAssociations,
             product,
             variedades,
@@ -223,7 +223,7 @@ export const register = async (req, res) => {
         );
 
         res.status(200).json({
-            wishlist: wishlistWithDetails,//resources.Wishlist.product_list(newWishlistWithAssociations.toJSON()),
+            wishlist: wishlistWithDetails,//WishlistResource.product_list(newWishlistWithAssociations.toJSON()),
             message_text: "El producto ha sido añadido a sus favoritos",
         });
 
