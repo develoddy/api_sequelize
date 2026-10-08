@@ -18,7 +18,7 @@ import { DiscountProduct } from "../../../../models/DiscountProduct.js";
 import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
 import fs from 'fs';
 import path from "path";
-import { getPrintfulProducts } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
+import { getPrintfulProducts } from '../../integrations/printful/controllers/productPrintful.controller.js';
 import { getGelatoProducts } from '../../../../controllers/proveedor/gelato/productGelato.controller.js';
 
 

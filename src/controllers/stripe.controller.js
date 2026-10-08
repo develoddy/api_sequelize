@@ -19,7 +19,7 @@ import { Tenant } from '../domains/platform/models/Tenant.js';
 import { Module } from '../domains/platform/models/Module.js';
 import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
 
-import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
+import { createPrintfulOrder } from '../domains/commerce/integrations/printful/controllers/productPrintful.controller.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
 import { sendEmail } from '../domains/commerce/orders/controllers/sale.controller.js';
 import { 

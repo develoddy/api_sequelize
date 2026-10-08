@@ -4,7 +4,7 @@ import { User } from "../../../../models/User.js";
 import { AddressClient } from "../../../../models/AddressClient.js";
 import token from "../../../../services/token.js";
 import bcrypt from 'bcryptjs';
-import { getPrintfulProducts } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
+import { getPrintfulProducts } from '../../../commerce/integrations/printful/controllers/productPrintful.controller.js';
 import jwt from "jsonwebtoken";
 import nodemailer from 'nodemailer';
 import fs from 'fs';

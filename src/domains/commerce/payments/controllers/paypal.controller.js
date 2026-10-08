@@ -8,7 +8,7 @@ import { Cart } from '../../../../models/Cart.js';
 import { CartCache } from '../../../../models/CartCache.js';
 import { createSaleReceipt } from '../../../../controllers/helpers/receipt.helper.js';
 import { sendEmail } from '../../orders/controllers/sale.controller.js';
-import { createPrintfulOrder } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
+import { createPrintfulOrder } from '../../integrations/printful/controllers/productPrintful.controller.js';
 
 /**
  * POST /api/paypal/webhook

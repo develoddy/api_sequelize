@@ -5,7 +5,7 @@ import {
     list,
     show,
     getDashboardStats,
-} from "../controllers/proveedor/printful/productPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/productPrintful.controller.js";
 
 import {
     getOrders,

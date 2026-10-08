@@ -27,7 +27,7 @@ import  {
   processGalleryImage,
   formatPrice,
   generateImageName,
-} from "../printful/helper.js";
+} from "../../../domains/commerce/integrations/printful/helpers/helper.js";
 
 export const list = async( req, res ) => {
   try{

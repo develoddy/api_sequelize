@@ -1,16 +1,16 @@
 import axios from "axios";
 import { Op } from 'sequelize';
-import { Product } from "../../../models/Product.js";
-import { Categorie } from "../../../models/Categorie.js";
-import { sequelize } from '../../../database/database.js';
-import { Galeria } from "../../../models/Galeria.js";
-import { Variedad } from "../../../models/Variedad.js";
-import { ProductVariants } from "../../../models/ProductVariants.js";
-import { SaleDetail } from "../../../models/SaleDetail.js";
-import { File } from "../../../models/File.js";
-import { Option } from "../../../models/Option.js";
-import { Cart } from "../../../models/Cart.js";
-import { Wishlist } from "../../../models/Wishlist.js";
+import { Product } from "../../../../../models/Product.js";
+import { Categorie } from "../../../../../models/Categorie.js";
+import { sequelize } from '../../../../../database/database.js';
+import { Galeria } from "../../../../../models/Galeria.js";
+import { Variedad } from "../../../../../models/Variedad.js";
+import { ProductVariants } from "../../../../../models/ProductVariants.js";
+import { SaleDetail } from "../../../../../models/SaleDetail.js";
+import { File } from "../../../../../models/File.js";
+import { Option } from "../../../../../models/Option.js";
+import { Cart } from "../../../../../models/Cart.js";
+import { Wishlist } from "../../../../../models/Wishlist.js";
 import fs from 'fs';
 import path from "path";
 import {
@@ -19,7 +19,7 @@ import {
   getPrintfulCatalogProductDetail,
   getPrintfulCategory,
   createPrintfulOrderService,
-} from '../../../domains/commerce/integrations/printful/services/printfulService.js';
+} from '../services/printfulService.js';
 
 import  {
   removeImageVersion  ,
@@ -30,10 +30,10 @@ import  {
   removeRepeatedColors,
   processGalleryImage,
   processGalleryImageVersioned,
-} from "./helper.js";
+} from "../helpers/helper.js";
 
 // controllers/productPrintful.controller.js
-import { generarDescripcionPorCategoria } from '../../helpers/productDescription.helper.js';
+import { generarDescripcionPorCategoria } from '../../../../../controllers/helpers/productDescription.helper.js';
 
 
 let idMapping = { products: {}, variedades: {} };
