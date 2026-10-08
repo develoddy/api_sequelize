@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
-import { sequelize } from "../database/database.js";
+import { sequelize } from "../../../database/database.js";
 
-export const Expense = sequelize.define('expenses', {
+export const Income = sequelize.define('incomes', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -22,23 +22,18 @@ export const Expense = sequelize.define('expenses', {
             model: 'bank_accounts',
             key: 'id'
         },
-        comment: 'Cuenta bancaria desde donde se realizó el gasto'
+        comment: 'Cuenta bancaria asociada'
     },
     category: {
-        type: DataTypes.ENUM(
-            'housing', 'utilities', 'groceries', 'transport', 'health', 
-            'insurance', 'entertainment', 'education', 'clothing', 
-            'savings', 'investments', 'debt_payment', 'restaurants', 
-            'travel', 'gifts', 'personal_care', 'technology', 'internal_transfer', 'other'
-        ),
+        type: DataTypes.ENUM('salary', 'freelance', 'investments', 'rental', 'business', 'gifts', 'internal_transfer', 'other'),
         defaultValue: 'other',
         allowNull: false,
-        comment: 'Categoría del gasto'
+        comment: 'Categoría del ingreso'
     },
     amount: {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
-        comment: 'Monto del gasto'
+        comment: 'Monto del ingreso'
     },
     currency: {
         type: DataTypes.STRING(3),
@@ -48,70 +43,54 @@ export const Expense = sequelize.define('expenses', {
     description: {
         type: DataTypes.STRING(255),
         allowNull: true,
-        comment: 'Descripción del gasto'
+        comment: 'Descripción del ingreso'
     },
     date: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-        comment: 'Fecha del gasto'
+        comment: 'Fecha del ingreso'
     },
     is_recurring: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
-        comment: 'Indica si es un gasto recurrente'
+        comment: 'Indica si es un ingreso recurrente'
     },
     recurrence_type: {
         type: DataTypes.ENUM('daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly', 'none'),
         defaultValue: 'none',
         comment: 'Tipo de recurrencia'
     },
-    is_essential: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        comment: 'Indica si es un gasto esencial (necesidad vs lujo)'
-    },
-    payment_method: {
-        type: DataTypes.ENUM('cash', 'debit_card', 'credit_card', 'bank_transfer', 'other'),
-        defaultValue: 'other',
-        comment: 'Método de pago utilizado'
-    },
     tags: {
         type: DataTypes.STRING(255),
         allowNull: true,
         comment: 'Tags separados por comas para filtrado'
     },
-    receipt_url: {
-        type: DataTypes.STRING(500),
-        allowNull: true,
-        comment: 'URL del recibo/factura digitalizada'
-    },
     notes: {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    target_account_id: {
+    source_account_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
             model: 'bank_accounts',
             key: 'id'
         },
-        comment: 'Cuenta destino en transferencias internas'
+        comment: 'Cuenta origen en transferencias internas'
     },
     linked_transaction_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        comment: 'ID del income vinculado en transferencias internas'
+        comment: 'ID del expense vinculado en transferencias internas'
     }
 }, {
     timestamps: true,
-    tableName: 'expenses',
+    tableName: 'incomes',
     indexes: [
         { fields: ['user_id'] },
         { fields: ['date'] },
         { fields: ['category'] },
         { fields: ['bank_account_id'] },
-        { fields: ['is_essential'] },
         { fields: ['user_id', 'date'] }
     ]
 });

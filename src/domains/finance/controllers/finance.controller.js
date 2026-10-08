@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import moment from 'moment';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../database/database.js';
 import { BankAccount } from '../models/BankAccount.js';
 import { Income } from '../models/Income.js';
 import { Expense } from '../models/Expense.js';

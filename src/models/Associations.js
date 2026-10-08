@@ -190,12 +190,12 @@ Guest.hasMany(ChatConversation, {
  * RELACIONES ASSET -> USER, BANK_ACCOUNT (patrimonio)
  * RELACIONES LIABILITY -> USER (patrimonio)
  */
-import { BankAccount } from './BankAccount.js';
-import { Income } from './Income.js';
-import { Expense } from './Expense.js';
-import { Debt } from './Debt.js';
-import { Asset } from './Asset.js';
-import { Liability } from './Liability.js';
+import { BankAccount } from '../domains/finance/models/BankAccount.js';
+import { Income } from '../domains/finance/models/Income.js';
+import { Expense } from '../domains/finance/models/Expense.js';
+import { Debt } from '../domains/finance/models/Debt.js';
+import { Asset } from '../domains/finance/models/Asset.js';
+import { Liability } from '../domains/finance/models/Liability.js';
 
 // BankAccount relationships
 User.hasMany(BankAccount, { 

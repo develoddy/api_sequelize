@@ -1,5 +1,5 @@
 import { Router } from "express";
-import auth from '../middlewares/auth.js';
+import auth from '../../../middlewares/auth.js';
 import {
     // Bank Accounts
     listBankAccounts,

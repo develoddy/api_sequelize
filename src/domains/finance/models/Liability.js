@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
-import { sequelize } from "../database/database.js";
+import { sequelize } from "../../../database/database.js";
 
-export const Asset = sequelize.define('assets', {
+export const Liability = sequelize.define('liabilities', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -18,33 +18,43 @@ export const Asset = sequelize.define('assets', {
     name: {
         type: DataTypes.STRING(255),
         allowNull: false,
-        comment: 'Nombre del activo (ej: Apartamento Madrid, Tesla Model 3)'
+        comment: 'Nombre del pasivo (ej: Hipoteca Vivienda, Tarjeta Visa)'
     },
     type: {
-        type: DataTypes.ENUM('cash', 'property', 'investment', 'vehicle', 'other'),
-        defaultValue: 'other',
+        type: DataTypes.ENUM('credit_card', 'loan', 'mortgage', 'debt', 'other'),
+        defaultValue: 'debt',
         allowNull: false,
-        comment: 'Tipo de activo'
+        comment: 'Tipo de pasivo'
     },
-    current_value: {
+    total_amount: {
         type: DataTypes.DECIMAL(12, 2),
-        defaultValue: 0.00,
         allowNull: false,
-        comment: 'Valor actual del activo'
+        comment: 'Monto original de la deuda'
     },
-    bank_account_id: {
-        type: DataTypes.INTEGER,
+    remaining_amount: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
+        comment: 'Saldo actual pendiente'
+    },
+    monthly_payment: {
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
-        references: {
-            model: 'bank_accounts',
-            key: 'id'
-        },
-        comment: 'Vincula con bank_accounts para activos tipo cash'
+        comment: 'Pago mensual'
     },
-    purchase_date: {
+    interest_rate: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        comment: 'Tasa de interés anual en porcentaje'
+    },
+    start_date: {
         type: DataTypes.DATEONLY,
         allowNull: true,
-        comment: 'Fecha de adquisición del activo'
+        comment: 'Fecha de inicio de la deuda'
+    },
+    due_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        comment: 'Fecha de vencimiento final'
     },
     notes: {
         type: DataTypes.TEXT,
@@ -54,7 +64,7 @@ export const Asset = sequelize.define('assets', {
     is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-        comment: 'Indica si el activo está activo'
+        comment: 'Indica si el pasivo está activo'
     },
     last_updated: {
         type: DataTypes.DATE,
@@ -65,7 +75,7 @@ export const Asset = sequelize.define('assets', {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'last_updated',
-    tableName: 'assets',
+    tableName: 'liabilities',
     indexes: [
         {
             name: 'idx_user_type',
@@ -74,6 +84,10 @@ export const Asset = sequelize.define('assets', {
         {
             name: 'idx_user_active',
             fields: ['user_id', 'is_active']
+        },
+        {
+            name: 'idx_user_remaining',
+            fields: ['user_id', 'remaining_amount']
         }
     ]
 });
