@@ -15,7 +15,7 @@ import sale from "../domains/commerce/orders/routes/sale.routes.js";
 import shipping from "../domains/commerce/shipping/routes/shipping.routes.js";
 import review from "../domains/commerce/reviews/routes/review.routes.js";
 import productsPrintfulRoutes from "../domains/commerce/integrations/printful/routes/productsPrintful.routes.js";
-import productsGelatoRoutes from "./productsGelato.routes.js";
+import productsGelatoRoutes from "../domains/commerce/integrations/gelato/routes/productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
 import wishlistRoutes from "../domains/commerce/wishlist/routes/wishlist.routes.js";
 import shippingratesRoutes from "../domains/commerce/shipping/routes/shippingrates.route.js";
