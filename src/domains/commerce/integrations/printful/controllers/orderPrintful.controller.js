@@ -1,10 +1,10 @@
 import axios from "axios";
-import { Sale } from "../../../models/Sale.js";
-import { SaleDetail } from "../../../models/SaleDetail.js";
-import { SaleAddress } from "../../../models/SaleAddress.js";
-import { Product } from "../../../models/Product.js";
-import { User } from "../../../models/User.js";
-import { Guest } from "../../../models/Guest.js";
+import { Sale } from "../../../../../models/Sale.js";
+import { SaleDetail } from "../../../../../models/SaleDetail.js";
+import { SaleAddress } from "../../../../../models/SaleAddress.js";
+import { Product } from "../../../../../models/Product.js";
+import { User } from "../../../../../models/User.js";
+import { Guest } from "../../../../../models/Guest.js";
 
 const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN;
 const PRINTFUL_API_URL = 'https://api.printful.com';

@@ -15,7 +15,7 @@ import {
     retryOrder,
     getOrderShipments,
     estimateOrderCosts
-} from "../controllers/proveedor/printful/orderPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/orderPrintful.controller.js";
 
 import {
     getFinancialStats,
