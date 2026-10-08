@@ -1,15 +1,15 @@
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 // MODELS
-import { Categorie } from "../models/Categorie.js";
-import { Discount } from "../models/Discount.js";
-import { Product } from "../models/Product.js";
-import { Variedad } from "../models/Variedad.js";
-import { File } from "../models/File.js";
-import { Guest } from "../models/Guest.js";
-import { CartCache } from "../models/CartCache.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Discount } from "../../../../models/Discount.js";
+import { Product } from "../../../../models/Product.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { File } from "../../../../models/File.js";
+import { Guest } from "../../../../models/Guest.js";
+import { CartCache } from "../../../../models/CartCache.js";
 // RESOURCES
-import resources from "../resources/index.js";
+import resources from "../../../../resources/index.js";
 
 
 export const register = async (req, res) => {

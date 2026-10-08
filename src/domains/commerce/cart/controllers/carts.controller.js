@@ -1,32 +1,32 @@
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 // MODELS
-import { Slider } from "../models/Slider.js";
-import { Categorie } from "../models/Categorie.js";
-import { Discount } from "../models/Discount.js";
-import { Product } from "../models/Product.js";
-import { Variedad } from "../models/Variedad.js";
-import { File } from "../models/File.js";
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
-import { Galeria } from "../models/Galeria.js";
+import { Slider } from "../../../../models/Slider.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Discount } from "../../../../models/Discount.js";
+import { Product } from "../../../../models/Product.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { File } from "../../../../models/File.js";
+import { Review } from "../../../../models/Review.js";
+import { User } from "../../../../models/User.js";
+import { Galeria } from "../../../../models/Galeria.js";
 
-import { DiscountProduct } from "../models/DiscountProduct.js";
-import { DiscountCategorie } from "../models/DiscountCategorie.js";
+import { DiscountProduct } from "../../../../models/DiscountProduct.js";
+import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
 
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Sale } from '../models/Sale.js';
-import { SaleAddress } from "../models/SaleAddress.js";
-import { AddressClient } from "../models/AddressClient.js";
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleAddress } from "../../../../models/SaleAddress.js";
+import { AddressClient } from "../../../../models/AddressClient.js";
 
-import { Cart } from "../models/Cart.js";
-import { CartCache } from "../models/CartCache.js";
-import { Cupone } from "../models/Cupone.js";
-import { CuponeProduct } from "../models/CuponeProduct.js";
-import { CuponeCategorie } from "../models/CuponeCategorie.js";
+import { Cart } from "../../../../models/Cart.js";
+import { CartCache } from "../../../../models/CartCache.js";
+import { Cupone } from "../../../../models/Cupone.js";
+import { CuponeProduct } from "../../../../models/CuponeProduct.js";
+import { CuponeCategorie } from "../../../../models/CuponeCategorie.js";
 
 // RESOURCES
-import resources from "../resources/index.js";
+import resources from "../../../../resources/index.js";
 import bcrypt from 'bcryptjs';
 
 
@@ -573,7 +573,7 @@ export const removeCupon = async (req, res) => {
                 // Buscar precio original desde variedad o producto
                 if (cart.variedadId) {
                     try {
-                        const variedad = await (await import('../models/Variedad.js')).Variedad.findByPk(cart.variedadId);
+                        const variedad = await (await import('../../../../models/Variedad.js')).Variedad.findByPk(cart.variedadId);
                         if (variedad && variedad.retail_price) {
                             originalPrice = parseFloat(variedad.retail_price);
                         }

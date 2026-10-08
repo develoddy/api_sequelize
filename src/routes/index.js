@@ -7,8 +7,8 @@ import slidersRoutes from "./sliders.routes.js";
 import cuponesRoutes from "./cupone.routes.js";
 import discountsRoutes from "./discount.routes.js";
 import homeRoutes from "./home.routes.js";
-import cartsRoutes from "./carts.routes.js";
-import cartsCacheRoutes from "./cartsCache.routes.js"; // Guest
+import cartsRoutes from "../domains/commerce/cart/routes/carts.routes.js";
+import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.js"; // Guest
 import addressClient from "./addressClient.routes.js";
 import addressGuest from "./addressGuest.routes.js"; // Guest
 import sale from "./sale.routes.js";
