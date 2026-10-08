@@ -3,7 +3,7 @@ import productsRoutes from '../domains/commerce/catalog/routes/products.routes.j
 import usersRoutes from '../domains/identity/users/routes/users.routes.js';
 import guestsRoutes from '../domains/commerce/guests/routes/guests.routes.js';
 import categoriesRoutes from "../domains/commerce/catalog/routes/categories.routes.js";
-import slidersRoutes from "./sliders.routes.js";
+import slidersRoutes from "../domains/commerce/sliders/routes/sliders.routes.js";
 import cuponesRoutes from "../domains/commerce/promotions/routes/cupone.routes.js";
 import discountsRoutes from "../domains/commerce/promotions/routes/discount.routes.js";
 import homeRoutes from "./home.routes.js";

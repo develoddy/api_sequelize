@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
-import { Slider } from "../models/Slider.js";
-import resources from "../resources/index.js";
-import { sequelize } from '../database/database.js';
+import { Slider } from "../../../../models/Slider.js";
+import SliderResource from "../resources/slider.js";
+import { sequelize } from '../../../../database/database.js';
 import fs from 'fs';
 import path from "path";
 
@@ -61,7 +61,7 @@ export const list = async(req, res) => {
         }
 
         const formatteherSliders = sliders.map(( slider ) => {
-            return resources.Slider.slider_list( slider );
+            return SliderResource.slider_list( slider );
         });
 
         res.status(200).json({
@@ -111,7 +111,7 @@ export const update = async(req, res) => {
 
         res.status(200).json({
             message: "¡Success! La categoria se ha modificado correctamente",
-            slider: resources.Slider.slider_list(SliderT),
+            slider: SliderResource.slider_list(SliderT),
         });
     } catch (error) {
         res.status(500).send({

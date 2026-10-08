@@ -22,7 +22,7 @@ import { ProductVariants } from "../models/ProductVariants.js";
 // Shipment not needed - tracking data is directly in Sale model
 
 // RESOURCES
-import SliderResource from "../resources/slider.js";
+import SliderResource from "../domains/commerce/sliders/resources/slider.js";
 import CategorieResource from "../domains/commerce/catalog/resources/categorie.js";
 import ProductResource from "../domains/commerce/catalog/resources/product.js";
 import bcrypt from 'bcryptjs';
