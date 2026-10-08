@@ -22,7 +22,7 @@ import {
     variedad_register,
     variedad_update,
     variedad_remove,
-} from "../../../../controllers/variedades.controller.js";
+} from "../controllers/variedades.controller.js";
 
 
 // Configurar el almacenamiento de archivos con Multer

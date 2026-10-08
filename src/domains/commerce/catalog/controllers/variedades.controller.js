@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
-import resources from "../resources/index.js";
-import { Variedad } from "../models/Variedad.js";
+import resources from "../../../../resources/index.js";
+import { Variedad } from "../../../../models/Variedad.js";
 
 export const variedad_register = async (req, res) => {
     try {
