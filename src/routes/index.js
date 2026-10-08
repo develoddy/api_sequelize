@@ -1,6 +1,6 @@
 import express from "express";
 import productsRoutes from '../domains/commerce/catalog/routes/products.routes.js';
-import usersRoutes from './users.routes.js';
+import usersRoutes from '../domains/identity/users/routes/users.routes.js';
 import guestsRoutes from '../domains/commerce/guests/routes/guests.routes.js';
 import categoriesRoutes from "../domains/commerce/catalog/routes/categories.routes.js";
 import slidersRoutes from "./sliders.routes.js";

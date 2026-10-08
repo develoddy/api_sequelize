@@ -1,19 +1,19 @@
 import { Op, Sequelize } from 'sequelize';
-import resources from "../resources/index.js";
-import { User } from "../models/User.js";
-import { AddressClient } from "../models/AddressClient.js";
-import token from "../services/token.js";
+import UserResource from "../resources/user.js";
+import { User } from "../../../../models/User.js";
+import { AddressClient } from "../../../../models/AddressClient.js";
+import token from "../../../../services/token.js";
 import bcrypt from 'bcryptjs';
-import { getPrintfulProducts } from './proveedor/printful/productPrintful.controller.js';
+import { getPrintfulProducts } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
 import jwt from "jsonwebtoken";
 import nodemailer from 'nodemailer';
 import fs from 'fs';
-import { logger, sanitize } from '../utils/logger.js';
+import { logger, sanitize } from '../../../../utils/logger.js';
 import path from "path";
 import handlebars from 'handlebars';
 import ejs from 'ejs';
 import smtpTransport from 'nodemailer-smtp-transport';
-import { verifyRecaptcha } from '../devtools/utils/verifyRecaptcha.js';
+import { verifyRecaptcha } from '../../../../devtools/utils/verifyRecaptcha.js';
 
 // ------ Send Email -----
 // Función para leer un archivo HTML
@@ -223,7 +223,7 @@ export const register_admin = async( req, res ) => {
         let user = await User.create( req.body );
 
         res.status(200).json({
-            user: resources.User.user_list( user )
+            user: UserResource.user_list( user )
         });
 
     } catch ( error ) {
@@ -418,7 +418,7 @@ export const update = async(req, res) => {
 
         res.status(200).json({
             message: "El usuario se ha modificado correctamente",
-            user: resources.User.user_list( UserT ),
+            user: UserResource.user_list( UserT ),
         });
     } catch ( error ) {
         res.status( 500 ).send({
@@ -455,7 +455,7 @@ export const list = async( req, res ) => {
         }
 
         users = users.map( ( user ) => {
-            return resources.User.user_list( user );
+            return UserResource.user_list( user );
         });
 
         res.status(200).json({
