@@ -1,11 +1,11 @@
 import axios from "axios";
 import { Op } from 'sequelize';
-import { Product } from "../../../models/Product.js";
-import { sequelize } from '../../../database/database.js';
+import { Product } from "../../../../../models/Product.js";
+import { sequelize } from '../../../../../database/database.js';
 
 import { 
     getPrintfulCategory,
-} from '../../../domains/commerce/integrations/printful/services/printfulService.js'; 
+} from '../services/printfulService.js'; 
 
 export const getPrintfulCategory = async(categoryId) =>  {
     try {
