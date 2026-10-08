@@ -1,6 +1,6 @@
 import {
  getPrintfulShippingRatesService,
-} from '../../../domains/commerce/integrations/printful/services/printfulService.js';
+} from '../services/printfulService.js';
 
 
 export const getShippingRates = async( payload ) => {

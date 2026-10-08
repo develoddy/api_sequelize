@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import { AddressClient } from "../../../../models/AddressClient.js";
 import { User } from "../../../../models/User.js";
 
-import { getShippingRates } from '../../../../controllers/proveedor/printful/shippingratesPrintful.controller.js';
+import { getShippingRates } from '../../integrations/printful/controllers/shippingratesPrintful.controller.js';
 
 export const shippingRates = async (req, res) => {
     try {
