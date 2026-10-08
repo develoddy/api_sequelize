@@ -1,22 +1,22 @@
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 // MODELS
-import { Product } from "../models/Product.js";
-import { Wishlist } from "../models/Wishlist.js";
-import { Categorie } from "../models/Categorie.js";
-import { Variedad } from "../models/Variedad.js";
-import { File } from "../models/File.js";
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
-import { Galeria } from "../models/Galeria.js";
+import { Product } from "../../../../models/Product.js";
+import { Wishlist } from "../../../../models/Wishlist.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { File } from "../../../../models/File.js";
+import { Review } from "../../../../models/Review.js";
+import { User } from "../../../../models/User.js";
+import { Galeria } from "../../../../models/Galeria.js";
 
-import { Discount } from "../models/Discount.js";
-import { DiscountProduct } from "../models/DiscountProduct.js";
-import { DiscountCategorie } from "../models/DiscountCategorie.js";
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Sale } from '../models/Sale.js';
+import { Discount } from "../../../../models/Discount.js";
+import { DiscountProduct } from "../../../../models/DiscountProduct.js";
+import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { Sale } from '../../../../models/Sale.js';
 // RESOURCES
-import resources from "../resources/index.js";
+import resources from "../../../../resources/index.js";
 import bcrypt from 'bcryptjs';
 
 

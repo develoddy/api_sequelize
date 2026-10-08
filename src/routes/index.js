@@ -17,7 +17,7 @@ import review from "./review.routes.js";
 import productsPrintfulRoutes from "./productsPrintful.routes.js";
 import productsGelatoRoutes from "./productsGelato.routes.js";
 import productsDropiRoutes from "./productsDropi.routes.js";
-import wishlistRoutes from "./wishlist.routes.js";
+import wishlistRoutes from "../domains/commerce/wishlist/routes/wishlist.routes.js";
 import shippingratesRoutes from "./shippingrates.route.js";
 import stripeRoutes from "./stripe.routes.js";
 import paypalRoutes from "./paypal.routes.js";
