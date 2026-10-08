@@ -29,7 +29,7 @@ import {
   cancelJob,
   markAsResolved
 } from '../../services/retryQueue.service.js';
-import { autoSyncOrderToPrintful } from '../../services/autoSyncPrintful.service.js';
+import { autoSyncOrderToPrintful } from '../../domains/commerce/integrations/printful/services/autoSyncPrintful.service.js';
 
 /**
  * GET /api/printful/admin/failed-orders

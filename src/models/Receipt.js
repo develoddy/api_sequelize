@@ -88,7 +88,7 @@ Receipt.afterUpdate(async (receipt, options) => {
     console.log(`🚀 Iniciando auto-sync con Printful...`);
 
     // Importar dinámicamente para evitar dependencias circulares
-    const { autoSyncOrderToPrintful } = await import('../services/autoSyncPrintful.service.js');
+    const { autoSyncOrderToPrintful } = await import('../domains/commerce/integrations/printful/services/autoSyncPrintful.service.js');
     
     // Ejecutar sincronización asíncrona (no bloquear el update de Receipt)
     autoSyncOrderToPrintful(receipt.saleId)
