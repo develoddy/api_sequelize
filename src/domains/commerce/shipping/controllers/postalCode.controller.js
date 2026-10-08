@@ -1,4 +1,4 @@
-import { PostalCode } from '../models/PostalCode.js';
+import { PostalCode } from '../../../../models/PostalCode.js';
 
 /**
  * @desc    Obtiene información de un código postal específico

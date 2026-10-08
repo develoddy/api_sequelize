@@ -32,7 +32,7 @@ import printfulWebhook from './printfulWebhook.routes.js';
 import notifications from './notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
-import postalCodeRoutes from './postalCode.routes.js';
+import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import trackingEventsRoutes from './trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
