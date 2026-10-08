@@ -7,7 +7,7 @@ import { User } from '../models/User.js';
 import { Cart } from '../models/Cart.js';
 import { CartCache } from '../models/CartCache.js';
 import { createSaleReceipt } from './helpers/receipt.helper.js';
-import { sendEmail } from './sale.controller.js';
+import { sendEmail } from '../domains/commerce/orders/controllers/sale.controller.js';
 import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
 
 /**

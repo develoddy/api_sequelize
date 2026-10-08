@@ -1,22 +1,22 @@
 import { Op } from 'sequelize';
-import { User } from "../models/User.js";
-import { Guest } from "../models/Guest.js";
-import { Sale } from "../models/Sale.js";
-import { Receipt } from '../models/Receipt.js';
-import { Cart } from "../models/Cart.js";
-import { CartCache } from "../models/CartCache.js";
-import { Variedad } from "../models/Variedad.js";
-import { Categorie } from "../models/Categorie.js";
-import { Product } from "../models/Product.js";
-import { SaleDetail } from "../models/SaleDetail.js";
-import { SaleAddress } from "../models/SaleAddress.js";
-import { Galeria } from "../models/Galeria.js";
-import { Option } from "../models/Option.js";
-import { ProductVariants } from "../models/ProductVariants.js";
-import { File } from "../models/File.js";
-import { Cupone } from "../models/Cupone.js";
-import { Module } from "../domains/platform/models/Module.js"; // 🆕 Importar Module
-import { Tenant } from "../domains/platform/models/Tenant.js"; // 🏢 Importar Tenant para multi-tenant
+import { User } from "../../../../models/User.js";
+import { Guest } from "../../../../models/Guest.js";
+import { Sale } from "../../../../models/Sale.js";
+import { Receipt } from '../../../../models/Receipt.js';
+import { Cart } from "../../../../models/Cart.js";
+import { CartCache } from "../../../../models/CartCache.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Product } from "../../../../models/Product.js";
+import { SaleDetail } from "../../../../models/SaleDetail.js";
+import { SaleAddress } from "../../../../models/SaleAddress.js";
+import { Galeria } from "../../../../models/Galeria.js";
+import { Option } from "../../../../models/Option.js";
+import { ProductVariants } from "../../../../models/ProductVariants.js";
+import { File } from "../../../../models/File.js";
+import { Cupone } from "../../../../models/Cupone.js";
+import { Module } from "../../../platform/models/Module.js"; // 🆕 Importar Module
+import { Tenant } from "../../../platform/models/Tenant.js"; // 🏢 Importar Tenant para multi-tenant
 import fs from 'fs';
 import path from "path";
 import http from 'http';
@@ -26,10 +26,10 @@ import ejs from 'ejs';
 import nodemailer from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
 
-import { createPrintfulOrder } from './proveedor/printful/productPrintful.controller.js';
-import { createSaleReceipt } from './helpers/receipt.helper.js';
+import { createPrintfulOrder } from '../../../../controllers/proveedor/printful/productPrintful.controller.js';
+import { createSaleReceipt } from '../../../../controllers/helpers/receipt.helper.js';
 import crypto from 'crypto';
-import { sendOrderConfirmationEmail } from '../services/email.service.js';
+import { sendOrderConfirmationEmail } from '../../../../services/email.service.js';
 
 /**
  * Formatea precio a 2 decimales exactos usando redondeo estándar
@@ -125,7 +125,7 @@ export const registerGuest = async (req, res) => {
         if (isModulePurchase) {
             console.log('[Sale Controller GUEST] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
             
-            const { Module } = await import('../domains/platform/models/Module.js');
+            const { Module } = await import('../../../platform/models/Module.js');
             const module = await Module.findByPk(moduleId);
             
             if (!module) {
@@ -401,7 +401,7 @@ export const register = async (req, res) => {
         if (isModulePurchase) {
             console.log('[Sale Controller] 🎯 Processing MODULE purchase:', { moduleId, moduleKey });
             
-            const { Module } = await import('../domains/platform/models/Module.js');
+            const { Module } = await import('../../../platform/models/Module.js');
             const module = await Module.findByPk(moduleId);
             
             if (!module) {
@@ -679,10 +679,10 @@ const calculateFinalPriceForCart = async (cart) => {
     let code_discount = cart.code_discount || null;
 
     // Importar modelos dinámicamente para evitar ciclos
-    const { Discount } = await import('../models/Discount.js');
-    const { DiscountProduct } = await import('../models/DiscountProduct.js');
-    const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
-    const { Cupone } = await import('../models/Cupone.js');
+    const { Discount } = await import('../../../../models/Discount.js');
+    const { DiscountProduct } = await import('../../../../models/DiscountProduct.js');
+    const { DiscountCategorie } = await import('../../../../models/DiscountCategorie.js');
+    const { Cupone } = await import('../../../../models/Cupone.js');
 
     // Resolver productId y categoryId
     let resolvedProductId = cart.productId || null;
@@ -711,8 +711,8 @@ const calculateFinalPriceForCart = async (cart) => {
         try {
             cuponRow = await Cupone.findOne({ where: { code: code_cupon, state: 1 } });
             if (cuponRow) {
-                const { CuponeProduct } = await import('../models/CuponeProduct.js');
-                const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+                const { CuponeProduct } = await import('../../../../models/CuponeProduct.js');
+                const { CuponeCategorie } = await import('../../../../models/CuponeCategorie.js');
                 if (cuponRow.type_segment === 1 && resolvedProductId) {
                     const cuponProduct = await CuponeProduct.findOne({
                         where: { cuponeId: cuponRow.id, productId: resolvedProductId }
@@ -1054,10 +1054,10 @@ const createSaleDetail = async (cart, saleId) => {
     let code_discount = cart.code_discount || null;
 
     // Importar modelos dinámicamente para evitar ciclos
-    const { Discount } = await import('../models/Discount.js');
-    const { DiscountProduct } = await import('../models/DiscountProduct.js');
-    const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
-    const { Cupone } = await import('../models/Cupone.js');
+    const { Discount } = await import('../../../../models/Discount.js');
+    const { DiscountProduct } = await import('../../../../models/DiscountProduct.js');
+    const { DiscountCategorie } = await import('../../../../models/DiscountCategorie.js');
+    const { Cupone } = await import('../../../../models/Cupone.js');
 
     // Resolver productId y categoryId
     let resolvedProductId = cart.productId || null;
@@ -1089,8 +1089,8 @@ const createSaleDetail = async (cart, saleId) => {
             
             if (cuponRow) {
                 // Verificar si el cupón aplica al producto o categoría
-                const { CuponeProduct } = await import('../models/CuponeProduct.js');
-                const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+                const { CuponeProduct } = await import('../../../../models/CuponeProduct.js');
+                const { CuponeCategorie } = await import('../../../../models/CuponeCategorie.js');
                 
                 // Si type_segment = 1, el cupón aplica a productos específicos
                 if (cuponRow.type_segment === 1 && resolvedProductId) {

@@ -11,7 +11,7 @@ import cartsRoutes from "../domains/commerce/cart/routes/carts.routes.js";
 import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.js"; // Guest
 import addressClient from "./addressClient.routes.js";
 import addressGuest from "./addressGuest.routes.js"; // Guest
-import sale from "./sale.routes.js";
+import sale from "../domains/commerce/orders/routes/sale.routes.js";
 import shipping from "./shipping.routes.js";
 import review from "./review.routes.js";
 import productsPrintfulRoutes from "./productsPrintful.routes.js";
@@ -23,7 +23,7 @@ import stripeRoutes from "./stripe.routes.js";
 import paypalRoutes from "./paypal.routes.js";
 import chatRoutes from './chat/chat.routes.js';
 import chatTenantRoutes from './chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS
-import saleRoutes  from './sale.routes.js';
+import saleRoutes  from '../domains/commerce/orders/routes/sale.routes.js';
 import ReturnRoutes from './returns.routes.js';
 import Inbox from './inbox.routes.js';
 import receiptRoutes from './receipt.routes.js';

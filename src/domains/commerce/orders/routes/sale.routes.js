@@ -1,6 +1,6 @@
 import { Router } from "express";
 import fs from 'fs';
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import multer from 'multer';
 
 import { 
@@ -15,7 +15,7 @@ import {
     hasSales,
     getLastSale
 } from "../controllers/sale.controller.js";
-import { refreshPrintfulStatus } from "../controllers/admin/sales.controller.js";
+import { refreshPrintfulStatus } from "../../../../controllers/admin/sales.controller.js";
 
 const router = Router();
 
