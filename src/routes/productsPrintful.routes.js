@@ -35,7 +35,7 @@ import {
     getPriceChanges,
     updateProduct,
     getStockStats
-} from "../controllers/proveedor/printful/stockSyncPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/stockSyncPrintful.controller.js";
 
 import {
     handleWebhook,

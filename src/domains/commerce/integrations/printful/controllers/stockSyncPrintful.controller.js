@@ -1,10 +1,10 @@
-import { Product } from "../../../models/Product.js";
-import { Variedad } from "../../../models/Variedad.js";
+import { Product } from "../../../../../models/Product.js";
+import { Variedad } from "../../../../../models/Variedad.js";
 import { Op } from 'sequelize';
 import { 
   getPrintfulProductsService,
   getPrintfulProductDetail 
-} from "../../../domains/commerce/integrations/printful/services/printfulService.js";
+} from "../services/printfulService.js";
 
 /**
  * 🔄 Sincronización completa de stock
