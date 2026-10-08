@@ -12,7 +12,7 @@ import {
   getGelatiProductsService,
   getGelatoProductDetail,
   getGelatoPriceProduct,
-} from '../../../services/proveedor/gelato/gelatoService.js';
+} from '../../../domains/commerce/integrations/gelato/services/gelatoService.js';
 import fs from 'fs';
 import path from "path";
 
