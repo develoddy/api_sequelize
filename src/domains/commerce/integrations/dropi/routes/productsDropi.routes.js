@@ -1,9 +1,9 @@
 import { Router } from "express";
 import fs from 'fs';
-//import auth from '../middlewares/auth.js';
+//import auth from '../../../../../middlewares/auth.js';
 import { 
     login_dropi,
-} from "../domains/commerce/integrations/dropi/controllers/productDropi.controller.js";
+} from "../controllers/productDropi.controller.js";
 
 const router = Router();
 
