@@ -1,8 +1,8 @@
 // services/notificationService.js
-import { getIO } from '../../../../socket.js';
-import { Notification } from '../../../../models/Notification.js';
-import { Sale } from '../../../../models/Sale.js';
-import { Shipment } from '../../../../models/Shipment.js';
+import { getIO } from '../../../../../socket.js';
+import { Notification } from '../../../../../models/Notification.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { Shipment } from '../../../../../models/Shipment.js';
 
 const isDev = process.env.NODE_ENV === 'development';
 

@@ -1,6 +1,6 @@
-import { getIO } from '../../../../socket.js';
-import { Sale } from '../../../../models/Sale.js';
-import { Shipment } from '../../../../models/Shipment.js';
+import { getIO } from '../../../../../socket.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { Shipment } from '../../../../../models/Shipment.js';
 import { createAndEmitNotification } from '../services/notificationService.js';
 
 /**
