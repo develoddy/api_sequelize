@@ -45,7 +45,7 @@ import {
 
 import {
     syncOrderToPrintful
-} from "../controllers/proveedor/printful/autoSyncPrintful.controller.js";
+} from "../domains/commerce/integrations/printful/controllers/autoSyncPrintful.controller.js";
 
 import {
     createTestReceipt,

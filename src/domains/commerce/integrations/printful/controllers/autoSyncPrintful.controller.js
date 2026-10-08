@@ -1,4 +1,4 @@
-import { autoSyncOrderToPrintful } from '../../../services/autoSyncPrintful.service.js';
+import { autoSyncOrderToPrintful } from '../../../../../services/autoSyncPrintful.service.js';
 
 /**
  * =====================================================================================
