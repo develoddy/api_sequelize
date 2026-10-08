@@ -1,9 +1,9 @@
-import { handleOrderCreated } from '../../../domains/commerce/integrations/printful/handlers/orderCreated.js';
-import { handleOrderUpdated } from '../../../domains/commerce/integrations/printful/handlers/orderUpdated.js';
-import { handlePackageShipped } from '../../../domains/commerce/integrations/printful/handlers/packageShipped.js';
-import { handlePackageReturned } from '../../../domains/commerce/integrations/printful/handlers/packageReturned.js';
-import { handleOrderFailed } from '../../../domains/commerce/integrations/printful/handlers/orderFailed.js';
-import { handleOrderCanceled } from '../../../domains/commerce/integrations/printful/handlers/orderCanceled.js';
+import { handleOrderCreated } from '../handlers/orderCreated.js';
+import { handleOrderUpdated } from '../handlers/orderUpdated.js';
+import { handlePackageShipped } from '../handlers/packageShipped.js';
+import { handlePackageReturned } from '../handlers/packageReturned.js';
+import { handleOrderFailed } from '../handlers/orderFailed.js';
+import { handleOrderCanceled } from '../handlers/orderCanceled.js';
 import crypto from 'crypto';
 
 const SECRET = process.env.PRINTFUL_WEBHOOK_TOKEN;
