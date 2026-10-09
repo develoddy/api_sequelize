@@ -22,7 +22,7 @@ import {
   exportFailures,
   getExecutiveReport,
   cleanExports
-} from '../controllers/proveedor/analytics.controller.js';
+} from '../domains/commerce/analytics/controllers/analytics.controller.js';
 
 const router = Router();
 

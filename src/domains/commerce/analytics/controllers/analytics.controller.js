@@ -3,14 +3,14 @@ import {
   aggregateWeeklyMetrics, 
   aggregateMonthlyMetrics,
   recalculateMetrics 
-} from '../../domains/commerce/analytics/services/analyticsCalculation.service.js';
+} from '../services/analyticsCalculation.service.js';
 
 import { 
   getPrintfulCostsFromWebhooks,
   calculateSaleCosts,
   getProductAverageCost,
   syncMissingCosts
-} from '../../domains/commerce/analytics/services/analyticsCost.service.js';
+} from '../services/analyticsCost.service.js';
 
 import { 
   getCachedMetrics, 
@@ -21,7 +21,7 @@ import {
   invalidateCache,
   cleanOldCache,
   compareMetrics
-} from '../../domains/commerce/analytics/services/analyticsCache.service.js';
+} from '../services/analyticsCache.service.js';
 
 import {
   generateMetricsReport,
@@ -30,7 +30,7 @@ import {
   generateFulfillmentReport,
   generateFailuresReport,
   generateExecutiveReport
-} from '../../domains/commerce/analytics/services/analyticsReport.service.js';
+} from '../services/analyticsReport.service.js';
 
 import {
   exportMetricsToCSV,
@@ -40,7 +40,7 @@ import {
   exportCostsReport,
   exportFailedOrdersReport,
   cleanOldExports
-} from '../../domains/commerce/analytics/services/analyticsExport.service.js';
+} from '../services/analyticsExport.service.js';
 
 /**
  * Obtiene resumen general del dashboard
