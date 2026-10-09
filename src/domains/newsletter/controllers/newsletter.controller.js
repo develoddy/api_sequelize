@@ -1,12 +1,12 @@
 import { Op } from 'sequelize';
-import { NewsletterSubscriber } from '../models/NewsletterSubscriber.js';
-import { NewsletterCampaign } from '../models/NewsletterCampaign.js';
-import { sequelize } from '../database/database.js';
+import { NewsletterSubscriber } from '../../../models/NewsletterSubscriber.js';
+import { NewsletterCampaign } from '../../../models/NewsletterCampaign.js';
+import { sequelize } from '../../../database/database.js';
 import crypto from 'crypto';
 import { 
     sendNewsletterWelcomeEmail, 
     sendNewsletterCampaign 
-} from '../services/newsletterEmailService.js';
+} from '../../../services/newsletterEmailService.js';
 
 // Rate limiting simple (en producción usar Redis)
 const subscriptionAttempts = new Map();

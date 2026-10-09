@@ -13,7 +13,7 @@ import {
     getCampaigns,
     previewCampaign,
     exportSubscribers
-} from '../controllers/newsletter.controller.js';
+} from '../domains/newsletter/controllers/newsletter.controller.js';
 import auth from '../middlewares/auth.js';
 
 const router = express.Router();
