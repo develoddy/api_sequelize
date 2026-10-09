@@ -1,4 +1,4 @@
-import chatService from '../../services/chat/chat.service.js';
+import chatService from '../../domains/chat/services/chat.service.js';
 import emailService from '../../services/emailNotification.service.js';
 import moment from 'moment';
 

@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import chatService from '../../services/chat/chat.service.js';
+import chatService from '../../domains/chat/services/chat.service.js';
 import { TenantChatConfig } from '../../models/chat/TenantChatConfig.js';
 import { TenantAgent } from '../../models/chat/TenantAgent.js';
 import { ChatConversation } from '../../models/chat/ChatConversation.js';

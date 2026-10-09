@@ -1,8 +1,8 @@
-import { ChatConversation } from '../../models/chat/ChatConversation.js';
-import { ChatMessage } from '../../models/chat/ChatMessage.js';
-import { User } from '../../models/User.js';
-import { Guest } from '../../models/Guest.js';
-import { sequelize } from '../../database/database.js';
+import { ChatConversation } from '../../../models/chat/ChatConversation.js';
+import { ChatMessage } from '../../../models/chat/ChatMessage.js';
+import { User } from '../../../models/User.js';
+import { Guest } from '../../../models/Guest.js';
+import { sequelize } from '../../../database/database.js';
 import { Op } from 'sequelize';
 import moment from 'moment';
 
