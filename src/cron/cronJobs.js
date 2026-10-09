@@ -8,7 +8,7 @@ import {
     aggregateMonthlyMetrics 
 } from '../domains/commerce/analytics/services/analyticsCalculation.service.js';
 import { startWebhookRetryCron } from './retry-webhooks.cron.js';
-import { startMailflowSenderCron } from './mailflow-sender.cron.js';
+import { startMailflowSenderCron } from '../domains/mailflow/cron/mailflow-sender.cron.js';
 
 /**
  * ⏰ CRON JOBS
