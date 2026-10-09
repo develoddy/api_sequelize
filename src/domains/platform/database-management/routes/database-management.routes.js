@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import {
     resetDatabase,
     runMigrations,
@@ -11,7 +11,7 @@ import {
     getSeedersStatus,
     runSeeders,
     runSingleSeeder
-} from '../domains/platform/database-management/controllers/database-management.controller.js';
+} from '../controllers/database-management.controller.js';
 
 const router = Router();
 
