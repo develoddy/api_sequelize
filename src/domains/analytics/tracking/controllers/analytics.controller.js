@@ -7,7 +7,7 @@
  * @module controllers/analytics
  */
 
-import { TrackingEvent } from '../models/TrackingEvent.js';
+import { TrackingEvent } from '../../../../models/TrackingEvent.js';
 import { Op } from 'sequelize';
 
 /**
