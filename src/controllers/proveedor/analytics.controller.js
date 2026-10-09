@@ -3,7 +3,7 @@ import {
   aggregateWeeklyMetrics, 
   aggregateMonthlyMetrics,
   recalculateMetrics 
-} from '../../services/analyticsCalculation.service.js';
+} from '../../domains/commerce/analytics/services/analyticsCalculation.service.js';
 
 import { 
   getPrintfulCostsFromWebhooks,

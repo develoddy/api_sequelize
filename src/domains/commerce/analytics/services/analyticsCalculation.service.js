@@ -1,10 +1,10 @@
-import { Sale } from '../models/Sale.js';
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Product } from '../models/Product.js';
-import AnalyticsCache from '../models/AnalyticsCache.js';
-import ProductAnalytics from '../models/ProductAnalytics.js';
-import { PrintfulWebhookLog } from '../models/PrintfulWebhookLog.js';
-import { sequelize } from '../database/database.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { Product } from '../../../../models/Product.js';
+import AnalyticsCache from '../../../../models/AnalyticsCache.js';
+import ProductAnalytics from '../../../../models/ProductAnalytics.js';
+import { PrintfulWebhookLog } from '../../../../models/PrintfulWebhookLog.js';
+import { sequelize } from '../../../../database/database.js';
 import { Op } from 'sequelize';
 
 /**

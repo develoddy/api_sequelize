@@ -6,7 +6,7 @@ import {
     calculateDailyMetrics, 
     aggregateWeeklyMetrics, 
     aggregateMonthlyMetrics 
-} from '../services/analyticsCalculation.service.js';
+} from '../domains/commerce/analytics/services/analyticsCalculation.service.js';
 import { startWebhookRetryCron } from './retry-webhooks.cron.js';
 import { startMailflowSenderCron } from './mailflow-sender.cron.js';
 
