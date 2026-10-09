@@ -1,6 +1,6 @@
-import chatService from '../../domains/chat/services/chat.service.js';
-import { TenantChatConfig } from '../../models/chat/TenantChatConfig.js';
-import { TenantAgent } from '../../models/chat/TenantAgent.js';
+import chatService from '../services/chat.service.js';
+import { TenantChatConfig } from '../../../models/chat/TenantChatConfig.js';
+import { TenantAgent } from '../../../models/chat/TenantAgent.js';
 import moment from 'moment';
 
 /**

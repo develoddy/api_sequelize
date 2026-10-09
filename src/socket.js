@@ -26,7 +26,7 @@ export async function initSocketIO(server) {
   console.log('✅ Socket.IO initialized with transports:', ['polling', 'websocket']);
   
   // 🚀 Setup multi-tenant Socket.IO namespaces
-  const { setupMultiTenantSocket } = await import('./controllers/chat/socket-tenant.controller.js');
+  const { setupMultiTenantSocket } = await import('./domains/chat/sockets/socket-tenant.controller.js');
   setupMultiTenantSocket(ioInstance);
   
   return ioInstance;
