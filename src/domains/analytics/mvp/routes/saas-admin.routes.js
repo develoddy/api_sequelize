@@ -1,6 +1,6 @@
 import express from 'express';
-import * as microSaasAnalyticsController from '../domains/analytics/mvp/controllers/microSaasAnalytics.controller.js';
-import { authenticateAdmin, logAdminAction } from '../middlewares/auth.middleware.js';
+import * as microSaasAnalyticsController from '../controllers/microSaasAnalytics.controller.js';
+import { authenticateAdmin, logAdminAction } from '../../../../middlewares/auth.middleware.js';
 
 const router = express.Router();
 

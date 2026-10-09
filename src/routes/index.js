@@ -45,7 +45,7 @@ import saasRoutes from '../domains/platform/tenants/saas.routes.js'; // 🚀 Saa
 import tenantsAdminRoutes from '../domains/platform/tenants/admin/tenants-admin.routes.js'; // 🔧 Platform Tenants Admin
 import saasEmailTestingRoutes from '../domains/platform/tenants/saas-email-testing.routes.js'; // 🧪 SaaS Email Testing
 import trackingAdminRoutes from '../domains/analytics/tracking/admin/tracking-admin.routes.js'; // 📊 Analytics Tracking Admin
-import saasAdminRoutes from './saas-admin.routes.js'; // 🔧 SaaS Admin Management
+import saasAdminRoutes from '../domains/analytics/mvp/routes/saas-admin.routes.js'; // 🔧 SaaS Admin Management
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
 import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
 import modulePreviewRoutes from './modulePreview.routes.js'; // 🎯 Generic Preview Mode for any SaaS module
