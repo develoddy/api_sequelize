@@ -1,5 +1,5 @@
 import { Op, Sequelize } from 'sequelize';
-import { Inbox } from '../models/Inbox.js';
+import { Inbox } from '../../../models/Inbox.js';
 
 // 📬 Crear mensaje
 export const create = async (req, res) => {
