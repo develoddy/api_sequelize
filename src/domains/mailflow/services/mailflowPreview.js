@@ -10,10 +10,10 @@
  * @module mailflow/preview
  */
 
-import modulePreviewService from '../services/modulePreviewService.js';
-import { generateSequence } from '../domains/mailflow/services/mailflowSequenceGenerator.js';
-import { MailflowSequence } from '../models/MailflowSequence.js';
-import { MailflowContact } from '../models/MailflowContact.js';
+import modulePreviewService from '../../../services/modulePreviewService.js';
+import { generateSequence } from './mailflowSequenceGenerator.js';
+import { MailflowSequence } from '../../../models/MailflowSequence.js';
+import { MailflowContact } from '../../../models/MailflowContact.js';
 
 /**
  * Mapear valores del frontend a valores ENUM de la BD
