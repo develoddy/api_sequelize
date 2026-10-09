@@ -1,9 +1,9 @@
-import SeoConfig from '../models/SeoConfig.js';
-import SitemapUrl from '../models/SitemapUrl.js';
-import { Product } from '../models/Product.js';
-import { Categorie } from '../models/Categorie.js';
+import SeoConfig from '../../../../models/SeoConfig.js';
+import SitemapUrl from '../../../../models/SitemapUrl.js';
+import { Product } from '../../../../models/Product.js';
+import { Categorie } from '../../../../models/Categorie.js';
 import { create } from 'xmlbuilder2';
-import googleSearchConsoleService from '../services/googleSearchConsole.service.js';
+import googleSearchConsoleService from '../../../../services/googleSearchConsole.service.js';
 import { Op } from 'sequelize';
 import fs from 'fs';
 import path from 'path';

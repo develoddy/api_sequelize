@@ -1,5 +1,5 @@
 import express from 'express';
-import * as seoController from '../controllers/seo.controller.js';
+import * as seoController from '../domains/platform/seo/controllers/seo.controller.js';
 import auth from '../middlewares/auth.js'; // Middleware de autenticación admin
 
 const router = express.Router();
