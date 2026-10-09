@@ -255,7 +255,7 @@ import './models/VideoJob.js';
 
 // 🎯 Preview Mode Services (Auto-register generators)
 import './domains/mailflow/services/mailflowPreview.js';
-import modulePreviewService from './services/modulePreviewService.js';
+import modulePreviewService from './domains/platform/module-preview/services/modulePreviewService.js';
 
 // Asociaciones
 import './models/Associations.js';

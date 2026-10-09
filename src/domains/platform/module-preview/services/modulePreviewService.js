@@ -11,8 +11,8 @@
  * @module services/modulePreviewService
  */
 
-import { Module } from '../domains/platform/models/Module.js';
-import { sequelize } from '../database/database.js';
+import { Module } from '../../models/Module.js';
+import { sequelize } from '../../../../database/database.js';
 
 /**
  * Registry de funciones generadoras de preview por módulo

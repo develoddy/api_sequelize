@@ -17,7 +17,7 @@
 
 import express from 'express';
 import modulePreviewController from '../controllers/modulePreviewController.js';
-import { authenticateTenant } from '../domains/platform/tenants/tenantAuth.js';
+import { authenticateTenant } from '../../tenants/tenantAuth.js';
 
 const router = express.Router();
 

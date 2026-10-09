@@ -10,7 +10,7 @@
  * @module mailflow/preview
  */
 
-import modulePreviewService from '../../../services/modulePreviewService.js';
+import modulePreviewService from '../../platform/module-preview/services/modulePreviewService.js';
 import { generateSequence } from './mailflowSequenceGenerator.js';
 import { MailflowSequence } from '../../../models/MailflowSequence.js';
 import { MailflowContact } from '../../../models/MailflowContact.js';
