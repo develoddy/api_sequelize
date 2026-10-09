@@ -14,7 +14,7 @@ import {
     getPrelaunchConfig,
     updatePrelaunchConfig,
     getPrelaunchStatus
-} from '../controllers/prelaunch.controller.js';
+} from '../domains/prelaunch/controllers/prelaunch.controller.js';
 import auth from '../middlewares/auth.js';
 
 const router = express.Router();

@@ -1,15 +1,15 @@
 import { Op } from 'sequelize';
-import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
-import { PrelaunchConfig } from '../models/PrelaunchConfig.js';
-import { Cupone } from '../models/Cupone.js';
-import { sequelize } from '../database/database.js';
+import { PrelaunchSubscriber } from '../../../models/PrelaunchSubscriber.js';
+import { PrelaunchConfig } from '../../../models/PrelaunchConfig.js';
+import { Cupone } from '../../../models/Cupone.js';
+import { sequelize } from '../../../database/database.js';
 import crypto from 'crypto';
-import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
+import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../../../services/prelaunchEmailService.js';
 import ejs from 'ejs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { logger, sanitize } from '../utils/logger.js';
+import { logger, sanitize } from '../../../utils/logger.js';
 
 // Para usar __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
