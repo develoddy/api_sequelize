@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireTenant } from '../middlewares/tenant-auth.middleware.js';
-import * as chatTenantController from '../controllers/chat/chat-tenant.controller.js';
+import * as chatTenantController from '../domains/chat/controllers/chat-tenant.controller.js';
 
 const router = express.Router();
 

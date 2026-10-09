@@ -1,10 +1,10 @@
 import { Op } from 'sequelize';
-import chatService from '../../domains/chat/services/chat.service.js';
-import { TenantChatConfig } from '../../models/chat/TenantChatConfig.js';
-import { TenantAgent } from '../../models/chat/TenantAgent.js';
-import { ChatConversation } from '../../models/chat/ChatConversation.js';
-import { ChatMessage } from '../../models/chat/ChatMessage.js';
-import { requireTenant } from '../../middlewares/tenant-auth.middleware.js';
+import chatService from '../services/chat.service.js';
+import { TenantChatConfig } from '../../../models/chat/TenantChatConfig.js';
+import { TenantAgent } from '../../../models/chat/TenantAgent.js';
+import { ChatConversation } from '../../../models/chat/ChatConversation.js';
+import { ChatMessage } from '../../../models/chat/ChatMessage.js';
+import { requireTenant } from '../../../middlewares/tenant-auth.middleware.js';
 
 /**
  * Controlador para endpoints multi-tenant del chat
@@ -239,7 +239,7 @@ export const sendTenantMessage = async (req, res) => {
     });
     
     // Emitir via Socket.IO (se maneja en socket-tenant.controller.js)
-    const { getIO } = await import('../../socket.js');
+    const { getIO } = await import('../../../socket.js');
     const io = getIO();
     
     // Emitir al namespace del tenant
