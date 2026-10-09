@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
-import emailService from '../services/emailNotification.service.js';
-import { sendTrialWelcomeEmail } from '../domains/platform/tenants/saas-email.controller.js';
+import { Tenant } from '../../models/Tenant.js';
+import { Module } from '../../models/Module.js';
+import emailService from '../../../../services/emailNotification.service.js';
+import { sendTrialWelcomeEmail } from '../../tenants/saas-email.controller.js';
 
 /**
  * 📬 Inbox Zero Prevention - Setup Request Controller
