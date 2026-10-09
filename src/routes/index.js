@@ -36,7 +36,7 @@ import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.rou
 import analyticsRoutes from '../domains/commerce/analytics/routes/analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import trackingEventsRoutes from '../domains/analytics/tracking/routes/trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
-import backupsRoutes from './backups.routes.js';
+import backupsRoutes from '../domains/platform/backups/routes/backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
