@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
  */
 export async function exportMetricsToCSV(metrics, filename = 'metrics.csv') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -78,7 +78,7 @@ export async function exportMetricsToCSV(metrics, filename = 'metrics.csv') {
  */
 export async function exportMetricsToExcel(metrics, filename = 'metrics.xlsx') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -162,7 +162,7 @@ export async function exportMetricsToExcel(metrics, filename = 'metrics.xlsx') {
  */
 export async function exportProductsToCSV(products, filename = 'products.csv') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -215,7 +215,7 @@ export async function exportProductsToCSV(products, filename = 'products.csv') {
  */
 export async function exportProductsToExcel(products, filename = 'products.xlsx') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -286,7 +286,7 @@ export async function exportProductsToExcel(products, filename = 'products.xlsx'
  */
 export async function exportCostsReport(costsData, filename = 'costs_report.xlsx') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -395,7 +395,7 @@ export async function exportCostsReport(costsData, filename = 'costs_report.xlsx
  */
 export async function exportFailedOrdersReport(failedOrders, filename = 'failed_orders.xlsx') {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
@@ -454,7 +454,7 @@ export async function exportFailedOrdersReport(failedOrders, filename = 'failed_
  */
 export async function cleanOldExports(days = 7) {
   try {
-    const exportDir = path.join(__dirname, '../exports');
+    const exportDir = path.join(__dirname, '../../../../exports');
     if (!fs.existsSync(exportDir)) {
       return 0;
     }

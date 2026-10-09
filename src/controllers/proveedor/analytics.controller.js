@@ -40,7 +40,7 @@ import {
   exportCostsReport,
   exportFailedOrdersReport,
   cleanOldExports
-} from '../../services/analyticsExport.service.js';
+} from '../../domains/commerce/analytics/services/analyticsExport.service.js';
 
 /**
  * Obtiene resumen general del dashboard
