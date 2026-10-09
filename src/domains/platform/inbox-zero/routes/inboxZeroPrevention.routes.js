@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createSetupRequest } from '../domains/platform/inbox-zero/controllers/inboxZeroPrevention.controller.js';
+import { createSetupRequest } from '../controllers/inboxZeroPrevention.controller.js';
 
 const router = Router();
 
