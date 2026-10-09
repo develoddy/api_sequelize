@@ -207,7 +207,7 @@ import app from './app.js';
 import { sequelize } from "./database/database.js";
 
 // Socket.IO
-import { setupChatSocketIO } from './controllers/chat/socket.controller.js';
+import { setupChatSocketIO } from './domains/chat/sockets/socket.controller.js';
 import { setupNotificationsSocketIO } from './controllers/notifications/socket.controller.js';
 import { initSocketIO, getIO } from './socket.js';
 
