@@ -29,7 +29,7 @@ import Inbox from './inbox.routes.js';
 import receiptRoutes from '../domains/commerce/receipts/routes/receipt.routes.js';
 // Webhook de Printful
 import printfulWebhook from '../domains/commerce/integrations/printful/routes/printfulWebhook.routes.js';
-import notifications from './notifications.routes.js';
+import notifications from '../domains/notifications/routes/notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
