@@ -8,7 +8,7 @@ import {
     getSequenceStatus,
     getSequence,
     listSequences
-} from '../controllers/mailflow.controller.js';
+} from '../domains/mailflow/controllers/mailflow.controller.js';
 
 const router = express.Router();
 
