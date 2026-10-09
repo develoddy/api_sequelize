@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
-import chatController from '../../domains/chat/controllers/chat.controller.js';
-import auth from '../../middlewares/auth.js';
+import chatController from '../controllers/chat.controller.js';
+import auth from '../../../middlewares/auth.js';
 
 // Rutas públicas
 router.post('/init', chatController.initChat);
