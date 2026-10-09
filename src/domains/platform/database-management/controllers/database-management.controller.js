@@ -1,14 +1,14 @@
-import { sequelize } from '../database/database.js';
-import { logger, sanitize } from '../utils/logger.js';
-import { BackupsController } from '../domains/platform/backups/controllers/backups.controller.js';
+import { sequelize } from '../../../../database/database.js';
+import { logger, sanitize } from '../../../../utils/logger.js';
+import { BackupsController } from '../../backups/controllers/backups.controller.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 
 // Importar TODOS los modelos para asegurar que se registren en sequelize.sync()
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
+import { Tenant } from '../../models/Tenant.js';
+import { Module } from '../../models/Module.js';
 
 const execAsync = promisify(exec);
 

@@ -11,7 +11,7 @@ import {
     getSeedersStatus,
     runSeeders,
     runSingleSeeder
-} from '../controllers/database-management.controller.js';
+} from '../domains/platform/database-management/controllers/database-management.controller.js';
 
 const router = Router();
 
