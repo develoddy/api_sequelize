@@ -7,8 +7,8 @@
  */
 
 import { Router } from 'express';
-import analyticsController from '../domains/analytics/tracking/controllers/analytics.controller.js';
-import auth from '../middlewares/auth.js';
+import analyticsController from '../controllers/analytics.controller.js';
+import auth from '../../../../middlewares/auth.js';
 
 const router = Router();
 

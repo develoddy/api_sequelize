@@ -35,7 +35,7 @@ import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
-import trackingEventsRoutes from './trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
+import trackingEventsRoutes from '../domains/analytics/tracking/routes/trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
 import backupsRoutes from './backups.routes.js';
 import databaseManagementRoutes from './database-management.routes.js';
 import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
