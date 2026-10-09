@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { Op } from 'sequelize';
 import { MailflowContact } from '../models/MailflowContact.js';
 import { MailflowSequence } from '../models/MailflowSequence.js';
-import { sendMailflowEmail, processRetries } from '../services/mailflowSender.service.js';
+import { sendMailflowEmail, processRetries } from '../domains/mailflow/services/mailflowSender.service.js';
 
 /**
  * MailFlow Sender Cron Job - PRODUCTION READY

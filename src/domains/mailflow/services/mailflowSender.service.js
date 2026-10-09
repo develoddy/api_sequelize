@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import { MailflowEmailLog } from '../models/MailflowEmailLog.js';
-import { MailflowContact } from '../models/MailflowContact.js';
+import { MailflowEmailLog } from '../../../models/MailflowEmailLog.js';
+import { MailflowContact } from '../../../models/MailflowContact.js';
 import { Op } from 'sequelize';
 
 /**
