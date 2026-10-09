@@ -6,7 +6,7 @@ import categoriesRoutes from "../domains/commerce/catalog/routes/categories.rout
 import slidersRoutes from "../domains/commerce/sliders/routes/sliders.routes.js";
 import cuponesRoutes from "../domains/commerce/promotions/routes/cupone.routes.js";
 import discountsRoutes from "../domains/commerce/promotions/routes/discount.routes.js";
-import homeRoutes from "./home.routes.js";
+import homeRoutes from "../domains/commerce/storefront/routes/home.routes.js";
 import cartsRoutes from "../domains/commerce/cart/routes/carts.routes.js";
 import cartsCacheRoutes from "../domains/commerce/cart/routes/cartsCache.routes.js"; // Guest
 import addressClient from "../domains/commerce/addresses/routes/addressClient.routes.js";

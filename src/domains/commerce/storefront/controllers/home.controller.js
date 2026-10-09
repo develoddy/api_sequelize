@@ -1,34 +1,34 @@
 import { Op, Sequelize } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 // MODELS
-import { Slider } from "../models/Slider.js";
-import { Categorie } from "../models/Categorie.js";
-import { Discount } from "../models/Discount.js";
-import { Product } from "../models/Product.js";
-import { Variedad } from "../models/Variedad.js";
-import { File } from "../models/File.js";
-import { Review } from "../models/Review.js";
-import { User } from "../models/User.js";
-import { Galeria } from "../models/Galeria.js";
+import { Slider } from "../../../../models/Slider.js";
+import { Categorie } from "../../../../models/Categorie.js";
+import { Discount } from "../../../../models/Discount.js";
+import { Product } from "../../../../models/Product.js";
+import { Variedad } from "../../../../models/Variedad.js";
+import { File } from "../../../../models/File.js";
+import { Review } from "../../../../models/Review.js";
+import { User } from "../../../../models/User.js";
+import { Galeria } from "../../../../models/Galeria.js";
 
-import { DiscountProduct } from "../models/DiscountProduct.js";
-import { DiscountCategorie } from "../models/DiscountCategorie.js";
+import { DiscountProduct } from "../../../../models/DiscountProduct.js";
+import { DiscountCategorie } from "../../../../models/DiscountCategorie.js";
 
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Sale } from '../models/Sale.js';
-import { SaleAddress } from "../models/SaleAddress.js";
-import { AddressClient } from "../models/AddressClient.js";
-import { ProductVariants } from "../models/ProductVariants.js";
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleAddress } from "../../../../models/SaleAddress.js";
+import { AddressClient } from "../../../../models/AddressClient.js";
+import { ProductVariants } from "../../../../models/ProductVariants.js";
 // Shipment not needed - tracking data is directly in Sale model
 
 // RESOURCES
-import SliderResource from "../domains/commerce/sliders/resources/slider.js";
-import CategorieResource from "../domains/commerce/catalog/resources/categorie.js";
-import ProductResource from "../domains/commerce/catalog/resources/product.js";
+import SliderResource from "../../sliders/resources/slider.js";
+import CategorieResource from "../../catalog/resources/categorie.js";
+import ProductResource from "../../catalog/resources/product.js";
 import bcrypt from 'bcryptjs';
 
 // PRINTFUL SERVICES
-import { getPrintfulSizeGuideService } from '../domains/commerce/integrations/printful/services/printfulService.js';
+import { getPrintfulSizeGuideService } from '../../integrations/printful/services/printfulService.js';
 
 
 export const list = async (req, res) => {
