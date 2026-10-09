@@ -22,7 +22,7 @@ import shippingratesRoutes from "../domains/commerce/shipping/routes/shippingrat
 import stripeRoutes from "./stripe.routes.js";
 import paypalRoutes from "../domains/commerce/payments/routes/paypal.routes.js";
 import chatRoutes from '../domains/chat/routes/chat.routes.js';
-import chatTenantRoutes from './chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS
+import chatTenantRoutes from '../domains/chat/routes/chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS
 import saleRoutes  from '../domains/commerce/orders/routes/sale.routes.js';
 import ReturnRoutes from '../domains/commerce/returns/routes/returns.routes.js';
 import Inbox from './inbox.routes.js';
