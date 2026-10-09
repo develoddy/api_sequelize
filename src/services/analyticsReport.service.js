@@ -6,7 +6,7 @@ import {
 
 import { 
   getPrintfulCostsFromWebhooks
-} from './analyticsCost.service.js';
+} from '../domains/commerce/analytics/services/analyticsCost.service.js';
 
 import { 
   getFailedJobs 

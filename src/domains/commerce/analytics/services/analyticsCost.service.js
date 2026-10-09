@@ -1,6 +1,6 @@
-import { PrintfulWebhookLog } from '../models/PrintfulWebhookLog.js';
-import { Sale } from '../models/Sale.js';
-import { SaleDetail } from '../models/SaleDetail.js';
+import { PrintfulWebhookLog } from '../../../../models/PrintfulWebhookLog.js';
+import { Sale } from '../../../../models/Sale.js';
+import { SaleDetail } from '../../../../models/SaleDetail.js';
 import { Op } from 'sequelize';
 import axios from 'axios';
 
