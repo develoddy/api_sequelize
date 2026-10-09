@@ -1,6 +1,6 @@
 import { sequelize } from '../database/database.js';
 import { logger, sanitize } from '../utils/logger.js';
-import { BackupsController } from './backups.controller.js';
+import { BackupsController } from '../domains/platform/backups/controllers/backups.controller.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';

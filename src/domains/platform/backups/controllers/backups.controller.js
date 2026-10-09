@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { logger, sanitize } from '../utils/logger.js';
+import { logger, sanitize } from '../../../../utils/logger.js';
 
 const execAsync = promisify(exec);
 
