@@ -9,23 +9,23 @@
  * @date 2026-02-09
  */
 
-import { calculateModuleAnalytics } from '../domains/analytics/mvp/mvp-analytics.service.js';
+import { calculateModuleAnalytics } from '../mvp-analytics.service.js';
 
 import {
   getAllModuleAnalytics,
   getTrendingModuleAnalytics
-} from '../domains/analytics/mvp/services/mvp-analytics-list.service.js';
+} from '../services/mvp-analytics-list.service.js';
 
 import {
   isValidMVPDecisionAction,
   executeMVPDecisionAction
-} from '../domains/analytics/mvp/services/mvp-decision.service.js';
+} from '../services/mvp-decision.service.js';
 
 import {
   createModuleFromValidatedMVP,
   MVPModuleAlreadyExistsError,
   MVPAnalyticsNotFoundError
-} from '../domains/analytics/mvp/services/mvp-module-creation.service.js';
+} from '../services/mvp-module-creation.service.js';
 
 
 // ==========================================
