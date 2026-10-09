@@ -33,7 +33,7 @@ import notifications from './notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
 import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
-import analyticsRoutes from './analytics.routes.js';
+import analyticsRoutes from '../domains/commerce/analytics/routes/analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import trackingEventsRoutes from '../domains/analytics/tracking/routes/trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
 import backupsRoutes from './backups.routes.js';

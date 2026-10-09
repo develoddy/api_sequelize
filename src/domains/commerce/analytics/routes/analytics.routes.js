@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import auth from '../middlewares/auth.js';
+import auth from '../../../../middlewares/auth.js';
 import {
   getDashboard,
   getMetrics,
@@ -22,7 +22,7 @@ import {
   exportFailures,
   getExecutiveReport,
   cleanExports
-} from '../domains/commerce/analytics/controllers/analytics.controller.js';
+} from '../controllers/analytics.controller.js';
 
 const router = Router();
 
