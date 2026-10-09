@@ -34,7 +34,7 @@ import prelaunchRoutes from '../domains/prelaunch/routes/prelaunch.routes.js';
 import newsletterRoutes from '../domains/newsletter/routes/newsletter.routes.js';
 import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
 import analyticsRoutes from '../domains/commerce/analytics/routes/analytics.routes.js';
-import trackingRoutes from './tracking.routes.js';
+import trackingRoutes from '../domains/commerce/tracking/routes/tracking.routes.js';
 import trackingEventsRoutes from '../domains/analytics/tracking/routes/trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
 import backupsRoutes from '../domains/platform/backups/routes/backups.routes.js';
 import databaseManagementRoutes from '../domains/platform/database-management/routes/database-management.routes.js';
