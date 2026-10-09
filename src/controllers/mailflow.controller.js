@@ -1,7 +1,7 @@
 import { MailflowSequence } from '../models/MailflowSequence.js';
 import { MailflowContact } from '../models/MailflowContact.js';
 import { MailflowEmailLog } from '../models/MailflowEmailLog.js';
-import { generateSequence } from '../services/mailflowSequenceGenerator.js';
+import { generateSequence } from '../domains/mailflow/services/mailflowSequenceGenerator.js';
 import { sequelize } from '../database/database.js';
 import crypto from 'crypto';
 

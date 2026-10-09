@@ -11,7 +11,7 @@
  */
 
 import modulePreviewService from '../services/modulePreviewService.js';
-import { generateSequence } from '../services/mailflowSequenceGenerator.js';
+import { generateSequence } from '../domains/mailflow/services/mailflowSequenceGenerator.js';
 import { MailflowSequence } from '../models/MailflowSequence.js';
 import { MailflowContact } from '../models/MailflowContact.js';
 
