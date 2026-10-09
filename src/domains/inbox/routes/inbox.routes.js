@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import auth from '../middlewares/auth.js';
-import { create, getList, getById, update, getByUser } from '../domains/inbox/controllers/inbox.controller.js';
+import auth from '../../../middlewares/auth.js';
+import { create, getList, getById, update, getByUser } from '../controllers/inbox.controller.js';
 
 const router = Router();
 
