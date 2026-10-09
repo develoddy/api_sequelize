@@ -51,7 +51,7 @@ import mailflowRoutes from '../domains/mailflow/routes/mailflow.routes.js'; // �
 import modulePreviewRoutes from '../domains/platform/module-preview/routes/modulePreview.routes.js'; // 🎯 Generic Preview Mode for any SaaS module
 import videoExpressRoutes from './videoExpress.routes.js'; // 🎬 Product Video Express - AI Video Generation
 import videoExpressPreviewRoutes from './videoExpressPreview.routes.js'; // 🎬 Video Express Preview (Public)
-import mvpHubRoutes from './mvpHub.routes.js'; // 🏠 MVP Hub - Dynamic listing of available MVPs
+import mvpHubRoutes from '../domains/analytics/mvp/hub/routes/mvpHub.routes.js'; // 🏠 MVP Hub - Dynamic listing of available MVPs
 import mvpAnalyticsRoutes from '../domains/analytics/mvp/routes/mvpAnalytics.routes.js'; // 📊 MVP Analytics - Dynamic analytics from tracking_events
 import financeRoutes from '../domains/finance/routes/finance.routes.js'; // 💰 Finance Module - Personal financial management
 import inboxZeroPreventionRoutes from '../domains/platform/inbox-zero/routes/inboxZeroPrevention.routes.js'; // 📬 Inbox Zero Prevention - Public setup requests

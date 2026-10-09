@@ -9,12 +9,12 @@
  * @module services/mvpMetrics
  */
 
-import { TrackingEvent } from '../models/TrackingEvent.js';
-import { VideoJob } from '../models/VideoJob.js';
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
+import { TrackingEvent } from '../../../../../models/TrackingEvent.js';
+import { VideoJob } from '../../../../../models/VideoJob.js';
+import { Tenant } from '../../../../platform/models/Tenant.js';
+import { Module } from '../../../../platform/models/Module.js';
 import { Op } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../../database/database.js';
 
 /**
  * Señales reales que indican que un MVP está vivo
