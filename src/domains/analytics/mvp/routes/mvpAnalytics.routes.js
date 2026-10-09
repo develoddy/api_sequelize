@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllMvps, getMvpDetail } from '../domains/analytics/mvp/controllers/mvpAnalytics.controller.js';
+import { getAllMvps, getMvpDetail } from '../controllers/mvpAnalytics.controller.js';
 
 const router = express.Router();
 
