@@ -21,7 +21,7 @@ import {
   invalidateCache,
   cleanOldCache,
   compareMetrics
-} from '../../services/analyticsCache.service.js';
+} from '../../domains/commerce/analytics/services/analyticsCache.service.js';
 
 import {
   generateMetricsReport,

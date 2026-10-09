@@ -1,6 +1,6 @@
-import AnalyticsCache from '../models/AnalyticsCache.js';
-import ProductAnalytics from '../models/ProductAnalytics.js';
-import { Product } from '../models/Product.js';
+import AnalyticsCache from '../../../../models/AnalyticsCache.js';
+import ProductAnalytics from '../../../../models/ProductAnalytics.js';
+import { Product } from '../../../../models/Product.js';
 import { Op } from 'sequelize';
 
 /**

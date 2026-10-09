@@ -2,7 +2,7 @@ import {
   getCachedMetrics,
   getProductAnalytics,
   getTopProducts
-} from './analyticsCache.service.js';
+} from '../domains/commerce/analytics/services/analyticsCache.service.js';
 
 import { 
   getPrintfulCostsFromWebhooks
