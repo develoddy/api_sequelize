@@ -31,7 +31,7 @@ import receiptRoutes from '../domains/commerce/receipts/routes/receipt.routes.js
 import printfulWebhook from '../domains/commerce/integrations/printful/routes/printfulWebhook.routes.js';
 import notifications from '../domains/notifications/routes/notifications.routes.js';
 import prelaunchRoutes from './prelaunch.routes.js';
-import newsletterRoutes from './newsletter.routes.js';
+import newsletterRoutes from '../domains/newsletter/routes/newsletter.routes.js';
 import postalCodeRoutes from '../domains/commerce/shipping/routes/postalCode.routes.js';
 import analyticsRoutes from '../domains/commerce/analytics/routes/analytics.routes.js';
 import trackingRoutes from './tracking.routes.js';

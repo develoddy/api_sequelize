@@ -13,8 +13,8 @@ import {
     getCampaigns,
     previewCampaign,
     exportSubscribers
-} from '../domains/newsletter/controllers/newsletter.controller.js';
-import auth from '../middlewares/auth.js';
+} from '../controllers/newsletter.controller.js';
+import auth from '../../../middlewares/auth.js';
 
 const router = express.Router();
 
