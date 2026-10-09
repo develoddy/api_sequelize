@@ -38,7 +38,7 @@ import trackingRoutes from './tracking.routes.js';
 import trackingEventsRoutes from '../domains/analytics/tracking/routes/trackingEvents.routes.js'; // 📊 Tracking de eventos del funnel
 import backupsRoutes from '../domains/platform/backups/routes/backups.routes.js';
 import databaseManagementRoutes from '../domains/platform/database-management/routes/database-management.routes.js';
-import seoRoutes from './seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
+import seoRoutes from '../domains/platform/seo/routes/seo.routes.js'; // ✅ SEO Management (Sitemap & Robots.txt)
 import emailTestingRoutes from './emailTesting.routes.js'; // 🧪 Email Testing
 import modulesRoutes from '../domains/platform/modules/modules.routes.js'; // 🚀 Multi-Module System (Levels-style)
 import saasRoutes from '../domains/platform/tenants/saas.routes.js'; // 🚀 SaaS Tenants & Trials
