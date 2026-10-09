@@ -47,7 +47,7 @@ import saasEmailTestingRoutes from '../domains/platform/tenants/saas-email-testi
 import trackingAdminRoutes from '../domains/analytics/tracking/admin/tracking-admin.routes.js'; // 📊 Analytics Tracking Admin
 import saasAdminRoutes from '../domains/analytics/mvp/routes/saas-admin.routes.js'; // 🔧 SaaS Admin Management
 import healthRoutes from './health.routes.js'; // 🏥 Health Check
-import mailflowRoutes from './mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
+import mailflowRoutes from '../domains/mailflow/routes/mailflow.routes.js'; // 📧 MailFlow - Onboarding Sequences
 import modulePreviewRoutes from './modulePreview.routes.js'; // 🎯 Generic Preview Mode for any SaaS module
 import videoExpressRoutes from './videoExpress.routes.js'; // 🎬 Product Video Express - AI Video Generation
 import videoExpressPreviewRoutes from './videoExpressPreview.routes.js'; // 🎬 Video Express Preview (Public)

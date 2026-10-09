@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireTenant } from '../middlewares/tenant-auth.middleware.js';
+import { requireTenant } from '../../../middlewares/tenant-auth.middleware.js';
 import {
     generateOnboardingSequence,
     activateSequence,
@@ -8,7 +8,7 @@ import {
     getSequenceStatus,
     getSequence,
     listSequences
-} from '../domains/mailflow/controllers/mailflow.controller.js';
+} from '../controllers/mailflow.controller.js';
 
 const router = express.Router();
 
