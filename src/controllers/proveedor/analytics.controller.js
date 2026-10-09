@@ -30,7 +30,7 @@ import {
   generateFulfillmentReport,
   generateFailuresReport,
   generateExecutiveReport
-} from '../../services/analyticsReport.service.js';
+} from '../../domains/commerce/analytics/services/analyticsReport.service.js';
 
 import {
   exportMetricsToCSV,

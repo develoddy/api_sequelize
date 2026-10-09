@@ -2,15 +2,15 @@ import {
   getCachedMetrics,
   getProductAnalytics,
   getTopProducts
-} from '../domains/commerce/analytics/services/analyticsCache.service.js';
+} from './analyticsCache.service.js';
 
 import { 
   getPrintfulCostsFromWebhooks
-} from '../domains/commerce/analytics/services/analyticsCost.service.js';
+} from './analyticsCost.service.js';
 
 import { 
   getFailedJobs 
-} from './retryQueue.service.js';
+} from '../../../../services/retryQueue.service.js';
 
 /**
  * Genera reporte completo de métricas para un período
