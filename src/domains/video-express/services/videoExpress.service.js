@@ -1,4 +1,4 @@
-import { VideoJob } from '../models/VideoJob.js';
+import { VideoJob } from '../../../models/VideoJob.js';
 import * as FalService from './fal.service.js';
 import fs from 'fs';
 import path from 'path';
@@ -29,7 +29,7 @@ const __dirname = path.dirname(__filename);
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/jpg'];
-const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || path.join(__dirname, '../../public/uploads/modules/video-express');
+const VIDEO_STORAGE_PATH = process.env.VIDEO_STORAGE_PATH || path.join(__dirname, '../../../../public/uploads/modules/video-express');
 const MAX_PROCESSING_TIME_MS = 5 * 60 * 1000; // 5 minutos timeout
 
 // 🚀 OPTIMIZACIÓN: Cachear URL base para evitar parsing repetido

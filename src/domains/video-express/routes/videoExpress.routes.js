@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import * as VideoExpressController from '../controllers/videoExpress.controller.js';
-import auth from '../middlewares/auth.js';
+import auth from '../../../middlewares/auth.js';
 
 /**
  * RUTAS: Product Video Express

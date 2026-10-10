@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import * as VideoExpressController from '../controllers/videoExpress.controller.js';
 import * as VideoExpressService from '../services/videoExpress.service.js';
-import { VideoJob } from '../models/VideoJob.js';
+import { VideoJob } from '../../../models/VideoJob.js';
 import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import * as FalService from '../services/fal.service.js';

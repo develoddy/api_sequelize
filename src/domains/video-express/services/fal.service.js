@@ -40,7 +40,7 @@ const SIMULATION_MODE = process.env.FAL_SIMULATION_MODE === 'true';
 
 // 💰 Límite de videos reales (protección de créditos)
 const VIDEO_REAL_LIMIT = parseInt(process.env.VIDEO_REAL_LIMIT) || 25;
-const CREDIT_COUNTER_PATH = path.join(__dirname, '../../data/video-credit-counter.json');
+const CREDIT_COUNTER_PATH = path.join(__dirname, '../../../../data/video-credit-counter.json');
 
 if (SIMULATION_MODE) {
     console.log('🎭 FAL.AI MODO SIMULACIÓN ACTIVADO - No se consumirán créditos');

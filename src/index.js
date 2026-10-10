@@ -322,7 +322,7 @@ async function main() {
 
             // Inicializar cron de Video Express polling
             try {
-                const { startVideoExpressPolling } = await import('./cron/videoExpressPolling.js');
+                const { startVideoExpressPolling } = await import('./domains/video-express/cron/videoExpressPolling.js');
                 startVideoExpressPolling();
             } catch (error) {
                 console.error('❌ Error inicializando Video Express polling:', error);
