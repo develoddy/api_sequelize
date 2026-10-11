@@ -2,7 +2,7 @@ import fs from 'fs';
 import nodemailer from 'nodemailer';
 import ejs from 'ejs';
 import Handlebars from 'handlebars';
-import { PrelaunchSubscriber } from '../models/PrelaunchSubscriber.js';
+import { PrelaunchSubscriber } from '../../../models/PrelaunchSubscriber.js';
 
 /**
  * Envía email de bienvenida inmediato después del registro

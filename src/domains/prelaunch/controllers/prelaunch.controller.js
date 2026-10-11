@@ -4,7 +4,7 @@ import { PrelaunchConfig } from '../../../models/PrelaunchConfig.js';
 import { Cupone } from '../../../models/Cupone.js';
 import { sequelize } from '../../../database/database.js';
 import crypto from 'crypto';
-import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../../../services/prelaunchEmailService.js';
+import { sendWelcomeEmail, sendLaunchEmails, verifyEmail as verifyEmailService, unsubscribeEmail } from '../services/prelaunchEmailService.js';
 import ejs from 'ejs';
 import fs from 'fs';
 import path from 'path';
