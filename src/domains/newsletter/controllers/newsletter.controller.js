@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import { 
     sendNewsletterWelcomeEmail, 
     sendNewsletterCampaign 
-} from '../../../services/newsletterEmailService.js';
+} from '../services/newsletterEmailService.js';
 
 // Rate limiting simple (en producción usar Redis)
 const subscriptionAttempts = new Map();
