@@ -10,7 +10,7 @@ import {
     testOrderShippedEmail, 
     testOrderDeliveredEmail,
     getTestableSales 
-} from '../controllers/testing/emailTesting.controller.js';
+} from '../controllers/emailTesting.controller.js';
 
 const router = Router();
 

@@ -4,19 +4,19 @@
  * Solo para testing de templates y localización
  */
 
-import { Sale } from '../../models/Sale.js';
-import { User } from '../../models/User.js';
-import { Guest } from '../../models/Guest.js';
-import { SaleAddress } from '../../models/SaleAddress.js';
-import { SaleDetail } from '../../models/SaleDetail.js';
-import { Product } from '../../models/Product.js';
-import { Variedad } from '../../models/Variedad.js';
-import { Tenant } from '../../domains/platform/models/Tenant.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { User } from '../../../../../models/User.js';
+import { Guest } from '../../../../../models/Guest.js';
+import { SaleAddress } from '../../../../../models/SaleAddress.js';
+import { SaleDetail } from '../../../../../models/SaleDetail.js';
+import { Product } from '../../../../../models/Product.js';
+import { Variedad } from '../../../../../models/Variedad.js';
+import { Tenant } from '../../../../../domains/platform/models/Tenant.js';
 import { 
     sendOrderShippedEmail, 
     sendOrderPrintingEmail, 
     sendOrderDeliveredEmail 
-} from '../../services/emailNotification.service.js';
+} from '../../../../../services/emailNotification.service.js';
 
 /**
  * 🧪 TEST: Email de confirmación de impresión
