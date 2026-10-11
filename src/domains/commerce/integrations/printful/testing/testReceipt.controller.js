@@ -1,4 +1,4 @@
-import { Receipt } from '../../models/Receipt.js';
+import { Receipt } from '../../../../../models/Receipt.js';
 
 /**
  * Endpoint temporal para crear Receipt de prueba

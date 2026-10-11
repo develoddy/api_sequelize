@@ -50,15 +50,15 @@ import {
 import {
     createTestReceipt,
     updateReceiptStatus
-} from "../../../../../controllers/helpers/testReceipt.controller.js";
+} from "../testing/testReceipt.controller.js";
 
 import {
     createTestSale
-} from "../../../../../controllers/helpers/testSale.controller.js";
+} from "../testing/testSale.controller.js";
 
 import {
     resetTestSale
-} from "../../../../../controllers/helpers/resetSale.controller.js";
+} from "../testing/resetSale.controller.js";
 
 import {
     runRetryQueueNow
@@ -73,7 +73,7 @@ import {
     testSimulateOrderFailed,
     testSendDeliveredEmail,
     testSendDailyReport
-} from "../../../../../controllers/helpers/testEmailNotifications.controller.js";
+} from "../testing/testEmailNotifications.controller.js";
 
 import {
     getFailedOrders,

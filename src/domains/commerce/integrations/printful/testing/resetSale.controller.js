@@ -1,4 +1,4 @@
-import { Sale } from '../../models/Sale.js';
+import { Sale } from '../../../../../models/Sale.js';
 
 /**
  * Endpoint temporal para resetear Sale de prueba

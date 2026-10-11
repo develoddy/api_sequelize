@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import { Sale } from '../../models/Sale.js';
-import { SaleAddress } from '../../models/SaleAddress.js';
-import { SaleDetail } from '../../models/SaleDetail.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { SaleAddress } from '../../../../../models/SaleAddress.js';
+import { SaleDetail } from '../../../../../models/SaleDetail.js';
 
 /**
  * Endpoint temporal para crear Sale de prueba completo

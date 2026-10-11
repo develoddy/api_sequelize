@@ -1,12 +1,12 @@
-import { Sale } from "../../models/Sale.js";
-import { SaleDetail } from "../../models/SaleDetail.js";
-import { SaleAddress } from "../../models/SaleAddress.js";
-import { Product } from "../../models/Product.js";
-import { Variedad } from "../../models/Variedad.js";
-import { User } from "../../models/User.js";
-import { Guest } from "../../models/Guest.js";
-import { Receipt } from "../../models/Receipt.js";
-import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert } from "../../services/emailNotification.service.js";
+import { Sale } from "../../../../../models/Sale.js";
+import { SaleDetail } from "../../../../../models/SaleDetail.js";
+import { SaleAddress } from "../../../../../models/SaleAddress.js";
+import { Product } from "../../../../../models/Product.js";
+import { Variedad } from "../../../../../models/Variedad.js";
+import { User } from "../../../../../models/User.js";
+import { Guest } from "../../../../../models/Guest.js";
+import { Receipt } from "../../../../../models/Receipt.js";
+import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert } from "../../../../../services/emailNotification.service.js";
 
 /**
  * 🧪 TEST: Simular envío de email "Order Shipped"
@@ -204,7 +204,7 @@ export const testSimulatePackageShipped = async (req, res) => {
         };
 
         // Llamar al webhook handler (importar dinámicamente para evitar circular deps)
-        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../controllers/webhookPrintful.controller.js');
         
         // Simular request
         const fakeReq = {
@@ -415,7 +415,7 @@ export const testSimulateOrderCreated = async (req, res) => {
         };
 
         // Llamar al webhook handler (importar dinámicamente para evitar circular deps)
-        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../controllers/webhookPrintful.controller.js');
         
         // Simular request
         const fakeReq = {
@@ -631,7 +631,7 @@ export const testSimulateOrderFailed = async (req, res) => {
         console.log('📤 [TEST] Enviando webhook simulado a handleWebhook...');
 
         // Importar dinámicamente para evitar dependencias circulares
-        const { handleWebhook } = await import('../../domains/commerce/integrations/printful/controllers/webhookPrintful.controller.js');
+        const { handleWebhook } = await import('../controllers/webhookPrintful.controller.js');
 
         const fakeReq = {
             body: simulatedWebhookPayload,
@@ -770,7 +770,7 @@ export const testSendDeliveredEmail = async (req, res) => {
         };
 
         // Importar la función
-        const { sendOrderDeliveredEmail } = await import('../../services/emailNotification.service.js');
+        const { sendOrderDeliveredEmail } = await import('../../../../../services/emailNotification.service.js');
 
         // Enviar email
         const result = await sendOrderDeliveredEmail(emailData);
@@ -830,7 +830,7 @@ export const testSendDailyReport = async (req, res) => {
         console.log(`🧪 [TEST] Generando y enviando daily report para: ${targetDate.toISOString().split('T')[0]}`);
 
         // Importar servicio
-        const { sendDailyReportToAdmin } = await import('../../services/dailyReportService.js');
+        const { sendDailyReportToAdmin } = await import('../../../../../services/dailyReportService.js');
 
         // Enviar reporte
         const result = await sendDailyReportToAdmin(targetDate);
