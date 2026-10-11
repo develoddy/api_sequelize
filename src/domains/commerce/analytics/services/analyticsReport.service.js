@@ -10,7 +10,7 @@ import {
 
 import { 
   getFailedJobs 
-} from '../../../../services/retryQueue.service.js';
+} from '../../integrations/printful/services/retryQueue.service.js';
 
 /**
  * Genera reporte completo de métricas para un período

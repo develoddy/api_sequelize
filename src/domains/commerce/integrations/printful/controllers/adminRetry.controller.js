@@ -28,7 +28,7 @@ import {
   resetJobForRetry,
   cancelJob,
   markAsResolved
-} from '../../../../../services/retryQueue.service.js';
+} from '../services/retryQueue.service.js';
 import { autoSyncOrderToPrintful } from '../services/autoSyncPrintful.service.js';
 
 /**

@@ -6,7 +6,7 @@
  * - RECOVERABLE: Errores que requieren intervención pero son recuperables
  * - CRITICAL: Errores graves que requieren atención inmediata
  * 
- * @file src/services/errorClassification.service.js
+ * @file src/domains/commerce/integrations/printful/services/errorClassification.service.js
  * @module ErrorClassificationService
  * @version 1.0.0
  * @sprint Sprint 6D - Intelligent Error Handling & Recovery

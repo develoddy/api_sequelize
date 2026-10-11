@@ -4,16 +4,16 @@
  * Gestiona la cola de reintentos para órdenes fallidas con backoff exponencial.
  * Procesa errores temporales y recuperables automáticamente.
  * 
- * @file src/services/retryQueue.service.js
+ * @file src/domains/commerce/integrations/printful/services/retryQueue.service.js
  * @module RetryQueueService
  * @version 1.0.0
  * @sprint Sprint 6D - Intelligent Error Handling & Recovery
  */
 
-import RetryQueue from '../models/RetryQueue.js';
-import { Sale } from '../models/Sale.js';
-import { User } from '../models/User.js';
-import { Guest } from '../models/Guest.js';
+import RetryQueue from '../../../../../models/RetryQueue.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { User } from '../../../../../models/User.js';
+import { Guest } from '../../../../../models/Guest.js';
 import { Op } from 'sequelize';
 import { classifyError, isRetryable, getErrorType } from './errorClassification.service.js';
 

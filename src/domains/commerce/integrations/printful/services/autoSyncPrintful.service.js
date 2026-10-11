@@ -10,8 +10,8 @@ import { User } from '../../../../../models/User.js';
 import { Guest } from '../../../../../models/Guest.js';
 import { createPrintfulOrderService } from './printfulService.js';
 import { sendAdminSyncFailedAlert } from '../../../notifications/services/emailNotification.service.js';
-import { addToQueue } from '../../../../../services/retryQueue.service.js';
-import { classifyError } from '../../../../../services/errorClassification.service.js';
+import { addToQueue } from './retryQueue.service.js';
+import { classifyError } from './errorClassification.service.js';
 
 /**
  * =====================================================================================
