@@ -2,7 +2,7 @@ import { Op, Sequelize } from 'sequelize';
 import UserResource from "../resources/user.js";
 import { User } from "../../../../models/User.js";
 import { AddressClient } from "../../../../models/AddressClient.js";
-import token from "../../../../services/token.js";
+import token from "../../services/token.js";
 import bcrypt from 'bcryptjs';
 import { getPrintfulProducts } from '../../../commerce/integrations/printful/controllers/productPrintful.controller.js';
 import jwt from "jsonwebtoken";

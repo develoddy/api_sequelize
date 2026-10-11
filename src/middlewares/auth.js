@@ -1,4 +1,4 @@
-import token from '../services/token.js';
+import token from '../domains/identity/services/token.js';
 
 export default {
     verifyEcommerce: async(req, res, next) => {
