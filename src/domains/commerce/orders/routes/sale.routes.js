@@ -15,7 +15,7 @@ import {
     hasSales,
     getLastSale
 } from "../controllers/sale.controller.js";
-import { refreshPrintfulStatus } from "../../../../controllers/admin/sales.controller.js";
+import { refreshPrintfulStatus } from "../controllers/sales.controller.js";
 
 const router = Router();
 

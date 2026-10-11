@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Sale } from '../../models/Sale.js';
+import { Sale } from '../../../../models/Sale.js';
 
 const PRINTFUL_API_TOKEN = process.env.PRINTFUL_API_TOKEN; 
 
