@@ -27,7 +27,7 @@ import nodemailer from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
 
 import { createPrintfulOrder } from '../../integrations/printful/controllers/productPrintful.controller.js';
-import { createSaleReceipt } from '../../../../controllers/helpers/receipt.helper.js';
+import { createSaleReceipt } from '../../receipts/helpers/receipt.helper.js';
 import crypto from 'crypto';
 import { sendOrderConfirmationEmail } from '../../../../services/email.service.js';
 

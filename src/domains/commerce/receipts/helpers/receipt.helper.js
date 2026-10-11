@@ -1,4 +1,4 @@
-import { Receipt } from '../../models/Receipt.js';
+import { Receipt } from '../../../../models/Receipt.js';
 
   //export const createSaleReceipt = async (sale, paymentMethod, metadata = {}) => {
   export const createSaleReceipt = async (sale, paymentMethod, metadata = {}, saleAddress = null) => {

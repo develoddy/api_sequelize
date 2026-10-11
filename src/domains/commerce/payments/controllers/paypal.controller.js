@@ -6,7 +6,7 @@ import { Guest } from '../../../../models/Guest.js';
 import { User } from '../../../../models/User.js';
 import { Cart } from '../../../../models/Cart.js';
 import { CartCache } from '../../../../models/CartCache.js';
-import { createSaleReceipt } from '../../../../controllers/helpers/receipt.helper.js';
+import { createSaleReceipt } from '../../receipts/helpers/receipt.helper.js';
 import { sendEmail } from '../../orders/controllers/sale.controller.js';
 import { createPrintfulOrder } from '../../integrations/printful/controllers/productPrintful.controller.js';
 

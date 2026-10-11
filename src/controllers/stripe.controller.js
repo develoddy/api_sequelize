@@ -20,7 +20,7 @@ import { Module } from '../domains/platform/models/Module.js';
 import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
 
 import { createPrintfulOrder } from '../domains/commerce/integrations/printful/controllers/productPrintful.controller.js';
-import { createSaleReceipt } from './helpers/receipt.helper.js';
+import { createSaleReceipt } from '../domains/commerce/receipts/helpers/receipt.helper.js';
 import { sendEmail } from '../domains/commerce/orders/controllers/sale.controller.js';
 import { 
   sendPaymentSuccessEmail, 
