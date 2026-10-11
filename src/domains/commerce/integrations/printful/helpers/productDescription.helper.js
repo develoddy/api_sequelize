@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const jsonPath = path.resolve('./src/controllers/helpers/data/productDescriptions.json');
+const jsonPath = new URL('./data/productDescriptions.json', import.meta.url);
 const rawData = fs.readFileSync(jsonPath);
 const descriptions = JSON.parse(rawData);
 

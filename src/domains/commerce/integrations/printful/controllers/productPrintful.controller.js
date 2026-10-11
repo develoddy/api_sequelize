@@ -33,7 +33,7 @@ import  {
 } from "../helpers/helper.js";
 
 // controllers/productPrintful.controller.js
-import { generarDescripcionPorCategoria } from '../../../../../controllers/helpers/productDescription.helper.js';
+import { generarDescripcionPorCategoria } from '../helpers/productDescription.helper.js';
 
 
 let idMapping = { products: {}, variedades: {} };
