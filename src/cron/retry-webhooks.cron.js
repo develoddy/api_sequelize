@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { Op } from 'sequelize';
 import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
-import { alertWebhookFailures } from '../services/alerting.service.js';
+import { alertWebhookFailures } from '../domains/platform/health/services/alerting.service.js';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -175,7 +175,7 @@ export const startWebhookRetryCron = () => {
     } catch (error) {
       console.error('❌ [CRON] Error en retry de webhooks:', error);
       // Importar dinámicamente para evitar dependencia circular
-      const { alertCronJobFailed } = await import('../services/alerting.service.js');
+      const { alertCronJobFailed } = await import('../domains/platform/health/services/alerting.service.js');
       await alertCronJobFailed('Webhook Retry', error.message);
     }
   });
