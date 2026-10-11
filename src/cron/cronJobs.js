@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { sendDailyReportToAdmin } from '../services/dailyReportService.js';
+import { sendDailyReportToAdmin } from '../domains/commerce/integrations/printful/services/dailyReportService.js';
 import { processQueue } from '../services/retryQueue.service.js';
 import { autoSyncOrderToPrintful } from '../domains/commerce/integrations/printful/services/autoSyncPrintful.service.js';
 import { 

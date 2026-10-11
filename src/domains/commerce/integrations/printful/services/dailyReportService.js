@@ -1,8 +1,8 @@
-import { Sale } from '../models/Sale.js';
-import { User } from '../models/User.js';
-import { Guest } from '../models/Guest.js';
+import { Sale } from '../../../../../models/Sale.js';
+import { User } from '../../../../../models/User.js';
+import { Guest } from '../../../../../models/Guest.js';
 import { Op } from 'sequelize';
-import { sendAdminDailyReport } from './emailNotification.service.js';
+import { sendAdminDailyReport } from '../../../notifications/services/emailNotification.service.js';
 
 /**
  * 📊 DAILY REPORT SERVICE

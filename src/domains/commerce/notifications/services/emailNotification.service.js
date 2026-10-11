@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import ejs from 'ejs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Sale } from '../models/Sale.js';
+import { Sale } from '../../../../models/Sale.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

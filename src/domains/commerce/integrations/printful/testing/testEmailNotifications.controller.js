@@ -6,7 +6,7 @@ import { Variedad } from "../../../../../models/Variedad.js";
 import { User } from "../../../../../models/User.js";
 import { Guest } from "../../../../../models/Guest.js";
 import { Receipt } from "../../../../../models/Receipt.js";
-import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert } from "../../../../../services/emailNotification.service.js";
+import { sendOrderShippedEmail, sendOrderPrintingEmail, sendAdminSyncFailedAlert } from "../../../notifications/services/emailNotification.service.js";
 
 /**
  * 🧪 TEST: Simular envío de email "Order Shipped"
@@ -770,7 +770,7 @@ export const testSendDeliveredEmail = async (req, res) => {
         };
 
         // Importar la función
-        const { sendOrderDeliveredEmail } = await import('../../../../../services/emailNotification.service.js');
+        const { sendOrderDeliveredEmail } = await import('../../../notifications/services/emailNotification.service.js');
 
         // Enviar email
         const result = await sendOrderDeliveredEmail(emailData);
@@ -830,7 +830,7 @@ export const testSendDailyReport = async (req, res) => {
         console.log(`🧪 [TEST] Generando y enviando daily report para: ${targetDate.toISOString().split('T')[0]}`);
 
         // Importar servicio
-        const { sendDailyReportToAdmin } = await import('../../../../../services/dailyReportService.js');
+        const { sendDailyReportToAdmin } = await import('../services/dailyReportService.js');
 
         // Enviar reporte
         const result = await sendDailyReportToAdmin(targetDate);

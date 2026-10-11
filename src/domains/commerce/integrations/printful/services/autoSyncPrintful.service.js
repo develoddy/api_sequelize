@@ -9,7 +9,7 @@ import { Option } from '../../../../../models/Option.js';
 import { User } from '../../../../../models/User.js';
 import { Guest } from '../../../../../models/Guest.js';
 import { createPrintfulOrderService } from './printfulService.js';
-import { sendAdminSyncFailedAlert } from '../../../../../services/emailNotification.service.js';
+import { sendAdminSyncFailedAlert } from '../../../notifications/services/emailNotification.service.js';
 import { addToQueue } from '../../../../../services/retryQueue.service.js';
 import { classifyError } from '../../../../../services/errorClassification.service.js';
 

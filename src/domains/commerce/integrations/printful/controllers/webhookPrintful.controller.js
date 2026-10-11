@@ -9,7 +9,7 @@ import { User } from "../../../../../models/User.js";
 import { Guest } from "../../../../../models/Guest.js";
 import { Receipt } from "../../../../../models/Receipt.js";
 import { Tenant } from "../../../../platform/models/Tenant.js";
-import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../../../services/emailNotification.service.js";
+import { sendOrderShippedEmail, sendAdminSyncFailedAlert, sendOrderDeliveredEmail } from "../../../notifications/services/emailNotification.service.js";
 
 const INTERNAL_TX_REGEX = /^sale_(\d+)_\d+$/;
 

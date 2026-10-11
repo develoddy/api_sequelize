@@ -1,5 +1,5 @@
 import chatService from '../services/chat.service.js';
-import emailService from '../../../services/emailNotification.service.js';
+import emailService from '../../commerce/notifications/services/emailNotification.service.js';
 import moment from 'moment';
 
 /**

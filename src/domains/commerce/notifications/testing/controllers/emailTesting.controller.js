@@ -16,7 +16,7 @@ import {
     sendOrderShippedEmail, 
     sendOrderPrintingEmail, 
     sendOrderDeliveredEmail 
-} from '../../../../../services/emailNotification.service.js';
+} from '../../services/emailNotification.service.js';
 
 /**
  * 🧪 TEST: Email de confirmación de impresión
