@@ -10,10 +10,10 @@
  * 4. Análisis de por qué los errores no son retriables
  */
 
-import './src/config/env.js';
-import './src/models/Associations.js';
+import '../../src/config/env.js';
+import '../../src/models/Associations.js';
 import nodemailer from 'nodemailer';
-import { MailflowEmailLog } from './src/models/MailflowEmailLog.js';
+import { MailflowEmailLog } from '../../src/models/MailflowEmailLog.js';
 import { Op } from 'sequelize';
 
 console.log('🔍 [DIAGNÓSTICO MAILFLOW] ========================================\n');

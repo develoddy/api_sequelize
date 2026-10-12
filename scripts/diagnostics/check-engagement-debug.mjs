@@ -4,8 +4,8 @@
  * Verificar eventos metric_clicked, prevention_demo_viewed y module_type
  */
 
-import './src/config/env.js';
-import { sequelize } from './src/database/database.js';
+import '../../src/config/env.js';
+import { sequelize } from '../../src/database/database.js';
 import { QueryTypes } from 'sequelize';
 
 async function checkEngagementRate() {

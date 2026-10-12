@@ -5,10 +5,10 @@
  * Solución: Reemplazar con emails válidos usando +addressing
  */
 
-import './src/config/env.js';
-import './src/models/Associations.js';
-import { MailflowContact } from './src/models/MailflowContact.js';
-import { MailflowEmailLog } from './src/models/MailflowEmailLog.js';
+import '../../src/config/env.js';
+import '../../src/models/Associations.js';
+import { MailflowContact } from '../../src/models/MailflowContact.js';
+import { MailflowEmailLog } from '../../src/models/MailflowEmailLog.js';
 import { Op } from 'sequelize';
 
 console.log('🔧 [FIX MAILFLOW] Limpiando contactos con emails inválidos...\n');

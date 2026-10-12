@@ -3,11 +3,11 @@
  * Compara stats.sent vs COUNT real de mailflow_email_logs
  */
 
-import './src/config/env.js';
-import { MailflowSequence } from './src/models/MailflowSequence.js';
-import { MailflowContact } from './src/models/MailflowContact.js';
-import { MailflowEmailLog } from './src/models/MailflowEmailLog.js';
-import { sequelize } from './src/database/database.js';
+import '../../src/config/env.js';
+import { MailflowSequence } from '../../src/models/MailflowSequence.js';
+import { MailflowContact } from '../../src/models/MailflowContact.js';
+import { MailflowEmailLog } from '../../src/models/MailflowEmailLog.js';
+import { sequelize } from '../../src/database/database.js';
 
 async function testRealStats() {
   console.log('\n🔍 ========================================');

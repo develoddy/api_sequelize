@@ -1,20 +1,25 @@
 /**
- * Script para enviar emails de MailFlow inmediatamente (sin esperar cron)
+ * Test optimizado de envío con singleton transporter
  * 
- * Útil para:
- * - Testing inmediato después de fix
- * - Debugging de envío SMTP
- * - Verificar que la solución funciona
+ * Este script prueba:
+ * 1. Singleton transporter (reutilizar conexión)
+ * 2. Rate limiting interno de nodemailer (1 email/segundo)
+ * 3. Envío en batch pequeño (5 emails) para evitar rate limiting del servidor
  */
 
-import './src/config/env.js';
-import './src/models/Associations.js';
+import '../../../src/config/env.js';
+import '../../../src/models/Associations.js';
 import { Op } from 'sequelize';
-import { MailflowContact } from './src/models/MailflowContact.js';
-import { MailflowSequence } from './src/models/MailflowSequence.js';
-import { sendMailflowEmail } from './src/services/mailflowSender.service.js';
+import { MailflowContact } from '../../../src/models/MailflowContact.js';
+import { MailflowSequence } from '../../../src/models/MailflowSequence.js';
+import { sendMailflowEmail } from '../../../src/domains/mailflow/services/mailflowSender.service.js';
 
-console.log('🚀 [MAILFLOW SEND NOW] Enviando emails pendientes inmediatamente...\n');
+console.log('🚀 [MAILFLOW TEST] Test optimizado con singleton transporter\n');
+console.log('⚙️  Configuración:');
+console.log('   - Rate limiting: 1 email/segundo (nodemailer)');
+console.log('   - Pool de conexiones: REUTILIZADO');
+console.log('   - Batch size: 5 emails (testing)');
+console.log('');
 
 async function sendNextEmail(contact) {
   try {
@@ -34,8 +39,7 @@ async function sendNextEmail(contact) {
     const subject = (emailConfig.subject || '').replace(/\{\{name\}\}/g, name);
     const bodyHtml = (emailConfig.bodyHtml || emailConfig.bodyText || '').replace(/\{\{name\}\}/g, name);
 
-    console.log(`📧 Enviando email #${contact.currentEmailIndex + 1} a ${contact.email}`);
-    console.log(`   Subject: ${subject}`);
+    console.log(`📧 Enviando a ${contact.email.substring(0, 30)}...`);
 
     const result = await sendMailflowEmail(
       contact,
@@ -60,15 +64,20 @@ async function sendNextEmail(contact) {
       }
       
       await contact.save();
-      console.log(`   ✅ Email enviado exitosamente\n`);
+      console.log(`   ✅ Enviado exitosamente\n`);
       return { success: true, sent: true };
+    } else if (result.shouldRetry) {
+      console.log(`   ⏳ Reintento programado para: ${result.retryAt?.toISOString()}\n`);
+      return { success: true, retry: true };
     } else {
-      console.error(`   ❌ Error: ${result.error}\n`);
+      console.log(`   ❌ Error: ${result.error}\n`);
+      contact.status = 'failed';
+      await contact.save();
       return { success: false, error: result.error };
     }
 
   } catch (error) {
-    console.error(`❌ Error procesando ${contact.email}:`, error);
+    console.error(`❌ Error procesando ${contact.email}:`, error.message);
     return { success: false, error: error.message };
   }
 }
@@ -85,13 +94,11 @@ try {
       required: true,
       where: { status: 'active' }
     }],
-    limit: 50
+    limit: 5 // SOLO 5 EMAILS PARA TEST
   });
 
   if (dueContacts.length === 0) {
-    console.log('📧 No hay emails pendientes para enviar ahora');
-    console.log('   - Verifica que haya sequences activas');
-    console.log('   - Verifica que los contactos tengan nextEmailAt <= NOW\n');
+    console.log('📧 No hay emails pendientes para enviar ahora\n');
     process.exit(0);
   }
 
@@ -99,6 +106,7 @@ try {
   console.log('========================================\n');
 
   let sent = 0;
+  let retries = 0;
   let failed = 0;
   let completed = 0;
 
@@ -107,20 +115,25 @@ try {
     
     if (result.completed) completed++;
     else if (result.sent) sent++;
+    else if (result.retry) retries++;
     else failed++;
     
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // NO delay manual - nodemailer lo maneja internamente con rateDelta/rateLimit
   }
   
   console.log('========================================');
-  console.log('\n✅ [ENVÍO COMPLETADO]\n');
+  console.log('\n✅ [TEST COMPLETADO]\n');
   console.log(`   ✅ Enviados: ${sent}`);
+  console.log(`   ⏳ Reintentos: ${retries}`);
   console.log(`   ✅ Completados: ${completed}`);
   console.log(`   ❌ Fallidos: ${failed}`);
   console.log('');
+  console.log('💡 Verifica tu inbox: lujandev@lujandev.com');
+  console.log('   Busca emails con prefijo: +test_');
+  console.log('');
 
 } catch (error) {
-  console.error('❌ Error ejecutando envío:', error);
+  console.error('❌ Error ejecutando test:', error);
   process.exit(1);
 }
 

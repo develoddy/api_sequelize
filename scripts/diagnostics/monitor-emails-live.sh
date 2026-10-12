@@ -18,12 +18,12 @@ BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Contador
+# Contadores de eventos detectados en los logs; no de entregas únicas
 EMAIL_COUNT=0
 DUPLICATE_COUNT=0
 
 # Monitorear logs en tiempo real
-pm2 logs api --lines 0 --raw 2>/dev/null | while read line; do
+pm2 logs api_sequelize --lines 0 --raw 2>/dev/null | while read line; do
     
     # Detectar UNIQUE EMAIL SEND
     if echo "$line" | grep -q "UNIQUE EMAIL SEND"; then

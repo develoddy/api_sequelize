@@ -3,13 +3,13 @@
 /**
  * Script para aplicar la migración de mailflow_email_logs
  * 
- * Uso: node apply-migration.mjs
+ * Uso desde api/: node scripts/maintenance/apply-migration.mjs
  */
 
 // ⚠️ IMPORTANTE: Cargar variables de entorno ANTES que cualquier otro módulo
-import './src/config/env.js';
+import '../../src/config/env.js';
 
-import { sequelize } from './src/database/database.js';
+import { sequelize } from '../../src/database/database.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -38,8 +38,7 @@ async function applyMigration() {
     console.log('🔌 Verificando tabla creada...');
     await sequelize.authenticate();
     
-    try {
-      const [structure] = await sequelize.query('DESCRIBE mailflow_email_logs');
+    const [structure] = await sequelize.query('DESCRIBE mailflow_email_logs');
       console.log('\n📊 Estructura de la tabla:');
       console.table(structure);
       

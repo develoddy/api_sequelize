@@ -1,11 +1,11 @@
-import './src/config/env.js';
-import { sequelize } from './src/database/database.js';
-import { Product } from './src/models/Product.js';
-import { Variedad } from './src/models/Variedad.js';
-import { File } from './src/models/File.js';
-import { ProductVariants } from './src/models/ProductVariants.js';
-import { Option } from './src/models/Option.js';
-import { Galeria } from './src/models/Galeria.js';
+import '../../src/config/env.js';
+import { sequelize } from '../../src/database/database.js';
+import { Product } from '../../src/models/Product.js';
+import { Variedad } from '../../src/models/Variedad.js';
+import { File } from '../../src/models/File.js';
+import { ProductVariants } from '../../src/models/ProductVariants.js';
+import { Option } from '../../src/models/Option.js';
+import { Galeria } from '../../src/models/Galeria.js';
 
 async function checkProductData() {
   try {

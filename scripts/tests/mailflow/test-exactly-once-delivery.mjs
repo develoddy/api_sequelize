@@ -1,9 +1,9 @@
-import './src/config/env.js';
-import { MailflowEmailLog } from './src/models/MailflowEmailLog.js';
-import { MailflowContact } from './src/models/MailflowContact.js';
-import { MailflowSequence } from './src/models/MailflowSequence.js';
-import { sendMailflowEmail, isEmailAlreadySent, processRetries } from './src/services/mailflowSender.service.js';
-import './src/models/Associations.js';
+import '../../../src/config/env.js';
+import { MailflowEmailLog } from '../../../src/models/MailflowEmailLog.js';
+import { MailflowContact } from '../../../src/models/MailflowContact.js';
+import { MailflowSequence } from '../../../src/models/MailflowSequence.js';
+import { sendMailflowEmail, isEmailAlreadySent, processRetries } from '../../../src/domains/mailflow/services/mailflowSender.service.js';
+import '../../../src/models/Associations.js';
 
 /**
  * TEST SUITE: EXACTLY-ONCE DELIVERY SYSTEM

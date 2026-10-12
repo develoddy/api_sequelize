@@ -4,7 +4,7 @@
 // 🔍 DIAGNÓSTICO DE TOKEN PRINTFUL
 // ================================================================
 
-import './src/config/env.js';
+import '../../src/config/env.js';
 import axios from 'axios';
 
 console.log('\n════════════════════════════════════════════════════════');

@@ -6,20 +6,20 @@
  * Este script verifica que todas las mejoras de fiabilidad están funcionando correctamente
  * EJECUTAR EN STAGING/DEVELOPMENT ANTES DE DEPLOYMENT A PRODUCCIÓN
  * 
- * Uso: node test-mailflow-production.mjs
+ * Uso desde api/: node scripts/tests/mailflow/test-mailflow-production.mjs
  */
 
 // ⚠️ IMPORTANTE: Cargar variables de entorno ANTES que cualquier otro módulo
-import './src/config/env.js';
+import '../../../src/config/env.js';
 
-import { MailflowContact } from './src/models/MailflowContact.js';
-import { MailflowSequence } from './src/models/MailflowSequence.js';
-import { MailflowEmailLog } from './src/models/MailflowEmailLog.js';
-import { sendMailflowEmail, isEmailAlreadySent, processRetries } from './src/services/mailflowSender.service.js';
-import { sequelize } from './src/database/database.js';
+import { MailflowContact } from '../../../src/models/MailflowContact.js';
+import { MailflowSequence } from '../../../src/models/MailflowSequence.js';
+import { MailflowEmailLog } from '../../../src/models/MailflowEmailLog.js';
+import { sendMailflowEmail, isEmailAlreadySent, processRetries } from '../../../src/domains/mailflow/services/mailflowSender.service.js';
+import { sequelize } from '../../../src/database/database.js';
 
 // Cargar asociaciones de Sequelize
-import './src/models/Associations.js';
+import '../../../src/models/Associations.js';
 
 const COLORS = {
   green: '\x1b[32m',

@@ -1,8 +1,8 @@
-import './src/config/env.js';
+import '../../src/config/env.js';
 
 async function fetchProduct(slug) {
   try {
-    const response = await fetch(`http://localhost:3000/api/products/show_landing_product/${slug}`);
+    const response = await fetch(`http://localhost:3500/api/home/show_landing_product/${slug}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -30,11 +30,20 @@ async function main() {
   console.log('='.repeat(80));
   
   // Intentar obtener lista de productos para comparar
-  const listResponse = await fetch('http://localhost:3000/api/products/list_products_all');
+  const listResponse = await fetch('http://localhost:3500/api/home/list');
+
+  if (!listResponse.ok) {
+    throw new Error(`Error consultando el catálogo: HTTP ${listResponse.status}`);
+  }
+
   const listData = await listResponse.json();
+
+  if (!Array.isArray(listData.our_products)) {
+    throw new Error('Respuesta inesperada: our_products no es un array');
+  }
   
   // Buscar un producto con variedades que no sea camiseta-dev-code
-  const workingProduct = listData.data.find(p => 
+  const workingProduct = listData.our_products.find(p =>
     p.slug !== 'camiseta-dev-code' && 
     p.variedades && 
     p.variedades.length > 0

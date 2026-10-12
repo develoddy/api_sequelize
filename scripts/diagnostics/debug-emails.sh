@@ -28,7 +28,7 @@ section "1️⃣ EMAIL TRIGGERS (últimos 20)"
 echo -e "${YELLOW}Buscando logs de 'EMAIL TRIGGERED FROM'...${NC}"
 echo ""
 
-TRIGGERS=$(pm2 logs api --lines 300 --nostream 2>/dev/null | grep "EMAIL TRIGGERED FROM" | tail -20)
+TRIGGERS=$(pm2 logs api_sequelize --lines 300 --nostream 2>/dev/null | grep "EMAIL TRIGGERED FROM" | tail -20)
 
 if [ -z "$TRIGGERS" ]; then
     echo -e "${RED}❌ No se encontraron logs de EMAIL TRIGGERED FROM${NC}"
@@ -47,10 +47,10 @@ section "2️⃣ WEBHOOKS PRINTFUL (últimos 10)"
 echo -e "${YELLOW}Buscando logs de webhooks Printful...${NC}"
 echo ""
 
-PRINTFUL=$(pm2 logs api --lines 300 --nostream 2>/dev/null | grep -E "(WEBHOOK Printful|Order Printing|handleOrderCreated)" | tail -10)
+PRINTFUL=$(pm2 logs api_sequelize --lines 300 --nostream 2>/dev/null | grep -E "(WEBHOOK Printful|Order Printing|handleOrderCreated)" | tail -10)
 
 if [ -z "$PRINTFUL" ]; then
-    echo -e "${GREEN}✅ No se encontraron logs de webhooks Printful${NC}"
+    echo -e "${GREEN}ℹ️ No se encontraron coincidencias de webhooks Printful en los logs revisados${NC}"
 else
     echo "$PRINTFUL"
 fi
@@ -60,7 +60,7 @@ section "3️⃣ EMAILS ENVIADOS (últimos 10)"
 echo -e "${YELLOW}Buscando confirmaciones de envío...${NC}"
 echo ""
 
-SENT=$(pm2 logs api --lines 300 --nostream 2>/dev/null | grep -E "(Email sent|Confirmation email|email enviado)" | tail -10)
+SENT=$(pm2 logs api_sequelize --lines 300 --nostream 2>/dev/null | grep -E "(Email sent|Confirmation email|email enviado)" | tail -10)
 
 if [ -z "$SENT" ]; then
     echo -e "${RED}❌ No se encontraron confirmaciones de envío${NC}"
@@ -75,7 +75,7 @@ echo -e "${YELLOW}Analizando duplicados...${NC}"
 echo ""
 
 # Buscar pares de triggers cercanos en tiempo
-RECENT_TRIGGERS=$(pm2 logs api --lines 100 --nostream 2>/dev/null | grep "EMAIL TRIGGERED FROM")
+RECENT_TRIGGERS=$(pm2 logs api_sequelize --lines 100 --nostream 2>/dev/null | grep "EMAIL TRIGGERED FROM")
 
 if [ -z "$RECENT_TRIGGERS" ]; then
     echo -e "${RED}❌ No hay datos para analizar${NC}"
@@ -110,12 +110,12 @@ if [ -z "$TRIGGERS" ]; then
     echo -e "${RED}❌ No hay logs de emails recientes${NC}"
     echo -e "${YELLOW}💡 Acción: Realiza una compra test${NC}"
 elif [ ! -z "$NOTIFICATION_COUNT" ] && [ "$NOTIFICATION_COUNT" -gt 0 ]; then
-    echo -e "${RED}❌ PROBLEMA DETECTADO: Emails duplicados${NC}"
-    echo -e "${YELLOW}📁 Culpable: emailNotification.service.js${NC}"
+    echo -e "${RED}⚠️ POSIBLE DUPLICADO: revisar los triggers detectados${NC}"
+    echo -e "${YELLOW}📁 Revisar los eventos asociados a emailNotification.service.js${NC}"
     echo -e "${YELLOW}🔧 Acción: Verificar llamadas a sendOrderPrintingEmail()${NC}"
 else
-    echo -e "${GREEN}✅ Sistema parece estar enviando 1 solo email${NC}"
-    echo -e "${GREEN}📧 Verifica tu bandeja de entrada para confirmar${NC}"
+    echo -e "${GREEN}ℹ️ No se identificaron duplicados con los patrones analizados${NC}"
+    echo -e "${GREEN}📧 Esta comprobación de logs no garantiza ausencia de duplicados${NC}"
 fi
 
 echo ""
