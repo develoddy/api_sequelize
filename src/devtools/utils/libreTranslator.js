@@ -4,7 +4,7 @@ import fetch from 'node-fetch'; // solo si tu Node < 18, de lo contrario puedes 
 export async function translateText(text, targetLang = 'es') {
   try {
     const res = await fetch("https://libretranslate.com/translate", {
-      method: "POST",s
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         q: text,
