@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Cargar variables de entorno
-const envPath = join(__dirname, '..', '.env.development');
+const envPath = join(__dirname, '..', '..', '.env.development');
 dotenv.config({ path: envPath });
 
 const DB_CONFIG = {

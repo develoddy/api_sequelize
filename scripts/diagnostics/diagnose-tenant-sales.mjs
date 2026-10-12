@@ -13,7 +13,7 @@ import { dirname, resolve } from 'path';
 // Cargar .env.development desde la carpeta api
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-dotenv.config({ path: resolve(__dirname, '../.env.development') });
+dotenv.config({ path: resolve(__dirname, '../../.env.development') });
 
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',

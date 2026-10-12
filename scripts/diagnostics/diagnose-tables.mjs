@@ -1,7 +1,7 @@
 /**
  * 🔍 Script de diagnóstico para ver nombres reales de tablas y columnas
  * 
- * Uso: NODE_ENV=production node scripts/diagnose-tables.mjs
+ * Uso: NODE_ENV=production node scripts/diagnostics/diagnose-tables.mjs
  */
 
 import { Sequelize } from 'sequelize';
@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 // Cargar variables de entorno según NODE_ENV
 const env = process.env.NODE_ENV || 'development';
 const envFile = env === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: path.resolve(__dirname, '..', envFile) });
+dotenv.config({ path: path.resolve(__dirname, '..', '..', envFile) });
 
 // Configuración de la base de datos
 const sequelize = new Sequelize(
