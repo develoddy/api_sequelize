@@ -252,12 +252,31 @@ export const register = async ( req, res ) => {
 
     // ✅ 2. Continuar con el registro
     try {
-        req.body.password = await bcrypt.hash( req.body.password, 10 );
-        const user = await User.create( req.body );
+        const { name, surname, email, password, zipcode, phone, birthday } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                message: "Nombre, correo electrónico y contraseña son obligatorios."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({
+            name,
+            surname,
+            email,
+            password: hashedPassword,
+            zipcode,
+            phone,
+            birthday,
+            rol: "cliente"
+        });
+
         res.status(200).json({
             status: 200,
             message: "Usuario registrado correctamente.",
-            data: user
+            data: UserResource.user_list(user)
         });
     } catch ( error ) {
         if (error instanceof Sequelize.UniqueConstraintError) {
