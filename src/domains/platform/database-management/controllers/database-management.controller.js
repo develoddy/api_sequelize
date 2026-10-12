@@ -390,7 +390,7 @@ export class DatabaseManagementController {
             console.log('🔍 INICIANDO DETECCIÓN DE SEEDERS EJECUTADOS...');
             
             try {
-                const { sequelize } = await import('../database/database.js');
+                const { sequelize } = await import('../../../../database/database.js');
                 console.log('📦 Sequelize importado exitosamente (ES Module)');
                 
                 // Prueba de conexión
