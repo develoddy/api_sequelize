@@ -422,30 +422,48 @@ export const refreshToken = async (req, res) => {
 
 export const update = async(req, res) => {
     try {
-        if ( req.files ) {
-            var img_path = req.files.avatar.path;
-            var name = img_path.split('\\');
-            var avatar_name = name[2];
+        const { _id, name, surname, email, password } = req.body;
+
+        if (!_id || !name || !surname || !email) {
+            return res.status(400).json({
+                message: "Identificador, nombre, apellidos y correo electrónico son obligatorios."
+            });
         }
 
-        if ( req.body.password ) {
-            req.body.password = await bcrypt.hash( req.body.password, 10 );
+        const user = await User.findOne({ where: { id: _id } });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "Usuario no encontrado."
+            });
         }
 
-        await User.update(req.body, { where: { id: req.body.id } });
-        const UserT = await User.findOne({ where: { id: req.body.id } });
+        const updateData = { name, surname, email };
 
-        res.status(200).json({
+        if (password !== null && password !== undefined && password !== "") {
+            if (typeof password !== "string") {
+                return res.status(400).json({
+                    message: "La contraseña debe ser una cadena de texto."
+                });
+            }
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        await User.update(updateData, { where: { id: _id } });
+
+        const updatedUser = await User.findOne({ where: { id: _id } });
+
+        return res.status(200).json({
             message: "El usuario se ha modificado correctamente",
-            user: UserResource.user_list( UserT ),
+            user: UserResource.user_list(updatedUser),
         });
-    } catch ( error ) {
-        res.status( 500 ).send({
-            message: "debbug: UserController login - OCURRIÓ UN PROBLEMA"
+    } catch (error) {
+        console.error("Error al actualizar usuario:", error);
+        return res.status(500).json({
+            message: "No se pudo actualizar el usuario."
         });
-        console.log(error);
     }
-}
+};
 
 export const list = async( req, res ) => {
     try {

@@ -18,11 +18,11 @@ const router = Router();
 
 router.post( '/register', register);
 router.post( '/register_admin', auth.verifyAdmin, register_admin);
-router.put( '/update', update);
+router.put( '/update', auth.verifyAdmin, update);
 router.get( '/list', auth.verifyAdmin, list);
 router.post( '/login', login );
 router.post( '/login_admin', login_admin);
-router.delete("/delete", remove);
+router.delete("/delete", auth.verifyAdmin, remove);
 router.post( '/detail_user', auth.verifyEcommerce, detail_user );
 router.post( '/detail_user_admin', auth.verifyAdmin, detail_user );
 
