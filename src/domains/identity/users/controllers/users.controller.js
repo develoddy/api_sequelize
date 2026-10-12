@@ -510,11 +510,23 @@ export const list = async( req, res ) => {
 export const remove = async( req, res ) => {
     try {
 
+        const { _id } = req.query;
+
+        if (typeof _id !== "string" || !/^[1-9][0-9]*$/.test(_id)) {
+            return res.status(400).json({
+                message: "Identificador de usuario no válido."
+            });
+        }
+
+        if (String(req.user.id) === _id) {
+            return res.status(403).json({
+                message: "No puedes eliminar tu propia cuenta de administrador."
+            });
+        }
+
         const deletedUser = await User.destroy({
-            where: {
-                id: req.query._id
-            }
-         });
+            where: { id: _id }
+        });
 
         if ( deletedUser == 1 ) {
             res.status( 200 ).json({
