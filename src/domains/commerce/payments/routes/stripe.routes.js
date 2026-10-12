@@ -1,7 +1,7 @@
 import { Router } from "express";
 import express from "express";
-import auth from '../middlewares/auth.js';
-import { stripeLimiter } from '../middlewares/rate-limit.middleware.js';
+import auth from '../../../../middlewares/auth.js';
+import { stripeLimiter } from '../../../../middlewares/rate-limit.middleware.js';
 import {
     createCheckoutSession,
     getCheckoutSession,

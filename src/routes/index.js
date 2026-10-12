@@ -19,7 +19,7 @@ import productsGelatoRoutes from "../domains/commerce/integrations/gelato/routes
 import productsDropiRoutes from "../domains/commerce/integrations/dropi/routes/productsDropi.routes.js";
 import wishlistRoutes from "../domains/commerce/wishlist/routes/wishlist.routes.js";
 import shippingratesRoutes from "../domains/commerce/shipping/routes/shippingrates.route.js";
-import stripeRoutes from "./stripe.routes.js";
+import stripeRoutes from "../domains/commerce/payments/routes/stripe.routes.js";
 import paypalRoutes from "../domains/commerce/payments/routes/paypal.routes.js";
 import chatRoutes from '../domains/chat/routes/chat.routes.js';
 import chatTenantRoutes from '../domains/chat/routes/chat-tenant.routes.js'; // 🚀 Multi-Tenant Chat SaaS

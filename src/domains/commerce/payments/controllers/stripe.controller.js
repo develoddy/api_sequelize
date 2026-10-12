@@ -1,34 +1,34 @@
 import { Op, Sequelize } from 'sequelize';
-import { sequelize } from '../database/database.js';
+import { sequelize } from '../../../../database/database.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
-import { Sale } from '../models/Sale.js';
-import { Receipt } from '../models/Receipt.js';
-import { SaleDetail } from '../models/SaleDetail.js';
-import { Variedad } from '../models/Variedad.js';
-import { Cart } from '../models/Cart.js';
-import { CartCache } from '../models/CartCache.js';
-import { CheckoutCache } from '../models/CheckoutCache.js';
-import { Guest } from '../models/Guest.js';
-import { User } from '../models/User.js';
-import { SaleAddress } from '../models/SaleAddress.js';
-import { File } from '../models/File.js';
-import { Option } from '../models/Option.js';
-import { Cupone } from '../models/Cupone.js';
-import { Tenant } from '../domains/platform/models/Tenant.js';
-import { Module } from '../domains/platform/models/Module.js';
-import { StripeWebhookLog } from '../models/StripeWebhookLog.js';
+import { Sale } from '../../../../models/Sale.js';
+import { Receipt } from '../../../../models/Receipt.js';
+import { SaleDetail } from '../../../../models/SaleDetail.js';
+import { Variedad } from '../../../../models/Variedad.js';
+import { Cart } from '../../../../models/Cart.js';
+import { CartCache } from '../../../../models/CartCache.js';
+import { CheckoutCache } from '../../../../models/CheckoutCache.js';
+import { Guest } from '../../../../models/Guest.js';
+import { User } from '../../../../models/User.js';
+import { SaleAddress } from '../../../../models/SaleAddress.js';
+import { File } from '../../../../models/File.js';
+import { Option } from '../../../../models/Option.js';
+import { Cupone } from '../../../../models/Cupone.js';
+import { Tenant } from '../../../platform/models/Tenant.js';
+import { Module } from '../../../platform/models/Module.js';
+import { StripeWebhookLog } from '../../../../models/StripeWebhookLog.js';
 
-import { createPrintfulOrder } from '../domains/commerce/integrations/printful/controllers/productPrintful.controller.js';
-import { createSaleReceipt } from '../domains/commerce/receipts/helpers/receipt.helper.js';
-import { sendEmail } from '../domains/commerce/orders/controllers/sale.controller.js';
+import { createPrintfulOrder } from '../../integrations/printful/controllers/productPrintful.controller.js';
+import { createSaleReceipt } from '../../receipts/helpers/receipt.helper.js';
+import { sendEmail } from '../../orders/controllers/sale.controller.js';
 import { 
   sendPaymentSuccessEmail, 
   sendSubscriptionCancelledEmail, 
   sendAccessLostEmail 
-} from '../domains/platform/tenants/saas-email.controller.js';
+} from '../../../platform/tenants/saas-email.controller.js';
 
-import stripe from '../devtools/utils/stripe.js';
+import stripe from '../../../../devtools/utils/stripe.js';
 
 // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 //   apiVersion: '2023-10-16', // o la que uses
@@ -174,7 +174,7 @@ export const createCheckoutSession = async (req, res) => {
     
     if (isModulePurchase) {
       // Compra de módulo: crear line item desde el módulo
-      const { Module } = await import('../domains/platform/models/Module.js');
+      const { Module } = await import('../../../platform/models/Module.js');
       const module = await Module.findByPk(moduleId);
       
       if (!module) {
@@ -465,7 +465,7 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
     });
     
     try {
-      const { Tenant } = await import('../domains/platform/models/Tenant.js');
+      const { Tenant } = await import('../../../platform/models/Tenant.js');
       const tenant = await Tenant.findByPk(tenantId);
       
       if (!tenant) {
@@ -667,7 +667,7 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
       }
       
       // Crear SaleDetail simple para el módulo
-      const { Module } = await import('../domains/platform/models/Module.js');
+      const { Module } = await import('../../../platform/models/Module.js');
       const module = await Module.findByPk(moduleId);
       
       if (module) {
@@ -866,11 +866,11 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
         let code_discount = item.code_discount || null;
 
         // Importar modelos dinámicamente para evitar ciclos
-        const { Discount } = await import('../models/Discount.js');
-        const { DiscountProduct } = await import('../models/DiscountProduct.js');
-        const { DiscountCategorie } = await import('../models/DiscountCategorie.js');
-        const { Cupone } = await import('../models/Cupone.js');
-        const { Product } = await import('../models/Product.js');
+        const { Discount } = await import('../../../../models/Discount.js');
+        const { DiscountProduct } = await import('../../../../models/DiscountProduct.js');
+        const { DiscountCategorie } = await import('../../../../models/DiscountCategorie.js');
+        const { Cupone } = await import('../../../../models/Cupone.js');
+        const { Product } = await import('../../../../models/Product.js');
 
         // Resolver productId y categoryId
         let resolvedProductId = item.productId || null;
@@ -902,8 +902,8 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
             
             if (cuponRow) {
               // Verificar si el cupón aplica al producto o categoría
-              const { CuponeProduct } = await import('../models/CuponeProduct.js');
-              const { CuponeCategorie } = await import('../models/CuponeCategorie.js');
+              const { CuponeProduct } = await import('../../../../models/CuponeProduct.js');
+              const { CuponeCategorie } = await import('../../../../models/CuponeCategorie.js');
               
               // Si type_segment = 1, el cupón aplica a productos específicos
               if (cuponRow.type_segment === 1 && resolvedProductId) {
@@ -1229,7 +1229,7 @@ async function handleCheckoutCompleted(req, event, res, webhookLog) {
           let name = it.title || '';
           try {
             if (!name && it.productId) {
-              const prod = await (await import('../models/Product.js')).Product.findByPk(it.productId).catch(() => null);
+              const prod = await (await import('../../../../models/Product.js')).Product.findByPk(it.productId).catch(() => null);
               if (prod && prod.title) name = prod.title;
             }
           } catch (e) { /* ignore */ }
@@ -1688,7 +1688,7 @@ async function handleInvoicePaid(event, res, webhookLog) {
     }
 
     // Buscar tenant y actualizar
-    const { Tenant } = await import('../domains/platform/models/Tenant.js');
+    const { Tenant } = await import('../../../platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1752,7 +1752,7 @@ async function handleSubscriptionUpdated(event, res, webhookLog) {
       return res.json({ received: true });
     }
 
-    const { Tenant } = await import('../domains/platform/models/Tenant.js');
+    const { Tenant } = await import('../../../platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1821,7 +1821,7 @@ async function handleSubscriptionDeleted(event, res, webhookLog) {
       return res.json({ received: true });
     }
 
-    const { Tenant } = await import('../domains/platform/models/Tenant.js');
+    const { Tenant } = await import('../../../platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -1890,7 +1890,7 @@ export const createSubscriptionCheckout = async (req, res) => {
     }
 
     // Buscar tenant
-    const { Tenant } = await import('../domains/platform/models/Tenant.js');
+    const { Tenant } = await import('../../../platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
@@ -2009,7 +2009,7 @@ export const cancelSubscription = async (req, res) => {
     }
 
     // Buscar tenant
-    const { Tenant } = await import('../domains/platform/models/Tenant.js');
+    const { Tenant } = await import('../../../platform/models/Tenant.js');
     const tenant = await Tenant.findByPk(tenantId);
 
     if (!tenant) {
