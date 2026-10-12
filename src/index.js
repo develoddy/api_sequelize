@@ -177,7 +177,11 @@ console.log('📝 Logging to file enabled:', logFilePath);
 
 // 🚨 Inicializar Sentry INMEDIATAMENTE después de las variables de entorno
 import { initSentry } from './config/sentry.js';
-initSentry();
+if (process.env.ENABLE_SENTRY !== "false") {
+    initSentry();
+} else {
+    console.warn("⏸️ Sentry desactivado mediante ENABLE_SENTRY=false");
+}
 
 // ================================================================
 // 🔒 DESACTIVACIÓN DE LOGS EN PRODUCCIÓN (SEGURIDAD)
