@@ -125,7 +125,7 @@ echo ""
 echo -e "${BLUE}1.${NC} Revisa los logs arriba"
 echo -e "${BLUE}2.${NC} Si ves 2 'EMAIL TRIGGERED FROM' para la misma compra → hay duplicado"
 echo -e "${BLUE}3.${NC} Identifica qué archivo envía el segundo email"
-echo -e "${BLUE}4.${NC} Lee DEBUG-EMAIL-DUPLICATES.md para la solución"
+echo -e "${BLUE}4.${NC} Consulta docs/archive/debugging/DEBUG-EMAIL-DUPLICATES.md para la solución"
 echo ""
 
 echo "=================================================="
