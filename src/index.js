@@ -304,28 +304,32 @@ async function main() {
             console.warn(`🚀 Server running on port ${PORT}`);
             console.warn("📡 WebSockets ready");
 
-            // Inicializar cron jobs (Sprint 6B - Iteración 4)
-            try {
-                const { initCronJobs } = await import('./cron/cronJobs.js');
-                initCronJobs();
-            } catch (error) {
-                console.error('❌ Error inicializando cron jobs:', error);
-            }
+            if (process.env.ENABLE_CRON_JOBS === "false") {
+                console.warn("⏸️ Cron jobs desactivados mediante ENABLE_CRON_JOBS=false");
+            } else {
+                // Inicializar cron jobs (Sprint 6B - Iteración 4)
+                try {
+                    const { initCronJobs } = await import('./cron/cronJobs.js');
+                    initCronJobs();
+                } catch (error) {
+                    console.error('❌ Error inicializando cron jobs:', error);
+                }
 
-            // Inicializar cron de notificaciones SaaS trial
-            try {
-                const { startTrialNotificationsCron } = await import('./domains/platform/tenants/trial-notifications.cron.js');
-                startTrialNotificationsCron();
-            } catch (error) {
-                console.error('❌ Error inicializando trial notifications cron:', error);
-            }
+                // Inicializar cron de notificaciones SaaS trial
+                try {
+                    const { startTrialNotificationsCron } = await import('./domains/platform/tenants/trial-notifications.cron.js');
+                    startTrialNotificationsCron();
+                } catch (error) {
+                    console.error('❌ Error inicializando trial notifications cron:', error);
+                }
 
-            // Inicializar cron de Video Express polling
-            try {
-                const { startVideoExpressPolling } = await import('./domains/video-express/cron/videoExpressPolling.js');
-                startVideoExpressPolling();
-            } catch (error) {
-                console.error('❌ Error inicializando Video Express polling:', error);
+                // Inicializar cron de Video Express polling
+                try {
+                    const { startVideoExpressPolling } = await import('./domains/video-express/cron/videoExpressPolling.js');
+                    startVideoExpressPolling();
+                } catch (error) {
+                    console.error('❌ Error inicializando Video Express polling:', error);
+                }
             }
         });
 
