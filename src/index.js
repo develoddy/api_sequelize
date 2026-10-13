@@ -327,12 +327,16 @@ async function main() {
                     console.error('❌ Error inicializando trial notifications cron:', error);
                 }
 
-                // Inicializar cron de Video Express polling
-                try {
-                    const { startVideoExpressPolling } = await import('./domains/video-express/cron/videoExpressPolling.js');
-                    startVideoExpressPolling();
-                } catch (error) {
-                    console.error('❌ Error inicializando Video Express polling:', error);
+                // Video Express: experimento desactivado por defecto
+                if (process.env.VIDEO_EXPRESS_POLLING_ENABLED === 'true') {
+                    try {
+                        const { startVideoExpressPolling } = await import('./domains/video-express/cron/videoExpressPolling.js');
+                        startVideoExpressPolling();
+                    } catch (error) {
+                        console.error('❌ Error inicializando Video Express polling:', error);
+                    }
+                } else {
+                    console.log('⏸️ Video Express Polling: desactivado');
                 }
             }
         });
