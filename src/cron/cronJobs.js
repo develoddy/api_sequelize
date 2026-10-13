@@ -146,9 +146,17 @@ export function initCronJobs() {
     // 🔄 Iniciar cron de retry de webhooks (SaaS Management)
     startWebhookRetryCron();
     
-    // 📧 Iniciar cron de MailFlow (Email Sequences)
-    startMailflowSenderCron();
-    console.log('   📧 MailFlow Sender: Cada 15 minutos (Europe/Madrid)');
+    // 📧 MailFlow: habilitado en producción o explícitamente en desarrollo
+    const mailflowCronEnabled =
+        process.env.NODE_ENV === 'production' ||
+        process.env.MAILFLOW_CRON_ENABLED === 'true';
+
+    if (mailflowCronEnabled) {
+        startMailflowSenderCron();
+        console.log('   📧 MailFlow Sender: Cada 15 minutos (Europe/Madrid)');
+    } else {
+        console.log('   ⏸️ MailFlow Sender: desactivado');
+    }
 }
 
 /**

@@ -21,7 +21,7 @@ export const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: process.env.DB_DIALECT || "mysql",
-    logging: isDev ? console.log : false, // Logging solo en dev
+    logging: false, // SQL logging desactivado
     define: {
       timestamps: false,
     },

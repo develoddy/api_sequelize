@@ -541,15 +541,24 @@ export const profile_client = async (req, res) => {
                 collection_detail_orders.push({
                     _id: d.id,
                     sale: order,
-                    product: {
-                    _id: d.product.id,
-                    title: d.product.title,
-                    sku: d.product.sku,
-                    slug: d.product.slug,
-                    imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada,
-                    categorie: d.product.category,
-                    price_soles: d.product.price_soles,
-                    price_usd: d.product.price_usd,
+                    product: d.product ? {
+                        _id: d.product.id,
+                        title: d.product.title,
+                        sku: d.product.sku,
+                        slug: d.product.slug,
+                        imagen: process.env.URL_BACKEND + '/api/products/uploads/product/' + d.product.portada,
+                        categorie: d.product.category,
+                        price_soles: d.product.price_soles,
+                        price_usd: d.product.price_usd,
+                    } : {
+                        _id: null,
+                        title: d.product_name || 'Producto no disponible',
+                        sku: d.product_sku || null,
+                        slug: null,
+                        imagen: d.product_image || null,
+                        categorie: null,
+                        price_soles: null,
+                        price_usd: null,
                     },
                     type_discount: d.type_discount,
                     discount: d.discount,
@@ -606,6 +615,8 @@ export const profile_client = async (req, res) => {
             address_client: addressClient,
         });
     } catch (error) {
+
+        console.error('[profile_client] Error:', error);
         res.status(500).send({
             message: "Ocurrió un problema",
             error: error
