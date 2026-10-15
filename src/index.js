@@ -327,6 +327,21 @@ async function main() {
                     console.error('❌ Error inicializando trial notifications cron:', error);
                 }
 
+                // Raffle Lab: expiración automática desactivada por defecto
+                if (process.env.RAFFLE_LAB_CRON_ENABLED === 'true') {
+                    try {
+                        const { startRaffleExpirationCron } = await import(
+                            './domains/experiments/raffle-lab/cron/raffle-expiration.cron.js'
+                        );
+                        startRaffleExpirationCron();
+                    } catch (error) {
+                        console.error(
+                            '❌ Error inicializando Raffle Lab expiration cron:',
+                            error
+                        );
+                    }
+                }
+
                 // Video Express: experimento desactivado por defecto
                 if (process.env.VIDEO_EXPRESS_POLLING_ENABLED === 'true') {
                     try {
