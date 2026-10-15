@@ -56,6 +56,8 @@ import mvpAnalyticsRoutes from '../domains/analytics/mvp/routes/mvpAnalytics.rou
 import financeRoutes from '../domains/finance/routes/finance.routes.js'; // 💰 Finance Module - Personal financial management
 import inboxZeroPreventionRoutes from '../domains/platform/inbox-zero/routes/inboxZeroPrevention.routes.js'; // 📬 Inbox Zero Prevention - Public setup requests
 
+import raffleLabRoutes from '../domains/experiments/raffle-lab/routes/raffle-lab.routes.js';
+
 const app = express();
 
 app.use("/users", usersRoutes);
@@ -113,6 +115,7 @@ app.use("/video-express/preview", videoExpressPreviewRoutes); // 🎬 Video Expr
 app.use("/", mvpHubRoutes); // 🏠 MVP Hub - Dynamic MVP listing (Public)
 app.use("/mvp-analytics", mvpAnalyticsRoutes); // 📊 MVP Analytics - Aggregated stats from tracking_events
 app.use("/finance", financeRoutes); // 💰 Finance Module - Personal financial management (Admin)
+app.use("/experiments/raffle-lab", raffleLabRoutes); // 🎟️ Raffle Lab - Public reservation experiment
 app.use("/public/inbox-zero", inboxZeroPreventionRoutes); // 📬 Inbox Zero Prevention - Public setup requests (No auth)
 
 export default app;
