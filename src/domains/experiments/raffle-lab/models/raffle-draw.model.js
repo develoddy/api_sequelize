@@ -16,6 +16,11 @@ export const RaffleDraw = experimentsSequelize.define('RaffleDraw', {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,
     },
+    status: {
+        type: DataTypes.ENUM('draft', 'published', 'closed'),
+        allowNull: false,
+        defaultValue: 'draft',
+    },
 }, {
     tableName: 'raffle_draws',
     timestamps: true,

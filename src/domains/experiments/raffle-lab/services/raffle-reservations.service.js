@@ -37,10 +37,15 @@ export async function createReservation({
     return experimentsSequelize.transaction(async (transaction) => {
         const draw = await RaffleDraw.findByPk(drawId, {
             transaction,
+            lock: transaction.LOCK.UPDATE,
         });
 
         if (!draw) {
             throw new Error('Sorteo no encontrado.');
+        }
+
+        if (draw.status !== 'published') {
+            throw new Error('El sorteo no está disponible para reservas.');
         }
 
         const requestedValues = [...input.values].sort((a, b) => a - b);

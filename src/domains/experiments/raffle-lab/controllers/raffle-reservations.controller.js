@@ -66,7 +66,10 @@ export async function createRaffleReservation(req, res) {
             });
         }
 
-        if (message === 'Uno o más números no están disponibles.') {
+        if (
+            message === 'Uno o más números no están disponibles.' ||
+            message === 'El sorteo no está disponible para reservas.'
+        ) {
             return res.status(409).json({
                 success: false,
                 message,

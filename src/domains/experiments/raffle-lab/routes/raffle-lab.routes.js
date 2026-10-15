@@ -1,3 +1,17 @@
+import {
+    listAdminReservations,
+    confirmAdminReservation,
+    cancelAdminReservation,
+} from '../controllers/raffle-reservations-admin.controller.js';
+
+import { authenticateAdmin } from '../../../../middlewares/auth.middleware.js';
+
+import {
+    createAdminDraw,
+    publishAdminDraw,
+    closeAdminDraw,
+} from '../controllers/raffle-draws-admin.controller.js';
+
 import { Router } from 'express';
 
 import {
@@ -5,10 +19,52 @@ import {
 } from '../controllers/raffle-reservations.controller.js';
 
 import {
+    listPublicRaffleDraws,
+    listPublicRaffleNumbers,
+} from '../controllers/raffle-draws.controller.js';
+
+import {
     raffleReservationLimiter,
 } from '../middlewares/raffle-rate-limit.middleware.js';
 
 const router = Router();
+
+const adminRouter = Router();
+
+adminRouter.use(authenticateAdmin);
+
+adminRouter.get(
+    '/draws/:drawId/reservations',
+    listAdminReservations
+);
+
+adminRouter.patch(
+    '/reservations/:reservationId/confirm',
+    confirmAdminReservation
+);
+
+adminRouter.patch(
+    '/reservations/:reservationId/cancel',
+    cancelAdminReservation
+);
+
+adminRouter.post('/draws', createAdminDraw);
+adminRouter.patch('/draws/:drawId/publish', publishAdminDraw);
+adminRouter.patch('/draws/:drawId/close', closeAdminDraw);
+
+router.use('/admin', adminRouter);
+
+
+
+router.get(
+    '/draws',
+    listPublicRaffleDraws
+);
+
+router.get(
+    '/draws/:drawId/numbers',
+    listPublicRaffleNumbers
+);
 
 router.post(
     '/reservations',
