@@ -104,3 +104,231 @@ export async function createReservation({
 
     });
 }
+
+
+export async function confirmReservation({ reservationId }) {
+    if (
+        !Number.isSafeInteger(reservationId) ||
+        reservationId < 1 ||
+        reservationId > 4294967295
+    ) {
+        throw new Error('Identificador de reserva inválido.');
+    }
+
+    return experimentsSequelize.transaction(async (transaction) => {
+        const reservation = await RaffleReservation.findByPk(
+            reservationId,
+            {
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+            }
+        );
+
+        if (!reservation) {
+            throw new Error('Reserva no encontrada.');
+        }
+
+        if (reservation.status !== 'active') {
+            throw new Error('La reserva no está activa.');
+        }
+
+        if (new Date(reservation.expires_at).getTime() <= Date.now()) {
+            throw new Error('La reserva ha expirado.');
+        }
+
+        const associations = await RaffleReservationNumber.findAll({
+            where: { reservation_id: reservationId },
+            order: [['number_id', 'ASC']],
+            transaction,
+        });
+
+        if (associations.length === 0) {
+            throw new Error('La reserva no tiene números asociados.');
+        }
+
+        const numberIds = associations.map(item => item.number_id);
+
+        const numbers = await RaffleNumber.findAll({
+            where: {
+                id: { [Op.in]: numberIds },
+                draw_id: reservation.draw_id,
+            },
+            order: [['id', 'ASC']],
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+
+        if (
+            numbers.length !== numberIds.length ||
+            numbers.some(number => number.status !== 'pending')
+        ) {
+            throw new Error('Los números de la reserva no están pendientes.');
+        }
+
+        if (new Date(reservation.expires_at).getTime() <= Date.now()) {
+            throw new Error('La reserva ha expirado.');
+        }
+
+        for (const number of numbers) {
+            await number.update(
+                { status: 'confirmed' },
+                { transaction }
+            );
+        }
+
+        await reservation.update(
+            { status: 'confirmed' },
+            { transaction }
+        );
+
+        return reservation;
+    });
+}
+
+
+export async function cancelReservation({ reservationId }) {
+    if (
+        !Number.isSafeInteger(reservationId) ||
+        reservationId < 1 ||
+        reservationId > 4294967295
+    ) {
+        throw new Error('Identificador de reserva inválido.');
+    }
+
+    return experimentsSequelize.transaction(async (transaction) => {
+        const reservation = await RaffleReservation.findByPk(
+            reservationId,
+            {
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+            }
+        );
+
+        if (!reservation) {
+            throw new Error('Reserva no encontrada.');
+        }
+
+        if (reservation.status !== 'active') {
+            throw new Error('La reserva no está activa.');
+        }
+
+        const associations = await RaffleReservationNumber.findAll({
+            where: { reservation_id: reservationId },
+            order: [['number_id', 'ASC']],
+            transaction,
+        });
+
+        if (associations.length === 0) {
+            throw new Error('La reserva no tiene números asociados.');
+        }
+
+        const numberIds = associations.map(item => item.number_id);
+
+        const numbers = await RaffleNumber.findAll({
+            where: {
+                id: { [Op.in]: numberIds },
+                draw_id: reservation.draw_id,
+            },
+            order: [['id', 'ASC']],
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+
+        if (
+            numbers.length !== numberIds.length ||
+            numbers.some(number => number.status !== 'pending')
+        ) {
+            throw new Error('Los números de la reserva no están pendientes.');
+        }
+
+        for (const number of numbers) {
+            await number.update(
+                { status: 'available' },
+                { transaction }
+            );
+        }
+
+        await reservation.update(
+            { status: 'cancelled' },
+            { transaction }
+        );
+
+        return reservation;
+    });
+}
+
+
+export async function expireReservation({ reservationId }) {
+    if (
+        !Number.isSafeInteger(reservationId) ||
+        reservationId < 1 ||
+        reservationId > 4294967295
+    ) {
+        throw new Error('Identificador de reserva inválido.');
+    }
+
+    return experimentsSequelize.transaction(async (transaction) => {
+        const reservation = await RaffleReservation.findByPk(
+            reservationId,
+            {
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+            }
+        );
+
+        if (!reservation) {
+            throw new Error('Reserva no encontrada.');
+        }
+
+        if (reservation.status !== 'active') {
+            throw new Error('La reserva no está activa.');
+        }
+
+        if (new Date(reservation.expires_at).getTime() > Date.now()) {
+            throw new Error('La reserva todavía no ha expirado.');
+        }
+
+        const associations = await RaffleReservationNumber.findAll({
+            where: { reservation_id: reservationId },
+            order: [['number_id', 'ASC']],
+            transaction,
+        });
+
+        if (associations.length === 0) {
+            throw new Error('La reserva no tiene números asociados.');
+        }
+
+        const numberIds = associations.map(item => item.number_id);
+
+        const numbers = await RaffleNumber.findAll({
+            where: {
+                id: { [Op.in]: numberIds },
+                draw_id: reservation.draw_id,
+            },
+            order: [['id', 'ASC']],
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+
+        if (
+            numbers.length !== numberIds.length ||
+            numbers.some(number => number.status !== 'pending')
+        ) {
+            throw new Error('Los números de la reserva no están pendientes.');
+        }
+
+        for (const number of numbers) {
+            await number.update(
+                { status: 'available' },
+                { transaction }
+            );
+        }
+
+        await reservation.update(
+            { status: 'expired' },
+            { transaction }
+        );
+
+        return reservation;
+    });
+}
