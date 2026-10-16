@@ -33,10 +33,10 @@ export const authenticateAdmin = async (req, res, next) => {
     // Buscar usuario en base de datos
     const user = await User.findByPk(decoded.id);
 
-    if (!user) {
+    if (!user || user.state !== 1) {
       return res.status(401).json({
         success: false,
-        message: 'Usuario no encontrado'
+        message: 'Usuario no encontrado o cuenta desactivada'
       });
     }
 
