@@ -33,6 +33,18 @@ const adminRouter = Router();
 
 adminRouter.use(authenticateAdmin);
 
+adminRouter.get('/session', (req, res) => {
+    return res.status(200).json({
+        success: true,
+        user: {
+            id: req.user.id,
+            name: req.user.name,
+            email: req.user.email,
+            rol: req.user.rol,
+        },
+    });
+});
+
 adminRouter.get(
     '/draws/:drawId/reservations',
     listAdminReservations
