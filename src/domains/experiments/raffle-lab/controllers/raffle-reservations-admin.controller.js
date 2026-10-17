@@ -11,6 +11,10 @@ import {
     cancelReservation,
 } from '../services/raffle-reservations.service.js';
 
+import {
+    createAdminReservation,
+} from '../services/raffle-reservations-admin.service.js';
+
 function parseId(value) {
     if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
         return null;
@@ -192,4 +196,77 @@ export async function confirmAdminReservation(req, res) {
 
 export async function cancelAdminReservation(req, res) {
     return changeReservation(req, res, cancelReservation);
+}
+
+export async function createAdminManualReservation(req, res) {
+    const drawId = parseId(req.params.drawId);
+
+    if (!drawId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Identificador de sorteo inválido.',
+        });
+    }
+
+    try {
+        const reservation = await createAdminReservation({
+            drawId,
+            participantName: req.body?.participantName,
+            values: req.body?.values,
+            paymentStatus: req.body?.paymentStatus,
+        });
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                id: reservation.id,
+                drawId: reservation.draw_id,
+                participantName: reservation.participant_name,
+                status: reservation.status,
+                source: reservation.source,
+                expiresAt: reservation.expires_at,
+            },
+        });
+    } catch (error) {
+        const message = error.message;
+
+        if (
+            message === 'Identificador de sorteo inválido.' ||
+            message === 'Datos de reserva inválidos.'
+        ) {
+            return res.status(400).json({
+                success: false,
+                message,
+            });
+        }
+
+        if (message === 'Sorteo no encontrado.') {
+            return res.status(404).json({
+                success: false,
+                message,
+            });
+        }
+
+        if ([
+            'El sorteo no admite nuevas reservas.',
+            'Número fuera del rango del sorteo.',
+            'Uno o más números no existen en el sorteo.',
+            'Uno o más números no están disponibles.',
+        ].includes(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
+        console.error(
+            '[Raffle Lab] Error registrando reserva manual:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo registrar la reserva manual.',
+        });
+    }
 }

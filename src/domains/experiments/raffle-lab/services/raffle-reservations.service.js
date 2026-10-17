@@ -137,7 +137,10 @@ export async function confirmReservation({ reservationId }) {
             throw new Error('La reserva no está activa.');
         }
 
-        if (new Date(reservation.expires_at).getTime() <= Date.now()) {
+        if (
+            reservation.expires_at !== null &&
+            new Date(reservation.expires_at).getTime() <= Date.now()
+        ) {
             throw new Error('La reserva ha expirado.');
         }
 
@@ -170,7 +173,10 @@ export async function confirmReservation({ reservationId }) {
             throw new Error('Los números de la reserva no están pendientes.');
         }
 
-        if (new Date(reservation.expires_at).getTime() <= Date.now()) {
+        if (
+            reservation.expires_at !== null &&
+            new Date(reservation.expires_at).getTime() <= Date.now()
+        ) {
             throw new Error('La reserva ha expirado.');
         }
 
@@ -289,7 +295,10 @@ export async function expireReservation({ reservationId }) {
             throw new Error('La reserva no está activa.');
         }
 
-        if (new Date(reservation.expires_at).getTime() > Date.now()) {
+        if (
+            reservation.expires_at === null ||
+            new Date(reservation.expires_at).getTime() > Date.now()
+        ) {
             throw new Error('La reserva todavía no ha expirado.');
         }
 

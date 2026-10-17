@@ -25,9 +25,14 @@ export const RaffleReservation = experimentsSequelize.define('RaffleReservation'
         allowNull: false,
         defaultValue: 'active',
     },
+    source: {
+        type: DataTypes.ENUM('public', 'manual'),
+        allowNull: false,
+        defaultValue: 'public',
+    },
     expires_at: {
         type: DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
     },
 }, {
     tableName: 'raffle_reservations',
