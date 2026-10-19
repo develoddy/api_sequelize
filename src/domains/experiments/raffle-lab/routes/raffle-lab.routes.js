@@ -8,6 +8,8 @@ import {
 import { authenticateAdmin } from '../../../../middlewares/auth.middleware.js';
 
 import {
+    listAdminDraws,
+    listAdminDrawNumbers,
     createAdminDraw,
     publishAdminDraw,
     closeAdminDraw,
@@ -66,6 +68,8 @@ adminRouter.patch(
     cancelAdminReservation
 );
 
+adminRouter.get('/draws', listAdminDraws);
+adminRouter.get('/draws/:drawId/numbers', listAdminDrawNumbers);
 adminRouter.post('/draws', createAdminDraw);
 adminRouter.patch('/draws/:drawId/publish', publishAdminDraw);
 adminRouter.patch('/draws/:drawId/close', closeAdminDraw);

@@ -1,3 +1,5 @@
+import { RaffleDraw, RaffleNumber } from '../models/raffle-associations.js';
+
 import {
     createAdminRaffleDraw,
     changeAdminRaffleDrawStatus,
@@ -37,6 +39,80 @@ function serialize(draw) {
         totalNumbers: draw.total_numbers,
         status: draw.status,
     };
+}
+
+export async function listAdminDraws(req, res) {
+    try {
+        const draws = await RaffleDraw.findAll({
+            attributes: ['id', 'name', 'total_numbers', 'status'],
+            order: [['id', 'DESC']],
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: draws.map(serialize),
+        });
+    } catch (error) {
+        console.error('[Raffle Lab] Error consultando sorteos administrativos:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudieron consultar los sorteos.',
+        });
+    }
+}
+
+export async function listAdminDrawNumbers(req, res) {
+    const rawDrawId = req.params.drawId;
+    const drawId = Number(rawDrawId);
+
+    if (
+        !/^[1-9]\d*$/.test(rawDrawId) ||
+        !Number.isSafeInteger(drawId) ||
+        drawId > 4294967295
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: 'Identificador de sorteo inválido.',
+        });
+    }
+
+    try {
+        const draw = await RaffleDraw.findByPk(drawId, {
+            attributes: ['id'],
+        });
+
+        if (!draw) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sorteo no encontrado.',
+            });
+        }
+
+        const numbers = await RaffleNumber.findAll({
+            where: { draw_id: drawId },
+            attributes: ['value', 'status'],
+            order: [['value', 'ASC']],
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                drawId,
+                numbers: numbers.map(number => ({
+                    value: number.value,
+                    status: number.status,
+                })),
+            },
+        });
+    } catch (error) {
+        console.error('[Raffle Lab] Error consultando números administrativos:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudieron consultar los números.',
+        });
+    }
 }
 
 export async function createAdminDraw(req, res) {
