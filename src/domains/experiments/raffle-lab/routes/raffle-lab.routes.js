@@ -1,3 +1,6 @@
+import {
+    uploadRafflePrizeImage,
+} from '../middlewares/raffle-prize-upload.middleware.js';
 import { uploadRaffleBanner } from '../middlewares/raffle-banner-upload.middleware.js';
 import {
     handleRaffleBannerUpload,
@@ -23,6 +26,21 @@ import {
     closeAdminDraw,
     updateAdminDrawPresentation,
 } from '../controllers/raffle-draws-admin.controller.js';
+
+import {
+    listPublicRafflePrizes,
+} from '../controllers/raffle-prizes.controller.js';
+
+import {
+    listAdminRafflePrizes,
+    createAdminRafflePrize,
+    updateAdminRafflePrize,
+    deleteAdminRafflePrize,
+    handleRafflePrizeImageUpload,
+    handleRafflePrizeImageUploadError,
+    uploadAdminRafflePrizeImage,
+    removeAdminRafflePrizeImage,
+} from '../controllers/raffle-prizes-admin.controller.js';
 
 import { Router } from 'express';
 
@@ -77,6 +95,26 @@ adminRouter.patch(
     cancelAdminReservation
 );
 
+adminRouter.get(
+    '/draws/:drawId/prizes',
+    listAdminRafflePrizes
+);
+
+adminRouter.post(
+    '/draws/:drawId/prizes',
+    createAdminRafflePrize
+);
+
+adminRouter.patch(
+    '/draws/:drawId/prizes/:prizeId',
+    updateAdminRafflePrize
+);
+
+adminRouter.delete(
+    '/draws/:drawId/prizes/:prizeId',
+    deleteAdminRafflePrize
+);
+
 adminRouter.get('/draws', listAdminDraws);
 adminRouter.get('/draws/:drawId/numbers', listAdminDrawNumbers);
 adminRouter.post('/draws', createAdminDraw);
@@ -101,6 +139,20 @@ adminRouter.patch(
 adminRouter.patch('/draws/:drawId/publish', publishAdminDraw);
 adminRouter.patch('/draws/:drawId/close', closeAdminDraw);
 
+
+adminRouter.post(
+    '/draws/:drawId/prizes/:prizeId/image',
+    handleRafflePrizeImageUpload,
+    uploadRafflePrizeImage,
+    handleRafflePrizeImageUploadError,
+    uploadAdminRafflePrizeImage
+);
+
+adminRouter.delete(
+    '/draws/:drawId/prizes/:prizeId/image',
+    removeAdminRafflePrizeImage
+);
+
 router.use('/admin', adminRouter);
 
 
@@ -113,6 +165,11 @@ router.get(
 router.get(
     '/draws/:drawId/numbers',
     listPublicRaffleNumbers
+);
+
+router.get(
+    '/draws/:drawId/prizes',
+    listPublicRafflePrizes
 );
 
 router.post(

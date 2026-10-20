@@ -1,7 +1,18 @@
 import { RaffleDraw } from './raffle-draw.model.js';
+import { RafflePrize } from './raffle-prize.model.js';
 import { RaffleNumber } from './raffle-number.model.js';
 import { RaffleReservation } from './raffle-reservation.model.js';
 import { RaffleReservationNumber } from './raffle-reservation-number.model.js';
+
+RaffleDraw.hasMany(RafflePrize, {
+    foreignKey: 'draw_id',
+    as: 'prizes',
+});
+
+RafflePrize.belongsTo(RaffleDraw, {
+    foreignKey: 'draw_id',
+    as: 'draw',
+});
 
 RaffleDraw.hasMany(RaffleNumber, {
     foreignKey: 'draw_id',
@@ -39,6 +50,7 @@ RaffleNumber.belongsToMany(RaffleReservation, {
 
 export {
     RaffleDraw,
+    RafflePrize,
     RaffleNumber,
     RaffleReservation,
     RaffleReservationNumber,
