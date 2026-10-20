@@ -1,3 +1,11 @@
+import { uploadRaffleBanner } from '../middlewares/raffle-banner-upload.middleware.js';
+import {
+    handleRaffleBannerUpload,
+    uploadAdminDrawBanner,
+    removeAdminDrawBanner,
+    handleRaffleBannerUploadError,
+} from '../controllers/raffle-banner-admin.controller.js';
+
 import {
     listAdminReservations,
     confirmAdminReservation,
@@ -13,6 +21,7 @@ import {
     createAdminDraw,
     publishAdminDraw,
     closeAdminDraw,
+    updateAdminDrawPresentation,
 } from '../controllers/raffle-draws-admin.controller.js';
 
 import { Router } from 'express';
@@ -71,6 +80,24 @@ adminRouter.patch(
 adminRouter.get('/draws', listAdminDraws);
 adminRouter.get('/draws/:drawId/numbers', listAdminDrawNumbers);
 adminRouter.post('/draws', createAdminDraw);
+adminRouter.post(
+    '/draws/:drawId/banner',
+    handleRaffleBannerUpload,
+    uploadRaffleBanner,
+    uploadAdminDrawBanner,
+    handleRaffleBannerUploadError
+);
+
+adminRouter.delete(
+    '/draws/:drawId/banner/:variant',
+    handleRaffleBannerUpload,
+    removeAdminDrawBanner
+);
+
+adminRouter.patch(
+    '/draws/:drawId/presentation',
+    updateAdminDrawPresentation
+);
 adminRouter.patch('/draws/:drawId/publish', publishAdminDraw);
 adminRouter.patch('/draws/:drawId/close', closeAdminDraw);
 

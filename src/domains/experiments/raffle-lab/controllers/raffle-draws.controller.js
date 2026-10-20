@@ -18,6 +18,12 @@ export async function listPublicRaffleDraws(req, res) {
                 'name',
                 'total_numbers',
                 'status',
+                'headline',
+                'description',
+                'banner_image',
+                'banner_image_mobile',
+                'ticket_price',
+                'draw_date',
             ],
             order: [['id', 'ASC']],
         });
@@ -29,6 +35,12 @@ export async function listPublicRaffleDraws(req, res) {
                 name: draw.name,
                 totalNumbers: draw.total_numbers,
                 status: draw.status,
+                headline: draw.headline,
+                description: draw.description,
+                bannerImage: draw.banner_image,
+                bannerImageMobile: draw.banner_image_mobile,
+                ticketPrice: draw.ticket_price,
+                drawDate: draw.draw_date,
             })),
         });
     } catch (error) {

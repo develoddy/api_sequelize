@@ -12,6 +12,30 @@ export const RaffleDraw = experimentsSequelize.define('RaffleDraw', {
         type: DataTypes.STRING(150),
         allowNull: false,
     },
+    headline: {
+        type: DataTypes.STRING(200),
+        allowNull: true,
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    banner_image: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+    },
+    banner_image_mobile: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+    },
+    ticket_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+    },
+    draw_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     total_numbers: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,

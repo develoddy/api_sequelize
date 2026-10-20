@@ -3,6 +3,7 @@ import { RaffleDraw, RaffleNumber } from '../models/raffle-associations.js';
 import {
     createAdminRaffleDraw,
     changeAdminRaffleDrawStatus,
+    updateAdminRaffleDrawPresentation,
 } from '../services/raffle-draws-admin.service.js';
 
 function sendError(res, error) {
@@ -11,7 +12,8 @@ function sendError(res, error) {
     if (
         message === 'Datos de sorteo inválidos.' ||
         message === 'Identificador de sorteo inválido.' ||
-        message === 'Operación de sorteo inválida.'
+        message === 'Operación de sorteo inválida.' ||
+        message === 'Datos de presentación inválidos.'
     ) {
         return res.status(400).json({ success: false, message });
     }
@@ -38,13 +40,30 @@ function serialize(draw) {
         name: draw.name,
         totalNumbers: draw.total_numbers,
         status: draw.status,
+        headline: draw.headline,
+        description: draw.description,
+        bannerImage: draw.banner_image,
+        bannerImageMobile: draw.banner_image_mobile,
+        ticketPrice: draw.ticket_price,
+        drawDate: draw.draw_date,
     };
 }
 
 export async function listAdminDraws(req, res) {
     try {
         const draws = await RaffleDraw.findAll({
-            attributes: ['id', 'name', 'total_numbers', 'status'],
+            attributes: [
+                'id',
+                'name',
+                'total_numbers',
+                'status',
+                'headline',
+                'description',
+                'banner_image',
+                'banner_image_mobile',
+                'ticket_price',
+                'draw_date',
+            ],
             order: [['id', 'DESC']],
         });
 
@@ -163,4 +182,34 @@ export async function publishAdminDraw(req, res) {
 
 export async function closeAdminDraw(req, res) {
     return changeStatus(req, res, 'close');
+}
+
+export async function updateAdminDrawPresentation(req, res) {
+    try {
+        const rawDrawId = req.params.drawId;
+        const drawId = Number(rawDrawId);
+
+        if (
+            !/^[1-9]\d*$/.test(rawDrawId) ||
+            !Number.isSafeInteger(drawId) ||
+            drawId > 4294967295
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Identificador de sorteo inválido.',
+            });
+        }
+
+        const draw = await updateAdminRaffleDrawPresentation({
+            drawId,
+            presentation: req.body,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: serialize(draw),
+        });
+    } catch (error) {
+        return sendError(res, error);
+    }
 }
