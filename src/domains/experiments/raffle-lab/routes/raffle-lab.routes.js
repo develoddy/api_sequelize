@@ -42,6 +42,17 @@ import {
     removeAdminRafflePrizeImage,
 } from '../controllers/raffle-prizes-admin.controller.js';
 
+import {
+    listAdminRaffleResults,
+    createAdminRaffleResult,
+    updateAdminRaffleResult,
+    publishAdminRaffleResults,
+} from '../controllers/raffle-results-admin.controller.js';
+
+import {
+    listPublicRaffleResults,
+} from '../controllers/raffle-results.controller.js';
+
 import { Router } from 'express';
 
 import {
@@ -115,6 +126,26 @@ adminRouter.delete(
     deleteAdminRafflePrize
 );
 
+adminRouter.get(
+    '/draws/:drawId/results',
+    listAdminRaffleResults
+);
+
+adminRouter.post(
+    '/draws/:drawId/results',
+    createAdminRaffleResult
+);
+
+adminRouter.patch(
+    '/draws/:drawId/results/publish',
+    publishAdminRaffleResults
+);
+
+adminRouter.patch(
+    '/draws/:drawId/results/:prizeId',
+    updateAdminRaffleResult
+);
+
 adminRouter.get('/draws', listAdminDraws);
 adminRouter.get('/draws/:drawId/numbers', listAdminDrawNumbers);
 adminRouter.post('/draws', createAdminDraw);
@@ -170,6 +201,11 @@ router.get(
 router.get(
     '/draws/:drawId/prizes',
     listPublicRafflePrizes
+);
+
+router.get(
+    '/draws/:drawId/results',
+    listPublicRaffleResults
 );
 
 router.post(

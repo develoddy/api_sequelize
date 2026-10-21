@@ -2,6 +2,7 @@ import { experimentsSequelize } from '../../../../database/experiments.database.
 import {
     RaffleDraw,
     RaffleNumber,
+    RaffleReservation,
 } from '../models/raffle-associations.js';
 
 const MAX_NUMBERS = 10000;
@@ -79,6 +80,23 @@ export async function changeAdminRaffleDrawStatus({ drawId, action }) {
 
         if (draw.status !== transition.from) {
             throw new Error('Transición de estado no permitida.');
+        }
+
+        if (action === 'close') {
+            const activeReservation = await RaffleReservation.findOne({
+                where: {
+                    draw_id: drawId,
+                    status: 'active',
+                },
+                attributes: ['id'],
+                transaction,
+            });
+
+            if (activeReservation) {
+                throw new Error(
+                    'El sorteo tiene reservas activas pendientes de resolver.'
+                );
+            }
         }
 
         await draw.update(

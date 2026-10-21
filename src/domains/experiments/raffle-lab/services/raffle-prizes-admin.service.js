@@ -10,7 +10,26 @@ import { cleanupUnusedRafflePrizeImage } from './raffle-prize-cleanup.service.js
 import {
     RaffleDraw,
     RafflePrize,
+    RaffleResult,
 } from '../models/raffle-associations.js';
+
+async function lockEditableRaffleDraw({ drawId, transaction }) {
+    const draw = await RaffleDraw.findByPk(drawId, {
+        attributes: ['id', 'results_published_at'],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!draw) {
+        throw new Error('Sorteo no encontrado.');
+    }
+
+    if (draw.results_published_at !== null) {
+        throw new Error('No se pueden modificar premios con resultados publicados.');
+    }
+
+    return draw;
+}
 
 export async function createAdminRafflePrize({ drawId, prize }) {
     if (
@@ -61,14 +80,10 @@ export async function createAdminRafflePrize({ drawId, prize }) {
 
     try {
         return await experimentsSequelize.transaction(async transaction => {
-            const draw = await RaffleDraw.findByPk(drawId, {
-                attributes: ['id'],
+            await lockEditableRaffleDraw({
+                drawId,
                 transaction,
             });
-
-            if (!draw) {
-                throw new Error('Sorteo no encontrado.');
-            }
 
             return RafflePrize.create({
                 draw_id: drawId,
@@ -162,6 +177,11 @@ export async function updateAdminRafflePrize({
 
     try {
         return await experimentsSequelize.transaction(async transaction => {
+            await lockEditableRaffleDraw({
+                drawId,
+                transaction,
+            });
+
             const prize = await RafflePrize.findOne({
                 where: {
                     id: prizeId,
@@ -206,6 +226,11 @@ export async function deleteAdminRafflePrize({
     let previousImagePath = null;
 
     const result = await experimentsSequelize.transaction(async transaction => {
+        await lockEditableRaffleDraw({
+            drawId,
+            transaction,
+        });
+
         const prize = await RafflePrize.findOne({
             where: {
                 id: prizeId,
@@ -220,6 +245,16 @@ export async function deleteAdminRafflePrize({
         }
 
         previousImagePath = prize.image_path;
+
+        const existingResult = await RaffleResult.findOne({
+            where: { prize_id: prizeId },
+            attributes: ['id'],
+            transaction,
+        });
+
+        if (existingResult) {
+            throw new Error('No se puede eliminar un premio con un resultado registrado.');
+        }
 
         await prize.destroy({ transaction });
 
@@ -250,6 +285,8 @@ export async function updateAdminRafflePrizeImage({
     drawId,
     prizeId,
     file,
+    storeImage = storeRafflePrizeImage,
+    removeStoredImage = unlink,
 }) {
     if (
         !Number.isSafeInteger(drawId) ||
@@ -278,7 +315,7 @@ export async function updateAdminRafflePrizeImage({
         throw new Error('Premio no encontrado.');
     }
 
-    const imagePath = await storeRafflePrizeImage({
+    const imagePath = await storeImage({
         drawId,
         file,
     });
@@ -288,6 +325,11 @@ export async function updateAdminRafflePrizeImage({
 
     try {
         updatedPrize = await experimentsSequelize.transaction(async transaction => {
+            await lockEditableRaffleDraw({
+                drawId,
+                transaction,
+            });
+
             const prize = await RafflePrize.findOne({
                 where: {
                     id: prizeId,
@@ -323,7 +365,7 @@ export async function updateAdminRafflePrizeImage({
         );
 
         try {
-            await unlink(filePath);
+            await removeStoredImage(filePath);
         } catch (cleanupError) {
             console.error(
                 'No se pudo limpiar la imagen del premio:',
@@ -369,6 +411,11 @@ export async function removeAdminRafflePrizeImage({
     let previousImagePath = null;
 
     const updatedPrize = await experimentsSequelize.transaction(async transaction => {
+        await lockEditableRaffleDraw({
+            drawId,
+            transaction,
+        });
+
         const prize = await RafflePrize.findOne({
             where: {
                 id: prizeId,

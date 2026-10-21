@@ -45,6 +45,11 @@ export const RaffleDraw = experimentsSequelize.define('RaffleDraw', {
         allowNull: false,
         defaultValue: 'draft',
     },
+    results_published_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+    },
 }, {
     tableName: 'raffle_draws',
     timestamps: true,

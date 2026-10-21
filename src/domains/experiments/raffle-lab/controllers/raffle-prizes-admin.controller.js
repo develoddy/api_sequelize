@@ -15,6 +15,13 @@ import {
     RafflePrize,
 } from '../models/raffle-associations.js';
 
+function isRafflePrizeConflict(message) {
+    return [
+        'No se pueden modificar premios con resultados publicados.',
+        'No se puede eliminar un premio con un resultado registrado.',
+    ].includes(message);
+}
+
 export async function listAdminRafflePrizes(req, res) {
     const rawDrawId = req.params.drawId;
     const drawId = Number(rawDrawId);
@@ -142,6 +149,13 @@ export async function createAdminRafflePrize(req, res) {
             });
         }
 
+        if (isRafflePrizeConflict(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
         console.error(
             '[Raffle Lab] Error creando premio administrativo:',
             error
@@ -220,6 +234,13 @@ export async function updateAdminRafflePrize(req, res) {
             });
         }
 
+        if (isRafflePrizeConflict(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
         console.error(
             '[Raffle Lab] Error actualizando premio administrativo:',
             error
@@ -280,6 +301,13 @@ export async function deleteAdminRafflePrize(req, res) {
             });
         }
 
+        if (isRafflePrizeConflict(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
         console.error(
             '[Raffle Lab] Error eliminando premio administrativo:',
             error
@@ -318,6 +346,13 @@ function sendPrizeImageError(res, error) {
 
     if (message === 'Premio no encontrado.') {
         return res.status(404).json({
+            success: false,
+            message,
+        });
+    }
+
+    if (isRafflePrizeConflict(message)) {
+        return res.status(409).json({
             success: false,
             message,
         });

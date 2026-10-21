@@ -22,7 +22,10 @@ function sendError(res, error) {
         return res.status(404).json({ success: false, message });
     }
 
-    if (message === 'Transición de estado no permitida.') {
+    if (
+        message === 'Transición de estado no permitida.' ||
+        message === 'El sorteo tiene reservas activas pendientes de resolver.'
+    ) {
         return res.status(409).json({ success: false, message });
     }
 

@@ -121,6 +121,32 @@ export async function confirmReservation({ reservationId }) {
     }
 
     return experimentsSequelize.transaction(async (transaction) => {
+        const reservationReference = await RaffleReservation.findByPk(
+            reservationId,
+            {
+                attributes: ['draw_id'],
+                transaction,
+            }
+        );
+
+        if (!reservationReference) {
+            throw new Error('Reserva no encontrada.');
+        }
+
+        const draw = await RaffleDraw.findByPk(
+            reservationReference.draw_id,
+            {
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+            }
+        );
+
+        if (!draw || !['draft', 'published'].includes(draw.status)) {
+            throw new Error(
+                'El sorteo no admite confirmaciones de reservas.'
+            );
+        }
+
         const reservation = await RaffleReservation.findByPk(
             reservationId,
             {
@@ -131,6 +157,10 @@ export async function confirmReservation({ reservationId }) {
 
         if (!reservation) {
             throw new Error('Reserva no encontrada.');
+        }
+
+        if (reservation.draw_id !== draw.id) {
+            throw new Error('La reserva no pertenece al sorteo.');
         }
 
         if (reservation.status !== 'active') {

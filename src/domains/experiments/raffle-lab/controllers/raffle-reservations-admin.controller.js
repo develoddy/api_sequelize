@@ -169,6 +169,8 @@ async function changeReservation(req, res, operation) {
 
         const conflictMessages = new Set([
             'La reserva no está activa.',
+            'El sorteo no admite confirmaciones de reservas.',
+            'La reserva no pertenece al sorteo.',
             'La reserva ha expirado.',
             'La reserva no tiene números asociados.',
             'Los números de la reserva no están pendientes.',

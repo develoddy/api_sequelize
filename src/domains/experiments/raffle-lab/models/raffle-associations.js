@@ -1,5 +1,6 @@
 import { RaffleDraw } from './raffle-draw.model.js';
 import { RafflePrize } from './raffle-prize.model.js';
+import { RaffleResult } from './raffle-result.model.js';
 import { RaffleNumber } from './raffle-number.model.js';
 import { RaffleReservation } from './raffle-reservation.model.js';
 import { RaffleReservationNumber } from './raffle-reservation-number.model.js';
@@ -48,9 +49,40 @@ RaffleNumber.belongsToMany(RaffleReservation, {
     as: 'reservations',
 });
 
+RaffleDraw.hasMany(RaffleResult, {
+    foreignKey: 'draw_id',
+    as: 'results',
+});
+
+RaffleResult.belongsTo(RaffleDraw, {
+    foreignKey: 'draw_id',
+    as: 'draw',
+});
+
+RafflePrize.hasOne(RaffleResult, {
+    foreignKey: 'prize_id',
+    as: 'result',
+});
+
+RaffleResult.belongsTo(RafflePrize, {
+    foreignKey: 'prize_id',
+    as: 'prize',
+});
+
+RaffleNumber.hasOne(RaffleResult, {
+    foreignKey: 'number_id',
+    as: 'result',
+});
+
+RaffleResult.belongsTo(RaffleNumber, {
+    foreignKey: 'number_id',
+    as: 'number',
+});
+
 export {
     RaffleDraw,
     RafflePrize,
+    RaffleResult,
     RaffleNumber,
     RaffleReservation,
     RaffleReservationNumber,
