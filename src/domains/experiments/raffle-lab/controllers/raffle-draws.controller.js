@@ -24,6 +24,7 @@ export async function listPublicRaffleDraws(req, res) {
                 'banner_image_mobile',
                 'ticket_price',
                 'draw_date',
+                'whatsapp_number',
             ],
             order: [['id', 'ASC']],
         });
@@ -41,6 +42,7 @@ export async function listPublicRaffleDraws(req, res) {
                 bannerImageMobile: draw.banner_image_mobile,
                 ticketPrice: draw.ticket_price,
                 drawDate: draw.draw_date,
+                whatsappNumber: draw.whatsapp_number,
             })),
         });
     } catch (error) {

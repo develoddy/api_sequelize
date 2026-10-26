@@ -24,7 +24,9 @@ function sendError(res, error) {
 
     if (
         message === 'Transición de estado no permitida.' ||
-        message === 'El sorteo tiene reservas activas pendientes de resolver.'
+        message === 'El sorteo tiene reservas activas pendientes de resolver.' ||
+        message === 'Configura un WhatsApp válido antes de publicar el sorteo.' ||
+        message === 'No puedes eliminar el WhatsApp de un sorteo publicado.'
     ) {
         return res.status(409).json({ success: false, message });
     }
@@ -49,6 +51,7 @@ function serialize(draw) {
         bannerImageMobile: draw.banner_image_mobile,
         ticketPrice: draw.ticket_price,
         drawDate: draw.draw_date,
+        whatsappNumber: draw.whatsapp_number,
     };
 }
 
@@ -66,6 +69,7 @@ export async function listAdminDraws(req, res) {
                 'banner_image_mobile',
                 'ticket_price',
                 'draw_date',
+                'whatsapp_number',
             ],
             order: [['id', 'DESC']],
         });

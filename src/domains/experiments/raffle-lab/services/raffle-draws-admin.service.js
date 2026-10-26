@@ -82,6 +82,17 @@ export async function changeAdminRaffleDrawStatus({ drawId, action }) {
             throw new Error('Transición de estado no permitida.');
         }
 
+        if (action === 'publish') {
+            if (
+                !draw.whatsapp_number ||
+                !/^[1-9][0-9]{7,14}$/.test(draw.whatsapp_number)
+            ) {
+                throw new Error(
+                    'Configura un WhatsApp válido antes de publicar el sorteo.'
+                );
+            }
+        }
+
         if (action === 'close') {
             const activeReservation = await RaffleReservation.findOne({
                 where: {
@@ -125,7 +136,7 @@ export async function updateAdminRaffleDrawPresentation({ drawId, presentation }
         throw new Error('Datos de presentación inválidos.');
     }
 
-    const allowedFields = ['headline', 'description', 'ticketPrice', 'drawDate'];
+    const allowedFields = ['headline', 'description', 'ticketPrice', 'drawDate', 'whatsappNumber'];
     const providedFields = Object.keys(presentation);
 
     if (
@@ -198,6 +209,38 @@ export async function updateAdminRaffleDrawPresentation({ drawId, presentation }
         changes.draw_date = value === null ? null : new Date(value);
     }
 
+
+    if (Object.hasOwn(presentation, 'whatsappNumber')) {
+        const value = presentation.whatsappNumber;
+
+        if (value !== null && typeof value !== 'string') {
+            throw new Error('Datos de presentación inválidos.');
+        }
+
+        if (value === null || value.trim() === '') {
+            changes.whatsapp_number = null;
+        } else {
+            const trimmed = value.trim();
+
+            // Se admite + inicial, espacios, guiones y paréntesis.
+            if (!/^\+?[0-9\s()-]+$/.test(trimmed)) {
+                throw new Error('Datos de presentación inválidos.');
+            }
+
+            const normalized = trimmed.replace(/[^0-9]/g, '');
+
+            if (
+                normalized.length < 8 ||
+                normalized.length > 15 ||
+                normalized.startsWith('0')
+            ) {
+                throw new Error('Datos de presentación inválidos.');
+            }
+
+            changes.whatsapp_number = normalized;
+        }
+    }
+
     return experimentsSequelize.transaction(async transaction => {
         const draw = await RaffleDraw.findByPk(drawId, {
             transaction,
@@ -206,6 +249,16 @@ export async function updateAdminRaffleDrawPresentation({ drawId, presentation }
 
         if (!draw) {
             throw new Error('Sorteo no encontrado.');
+        }
+
+        if (
+            draw.status === 'published' &&
+            Object.hasOwn(changes, 'whatsapp_number') &&
+            changes.whatsapp_number === null
+        ) {
+            throw new Error(
+                'No puedes eliminar el WhatsApp de un sorteo publicado.'
+            );
         }
 
         await draw.update(changes, { transaction });

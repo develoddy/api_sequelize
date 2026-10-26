@@ -36,6 +36,10 @@ export const RaffleDraw = experimentsSequelize.define('RaffleDraw', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    whatsapp_number: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+    },
     total_numbers: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,
