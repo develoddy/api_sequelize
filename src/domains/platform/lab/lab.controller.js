@@ -24,6 +24,37 @@ function parseJsonArray(value) {
 
 
 /**
+ * Obtiene la ruta pública de Orbit desde Module.config.
+ * Acepta rutas internas con letras minúsculas, números, - y _.
+ */
+function parseLabRoute(value) {
+  let config = value;
+
+  if (typeof config === 'string') {
+    try {
+      config = JSON.parse(config);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    return null;
+  }
+
+  const route = config.lab?.route;
+
+  if (
+    typeof route !== 'string' ||
+    !/^\/[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/.test(route)
+  ) {
+    return null;
+  }
+
+  return route;
+}
+
+/**
  * GET /api/lab/experiments
  *
  * Catálogo público de experimentos publicados en LujanDev Lab.
@@ -48,7 +79,8 @@ export async function listExperiments(req, res) {
         'color',
         'status',
         'screenshots',
-        'features'
+        'features',
+        'config'
       ],
       order: [['name', 'ASC']]
     });
@@ -62,7 +94,8 @@ export async function listExperiments(req, res) {
       color: module.color,
       status: module.status,
       screenshots: parseJsonArray(module.screenshots),
-      features: parseJsonArray(module.features)
+      features: parseJsonArray(module.features),
+      route: parseLabRoute(module.config)
     }));
 
     return res.json({
