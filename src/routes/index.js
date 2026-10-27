@@ -1,3 +1,4 @@
+import labRoutes from '../domains/platform/lab/lab.routes.js';
 import express from "express";
 import productsRoutes from '../domains/commerce/catalog/routes/products.routes.js';
 import usersRoutes from '../domains/identity/users/routes/users.routes.js';
@@ -100,7 +101,8 @@ app.use("/backups", backupsRoutes); // ✅ Gestión de backups MySQL
 app.use("/database-management", databaseManagementRoutes); // 🚨 Gestión de base de datos (SUPER_ADMIN)
 app.use("/", seoRoutes); // ✅ SEO Management (sitemap.xml, robots.txt)
 app.use("/email-testing", emailTestingRoutes); // 🧪 Email Testing (NO afecta Printful)
-app.use("/", modulesRoutes); // 🚀 Multi-Module System (Levels-style)
+app.use("/", modulesRoutes);
+app.use("/", labRoutes); // 🚀 Multi-Module System (Levels-style)
 app.use("/", saasRoutes); // 🚀 SaaS Tenants & Trials
 app.use("/tenants", saasEmailTestingRoutes); // 🧪 Tenants list for testing
 app.use("/saas-email-testing", saasEmailTestingRoutes); // 🧪 SaaS Email Testing

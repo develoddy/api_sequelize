@@ -275,7 +275,8 @@ export const updateModule = async (req, res) => {
       tech_stack,
       requirements,
       // 🚀 SaaS fields
-      saas_config
+      saas_config,
+      show_in_store
     } = req.body;
 
     const module = await Module.findOne({ where: { key } });
@@ -289,6 +290,15 @@ export const updateModule = async (req, res) => {
 
     // Actualizar solo campos proporcionados
     const updates = {};
+    if (show_in_store !== undefined) {
+      if (typeof show_in_store !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          error: 'show_in_store must be a boolean'
+        });
+      }
+      updates.show_in_store = show_in_store;
+    }
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (type !== undefined) updates.type = type;
