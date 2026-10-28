@@ -14,6 +14,8 @@ import {
     confirmAdminReservation,
     cancelAdminReservation,
     createAdminManualReservation,
+    updateAdminParticipant,
+    changeAdminNumbers,
 } from '../controllers/raffle-reservations-admin.controller.js';
 
 import { authenticateAdmin } from '../../../../middlewares/auth.middleware.js';
@@ -94,6 +96,16 @@ adminRouter.get(
 adminRouter.post(
     '/draws/:drawId/reservations',
     createAdminManualReservation
+);
+
+adminRouter.patch(
+    '/reservations/:reservationId/participant',
+    updateAdminParticipant
+);
+
+adminRouter.patch(
+    '/reservations/:reservationId/numbers',
+    changeAdminNumbers
 );
 
 adminRouter.patch(

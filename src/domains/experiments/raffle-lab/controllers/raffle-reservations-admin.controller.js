@@ -13,6 +13,9 @@ import {
 
 import {
     createAdminReservation,
+    updateAdminReservationParticipant,
+    changeAdminReservationNumbers,
+    cancelAdminConfirmedReservation,
 } from '../services/raffle-reservations-admin.service.js';
 
 function parseId(value) {
@@ -174,6 +177,9 @@ async function changeReservation(req, res, operation) {
             'La reserva ha expirado.',
             'La reserva no tiene números asociados.',
             'Los números de la reserva no están pendientes.',
+            'El sorteo no admite modificaciones.',
+            'La reserva no está confirmada.',
+            'Los números de la reserva no están confirmados.',
         ]);
 
         if (conflictMessages.has(message)) {
@@ -192,12 +198,146 @@ async function changeReservation(req, res, operation) {
     }
 }
 
+export async function updateAdminParticipant(req, res) {
+    const reservationId = parseId(req.params.reservationId);
+
+    if (!reservationId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Identificador de reserva inválido.',
+        });
+    }
+
+    try {
+        const reservation = await updateAdminReservationParticipant({
+            reservationId,
+            participantName: req.body?.participantName,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                id: reservation.id,
+                drawId: reservation.draw_id,
+                participantName: reservation.participant_name,
+                status: reservation.status,
+            },
+        });
+    } catch (error) {
+        const message = error.message;
+
+        if (message === 'Nombre de participante inválido.') {
+            return res.status(400).json({
+                success: false,
+                message,
+            });
+        }
+
+        if (message === 'Reserva no encontrada.') {
+            return res.status(404).json({
+                success: false,
+                message,
+            });
+        }
+
+        if ([
+            'El sorteo no admite modificaciones.',
+            'La reserva no admite modificaciones.',
+        ].includes(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
+        console.error('[Raffle Lab] Error editando participante:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo actualizar el participante.',
+        });
+    }
+}
+
+export async function changeAdminNumbers(req, res) {
+    const reservationId = parseId(req.params.reservationId);
+
+    if (!reservationId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Identificador de reserva inválido.',
+        });
+    }
+
+    try {
+        const result = await changeAdminReservationNumbers({
+            reservationId,
+            values: req.body?.values,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        const message = error.message;
+
+        if ([
+            'Números de reserva inválidos.',
+            'Número fuera del rango del sorteo.',
+        ].includes(message)) {
+            return res.status(400).json({
+                success: false,
+                message,
+            });
+        }
+
+        if (message === 'Reserva no encontrada.') {
+            return res.status(404).json({
+                success: false,
+                message,
+            });
+        }
+
+        if ([
+            'El sorteo no admite modificaciones.',
+            'La reserva no admite modificaciones.',
+            'Uno o más números no existen en el sorteo.',
+            'Los números de la reserva no son válidos.',
+            'Los números actuales tienen un estado incompatible.',
+            'Uno o más números no están disponibles.',
+        ].includes(message)) {
+            return res.status(409).json({
+                success: false,
+                message,
+            });
+        }
+
+        console.error('[Raffle Lab] Error cambiando números:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudieron cambiar los números.',
+        });
+    }
+}
+
 export async function confirmAdminReservation(req, res) {
     return changeReservation(req, res, confirmReservation);
 }
 
 export async function cancelAdminReservation(req, res) {
-    return changeReservation(req, res, cancelReservation);
+    return changeReservation(req, res, async ({ reservationId }) => {
+        try {
+            return await cancelReservation({ reservationId });
+        } catch (error) {
+            if (error.message !== 'La reserva no está activa.') {
+                throw error;
+            }
+
+            return cancelAdminConfirmedReservation({ reservationId });
+        }
+    });
 }
 
 export async function createAdminManualReservation(req, res) {
