@@ -52,6 +52,7 @@ function serialize(draw) {
         ticketPrice: draw.ticket_price,
         drawDate: draw.draw_date,
         whatsappNumber: draw.whatsapp_number,
+        organizerName: draw.organizer_name,
     };
 }
 
@@ -70,6 +71,7 @@ export async function listAdminDraws(req, res) {
                 'ticket_price',
                 'draw_date',
                 'whatsapp_number',
+                'organizer_name',
             ],
             order: [['id', 'DESC']],
         });

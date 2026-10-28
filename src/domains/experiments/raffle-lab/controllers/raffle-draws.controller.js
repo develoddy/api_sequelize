@@ -25,6 +25,7 @@ export async function listPublicRaffleDraws(req, res) {
                 'ticket_price',
                 'draw_date',
                 'whatsapp_number',
+                'organizer_name',
             ],
             order: [['id', 'ASC']],
         });
@@ -43,6 +44,7 @@ export async function listPublicRaffleDraws(req, res) {
                 ticketPrice: draw.ticket_price,
                 drawDate: draw.draw_date,
                 whatsappNumber: draw.whatsapp_number,
+        organizerName: draw.organizer_name,
             })),
         });
     } catch (error) {

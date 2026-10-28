@@ -40,6 +40,10 @@ export const RaffleDraw = experimentsSequelize.define('RaffleDraw', {
         type: DataTypes.STRING(20),
         allowNull: true,
     },
+    organizer_name: {
+        type: DataTypes.STRING(150),
+        allowNull: true,
+    },
     total_numbers: {
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,

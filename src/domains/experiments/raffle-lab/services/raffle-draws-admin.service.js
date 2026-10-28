@@ -136,7 +136,7 @@ export async function updateAdminRaffleDrawPresentation({ drawId, presentation }
         throw new Error('Datos de presentación inválidos.');
     }
 
-    const allowedFields = ['headline', 'description', 'ticketPrice', 'drawDate', 'whatsappNumber'];
+    const allowedFields = ['headline', 'description', 'ticketPrice', 'drawDate', 'whatsappNumber', 'organizerName'];
     const providedFields = Object.keys(presentation);
 
     if (
@@ -209,6 +209,22 @@ export async function updateAdminRaffleDrawPresentation({ drawId, presentation }
         changes.draw_date = value === null ? null : new Date(value);
     }
 
+
+    if (Object.hasOwn(presentation, 'organizerName')) {
+        const value = presentation.organizerName;
+
+        if (value !== null && typeof value !== 'string') {
+            throw new Error('Nombre del organizador inválido.');
+        }
+
+        const cleaned = value === null ? null : value.trim();
+
+        if (cleaned !== null && cleaned.length > 150) {
+            throw new Error('El nombre del organizador no puede superar los 150 caracteres.');
+        }
+
+        changes.organizer_name = cleaned || null;
+    }
 
     if (Object.hasOwn(presentation, 'whatsappNumber')) {
         const value = presentation.whatsappNumber;
