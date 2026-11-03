@@ -198,6 +198,23 @@ adminRouter.delete(
 
 router.use('/admin', adminRouter);
 
+// Suspensión temporal del acceso público a NUMIQ.
+// Las rutas administrativas permanecen disponibles.
+router.use((req, res, next) => {
+    if (process.env.NUMIQ_PUBLIC_ENABLED === 'true') {
+        return next();
+    }
+
+    res.set('Cache-Control', 'no-store');
+
+    return res.status(503).json({
+        success: false,
+        code: 'NUMIQ_EXPERIMENT_SUSPENDED',
+        message: 'NUMIQ está en fase de validación. Los sorteos públicos no están disponibles temporalmente.',
+    });
+});
+
+
 
 
 router.get(
