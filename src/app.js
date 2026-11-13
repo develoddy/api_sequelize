@@ -27,6 +27,7 @@ const corsOptions = {
     : [
         'http://localhost:4200',    // Tienda (dev)
         'http://localhost:5000',    // Tienda (dev alternativo)
+        'http://localhost:5001',    // Ecommerce (dev)
         'http://localhost:4201',    // Admin (dev)
         'http://localhost:4202',    // App SaaS (dev)
         'http://localhost:3000',    // Otros servicios
