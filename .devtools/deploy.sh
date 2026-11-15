@@ -62,9 +62,14 @@ pm2 describe api_sequelize | grep -q 'online' || { echo 'ERROR: PM2 no está onl
 REMOTE
 
 info '5. Comprobar endpoints'
-sleep 5
-health="$(curl -sS -L --max-time 15 -o /dev/null -w '%{http_code}' https://api.lujandev.com/health)"
-[[ "$health" == '200' ]] || fail "/health devuelve HTTP $health"
+health=''
+for attempt in {1..12}; do
+  health="$(curl -s -L --max-time 4 -o /dev/null -w '%{http_code}' https://api.lujandev.com/health || true)"
+  [[ "$health" == '200' ]] && break
+  printf 'Esperando API: intento %s/12 (HTTP %s)\n' "$attempt" "${health:-sin respuesta}"
+  [[ "$attempt" -eq 12 ]] || sleep 5
+done
+[[ "$health" == '200' ]] || fail "/health no responde HTTP 200"
 printf '%b/health: HTTP 200%b\n' "$GREEN" "$NC"
 for path in dashboard.html metrics/latest.json; do
   status="$(curl -sS -L --max-time 15 -o /dev/null -w '%{http_code}' "https://api.lujandev.com/$path" || true)"
