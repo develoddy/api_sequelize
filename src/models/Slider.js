@@ -7,6 +7,14 @@ export const Slider = sequelize.define('sliders', {
     subtitle: { type: DataTypes.STRING(250), allowNull: true },
     description: { type: DataTypes.STRING(500), allowNull: true },
     position: { type: DataTypes.STRING(50), allowNull: false, defaultValue: 'middle-left' },
+    placement: {
+        type: DataTypes.STRING(30),
+        allowNull: false,
+        defaultValue: 'home',
+        validate: {
+            isIn: [['home', 'editorial']]
+        }
+    },
     link: { type: DataTypes.STRING(250), allowNull: false },
     imagen_mobile: { type: DataTypes.STRING(250), allowNull: false },
     imagen_desktop: { type: DataTypes.STRING(250), allowNull: false },

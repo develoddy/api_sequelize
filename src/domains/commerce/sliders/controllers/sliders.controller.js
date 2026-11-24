@@ -5,8 +5,20 @@ import { sequelize } from '../../../../database/database.js';
 import fs from 'fs';
 import path from "path";
 
+const VALID_PLACEMENTS = ['home', 'editorial'];
+
 export const register = async(req, res) => {
     try {
+        const placement = req.body.placement === undefined
+            ? 'home'
+            : req.body.placement;
+
+        if (!VALID_PLACEMENTS.includes(placement)) {
+            return res.status(400).json({
+                message: "Ubicacion del banner no valida"
+            });
+        }
+
         if (req.files) {
             const mobileFile = req.files['imagen_mobile'] && req.files['imagen_mobile'][0];
             const desktopFile = req.files['imagen_desktop'] && req.files['imagen_desktop'][0];
@@ -19,6 +31,7 @@ export const register = async(req, res) => {
         }
 
         const slider = await Slider.create({
+            placement,
             title: req.body.title,
             subtitle: req.body.subtitle,
             description: req.body.description,
@@ -28,7 +41,10 @@ export const register = async(req, res) => {
             imagen_desktop: req.body.imagen_desktop,
             state: req.body.state
         });
-        res.status(200).json(slider);
+        res.status(200).json({
+            ...slider.toJSON(),
+            ...SliderResource.slider_list(slider)
+        });
     } catch (error) {
         res.status(500).send({
             message: "debbug: SliderController register - OCURRIÓ UN PROBLEMA"
@@ -77,6 +93,17 @@ export const list = async(req, res) => {
 
 export const update = async(req, res) => {
     try {
+        const placement = req.body.placement;
+
+        if (
+            placement !== undefined &&
+            !VALID_PLACEMENTS.includes(placement)
+        ) {
+            return res.status(400).json({
+                message: "Ubicacion del banner no valida"
+            });
+        }
+
         if (req.files) {
             const mobileFile = req.files['imagen_mobile'] && req.files['imagen_mobile'][0];
             const desktopFile = req.files['imagen_desktop'] && req.files['imagen_desktop'][0];
@@ -94,6 +121,7 @@ export const update = async(req, res) => {
         }
 
         await Slider.update({
+            ...(placement !== undefined ? { placement } : {}),
             title: req.body.title,
             subtitle: req.body.subtitle,
             description: req.body.description,
@@ -118,6 +146,33 @@ export const update = async(req, res) => {
             message: "debbug: UserController login - OCURRIÓ UN PROBLEMA"
         });
         console.log(error);
+    }
+}
+
+export const getEditorial = async(req, res) => {
+    try {
+        const slider = await Slider.findOne({
+            where: {
+                placement: 'editorial',
+                state: 1
+            },
+            order: [
+                ['createdAt', 'DESC'],
+                ['id', 'DESC']
+            ]
+        });
+
+        return res.status(200).json({
+            banner: slider
+                ? SliderResource.slider_list(slider)
+                : null
+        });
+    } catch (error) {
+        console.error('[SliderController] getEditorial:', error);
+
+        return res.status(500).json({
+            message: "No se pudo obtener el banner editorial"
+        });
     }
 }
 

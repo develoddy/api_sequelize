@@ -54,7 +54,12 @@ export const list = async (req, res) => {
         const TIME_NOW = req.query.TIME_NOW;
 
         // Obtener sliders
-        let Sliders = await Slider.findAll({ where: { state: 1 } });
+        let Sliders = await Slider.findAll({
+            where: {
+                state: 1,
+                placement: 'home'
+            }
+        });
         Sliders = Sliders.map(slider => SliderResource.slider_list(slider));
 
         // Obtener categorías

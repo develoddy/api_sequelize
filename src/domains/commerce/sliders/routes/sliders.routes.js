@@ -7,6 +7,7 @@ import {
     list,
     update,
     getImage,
+    getEditorial,
     remove,
 } from "../controllers/sliders.controller.js";
 
@@ -36,6 +37,7 @@ router.post("/register", [auth.verifyAdmin, upload.fields([
     { name: 'imagen_desktop', maxCount: 1 }
 ])], register);
 router.get("/list", auth.verifyAdmin, list);
+router.get("/editorial", getEditorial);
 router.put("/update", [auth.verifyAdmin, upload.fields([
     { name: 'imagen_mobile', maxCount: 1 },
     { name: 'imagen_desktop', maxCount: 1 }

@@ -9,11 +9,12 @@ export default {
             subtitle: slider.subtitle,
             description: slider.description,
             position: slider.position,
+            placement: slider.placement,
             link: slider.link,
             imagen_mobile: slider.imagen_mobile,
             imagen_desktop: slider.imagen_desktop,
-            imagen_mobile_url: fileNameMobile ? process.env.URL_BACKEND + '/api/sliders/uploads/slider/' + fileNameMobile : '',
-            imagen_desktop_url: fileNameDesktop ? process.env.URL_BACKEND + '/api/sliders/uploads/slider/' + fileNameDesktop : '',
+            imagen_mobile_url: fileNameMobile ? process.env.URL_BACKEND + '/api/sliders/uploads/slider/' + encodeURIComponent(fileNameMobile) : '',
+            imagen_desktop_url: fileNameDesktop ? process.env.URL_BACKEND + '/api/sliders/uploads/slider/' + encodeURIComponent(fileNameDesktop) : '',
             state: slider.state,
         }
     }
