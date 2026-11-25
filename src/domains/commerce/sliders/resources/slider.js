@@ -10,6 +10,7 @@ export default {
             description: slider.description,
             position: slider.position,
             placement: slider.placement,
+            editorial_category: slider.editorial_category,
             link: slider.link,
             imagen_mobile: slider.imagen_mobile,
             imagen_desktop: slider.imagen_desktop,

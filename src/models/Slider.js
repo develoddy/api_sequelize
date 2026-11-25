@@ -15,6 +15,14 @@ export const Slider = sequelize.define('sliders', {
             isIn: [['home', 'editorial']]
         }
     },
+    editorial_category: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+        defaultValue: null,
+        validate: {
+            isIn: [['default', 't-shirts', 'hoodies', 'mugs', 'caps']]
+        }
+    },
     link: { type: DataTypes.STRING(250), allowNull: false },
     imagen_mobile: { type: DataTypes.STRING(250), allowNull: false },
     imagen_desktop: { type: DataTypes.STRING(250), allowNull: false },

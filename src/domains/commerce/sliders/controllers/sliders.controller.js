@@ -7,6 +7,22 @@ import path from "path";
 
 const VALID_PLACEMENTS = ['home', 'editorial'];
 
+const VALID_EDITORIAL_CATEGORIES = [
+    'default',
+    't-shirts',
+    'hoodies',
+    'mugs',
+    'caps'
+];
+
+const resolveEditorialCategory = (placement, category) => {
+    if (placement !== 'editorial') {
+        return null;
+    }
+
+    return category === undefined ? 'default' : category;
+};
+
 export const register = async(req, res) => {
     try {
         const placement = req.body.placement === undefined
@@ -30,8 +46,23 @@ export const register = async(req, res) => {
             }
         }
 
+        const editorialCategory = resolveEditorialCategory(
+            placement,
+            req.body.editorial_category
+        );
+
+        if (
+            placement === 'editorial' &&
+            !VALID_EDITORIAL_CATEGORIES.includes(editorialCategory)
+        ) {
+            return res.status(400).json({
+                message: "Categoria editorial no valida"
+            });
+        }
+
         const slider = await Slider.create({
             placement,
+            editorial_category: editorialCategory,
             title: req.body.title,
             subtitle: req.body.subtitle,
             description: req.body.description,
@@ -120,8 +151,39 @@ export const update = async(req, res) => {
           return res.status(400).json({ message: "Slider ID no proporcionado" });
         }
 
+        const existingSlider = await Slider.findByPk(sliderId);
+
+        if (!existingSlider) {
+            return res.status(404).json({
+                message: "Slider no encontrado"
+            });
+        }
+
+        const effectivePlacement = placement === undefined
+            ? existingSlider.placement
+            : placement;
+
+        const requestedCategory = req.body.editorial_category === undefined
+            ? (existingSlider.editorial_category ?? undefined)
+            : req.body.editorial_category;
+
+        const editorialCategory = resolveEditorialCategory(
+            effectivePlacement,
+            requestedCategory
+        );
+
+        if (
+            effectivePlacement === 'editorial' &&
+            !VALID_EDITORIAL_CATEGORIES.includes(editorialCategory)
+        ) {
+            return res.status(400).json({
+                message: "Categoria editorial no valida"
+            });
+        }
+
         await Slider.update({
             ...(placement !== undefined ? { placement } : {}),
+            editorial_category: editorialCategory,
             title: req.body.title,
             subtitle: req.body.subtitle,
             description: req.body.description,
@@ -151,7 +213,7 @@ export const update = async(req, res) => {
 
 export const getEditorial = async(req, res) => {
     try {
-        const slider = await Slider.findOne({
+        const sliders = await Slider.findAll({
             where: {
                 placement: 'editorial',
                 state: 1
@@ -162,10 +224,24 @@ export const getEditorial = async(req, res) => {
             ]
         });
 
+        const banners = Object.fromEntries(
+            VALID_EDITORIAL_CATEGORIES.map(category => [category, null])
+        );
+
+        for (const slider of sliders) {
+            const category = slider.editorial_category ?? 'default';
+
+            if (
+                VALID_EDITORIAL_CATEGORIES.includes(category) &&
+                banners[category] === null
+            ) {
+                banners[category] = SliderResource.slider_list(slider);
+            }
+        }
+
         return res.status(200).json({
-            banner: slider
-                ? SliderResource.slider_list(slider)
-                : null
+            banner: banners.default,
+            banners
         });
     } catch (error) {
         console.error('[SliderController] getEditorial:', error);
