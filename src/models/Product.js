@@ -20,6 +20,9 @@ export const Product = sequelize.define('products', {
     // Descripciones multilenguaje
     description_en: { type: DataTypes.TEXT, allowNull: false },  // Inglés original
     description_es: { type: DataTypes.TEXT, allowNull: false },  // Traducción español
+    // Storytelling editorial multilenguaje
+    story_es: { type: DataTypes.TEXT, allowNull: true },
+    story_en: { type: DataTypes.TEXT, allowNull: true },
     resumen: { type: DataTypes.TEXT, allowNull: false },
     tags: { type: DataTypes.STRING, allowNull: false },
     type_inventario: { type: DataTypes.INTEGER, defaultValue: 1 },
