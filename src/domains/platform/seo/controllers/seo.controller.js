@@ -171,7 +171,7 @@ export const generateSitemap = async (req, res) => {
         // 📁 Guardar archivo físico en el servidor del frontend (producción)
         if (process.env.NODE_ENV === 'production') {
             try {
-                const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/sitemap.xml';
+                const frontendPath = '/var/www/lujandev-seo/ecommerce/sitemap.xml';
                 fs.writeFileSync(frontendPath, xmlContent, 'utf8');
                 console.log(`💾 [SEO] Sitemap físico guardado en: ${frontendPath}`);
             } catch (writeError) {
@@ -253,7 +253,7 @@ export const generateRobotsTxt = async (req, res) => {
         // 📁 Guardar archivo físico en el servidor del frontend (producción)
         if (process.env.NODE_ENV === 'production') {
             try {
-                const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/robots.txt';
+                const frontendPath = '/var/www/lujandev-seo/ecommerce/robots.txt';
                 fs.writeFileSync(frontendPath, robotsTxt, 'utf8');
                 console.log(`💾 [SEO] Robots.txt físico guardado en: ${frontendPath}`);
             } catch (writeError) {
@@ -914,7 +914,7 @@ const generateStaticSitemap = async () => {
         const xmlContent = doc.end({ prettyPrint: true });
 
         // Guardar archivo físico
-        const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/sitemap.xml';
+        const frontendPath = '/var/www/lujandev-seo/ecommerce/sitemap.xml';
         fs.writeFileSync(frontendPath, xmlContent, 'utf8');
 
         return { 
@@ -973,7 +973,7 @@ const generateStaticRobots = async () => {
         }
 
         // Guardar archivo físico
-        const frontendPath = '/var/www/tienda_ecommerce_mean/ecommerce/robots.txt';
+        const frontendPath = '/var/www/lujandev-seo/ecommerce/robots.txt';
         fs.writeFileSync(frontendPath, robotsTxt, 'utf8');
 
         return { 
