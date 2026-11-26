@@ -144,6 +144,23 @@ export const register = async(req, res) => {
     try {
         let data = req.body;
 
+        // Validar storytelling editorial opcional
+        for (const field of ['story_es', 'story_en']) {
+            if (!Object.prototype.hasOwnProperty.call(data, field)) {
+                continue;
+            }
+
+            if (data[field] !== null && typeof data[field] !== 'string') {
+                return res.status(400).json({
+                    message: `${field} debe ser texto o null`
+                });
+            }
+
+            data[field] = data[field] === null
+                ? null
+                : data[field].trim() || null;
+        }
+
         const valid_Product = await Product.findOne({ where: { title: data.title }} );
 
         if( valid_Product ) {
@@ -184,6 +201,23 @@ export const register = async(req, res) => {
 export const update = async(req, res) => {
     try {
         let data = req.body;
+
+        // Validar storytelling editorial opcional
+        for (const field of ['story_es', 'story_en']) {
+            if (!Object.prototype.hasOwnProperty.call(data, field)) {
+                continue;
+            }
+
+            if (data[field] !== null && typeof data[field] !== 'string') {
+                return res.status(400).json({
+                    message: `${field} debe ser texto o null`
+                });
+            }
+
+            data[field] = data[field] === null
+                ? null
+                : data[field].trim() || null;
+        }
 
         data.categoryId = data.categorie;
 

@@ -62,6 +62,8 @@ export default {
             stock: product.stock,
             description_en: product.description_en,
             description_es: product.description_es,
+            story_es: product.story_es,
+            story_en: product.story_en,
             resumen: product.resumen,
             tags: product.tags ? JSON.parse(product.tags) : [],
             type_inventario: product.type_inventario,
