@@ -133,7 +133,7 @@ export const generateSitemap = async (req, res) => {
                     .replace(/\s+/g, '-'); // Reemplazar espacios por guiones
 
                 for (const { country, locale } of SUPPORTED_LOCALES) {
-                    const categoryUrl = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+                    const categoryUrl = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}/${category.id}`;
                     
                     // Solo incluir si la URL está habilitada en sitemap_urls (o no existe aún en sitemap_urls)
                     if (!enabledUrls.size || enabledUrls.has(categoryUrl)) {
@@ -627,7 +627,7 @@ export const syncProductsToSitemap = async (req, res) => {
             const cleanBaseUrl = baseUrl.replace(/\/$/, '');
 
             for (const { country, locale } of SUPPORTED_LOCALES) {
-                const loc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+                const loc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}/${category.id}`;
 
                 const [url, created] = await SitemapUrl.findOrCreate({
                     where: { loc },
@@ -668,7 +668,7 @@ export const syncProductsToSitemap = async (req, res) => {
                 .trim()
                 .replace(/\s+/g, '-');
 
-            return SUPPORTED_LOCALES.map(({ country, locale }) => `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`);
+            return SUPPORTED_LOCALES.map(({ country, locale }) => `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}/${category.id}`);
         });
 
         let catDisabled = 0;
@@ -874,7 +874,7 @@ const generateStaticSitemap = async () => {
                     .replace(/\s+/g, '-');
 
                 for (const { country, locale } of SUPPORTED_LOCALES) {
-                    const categoryLoc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}`;
+                    const categoryLoc = `${cleanBaseUrl}/${country}/${locale}/shop/filter-products/${categorySlug}/${category.id}`;
                     const categoryUrl = await SitemapUrl.findOne({
                         where: {
                             type: 'category',
