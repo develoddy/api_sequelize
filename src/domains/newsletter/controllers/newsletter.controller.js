@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { User } from '../../../models/User.js';
 import { NewsletterSubscriber } from '../../../models/NewsletterSubscriber.js';
 import { NewsletterCampaign } from '../../../models/NewsletterCampaign.js';
 import { sequelize } from '../../../database/database.js';
@@ -37,7 +38,57 @@ const checkRateLimit = (ip) => {
  */
 export const subscribe = async (req, res) => {
     try {
-        const { email, source = 'home', userId } = req.body;
+        if (Object.prototype.hasOwnProperty.call(req.body || {}, 'userId')) {
+            return res.status(400).json({
+                status: 400,
+                message: 'La vinculación de cuentas requiere autenticación'
+            });
+        }
+
+        return await processSubscription(req, res, null);
+    } catch (error) {
+        console.error('Error al procesar suscripción pública:', error);
+
+        return res.status(500).json({
+            status: 500,
+            message: 'Ocurrió un problema al procesar tu suscripción.'
+        });
+    }
+};
+
+export const subscribeAuthenticated = async (req, res) => {
+    try {
+        const user = await User.findOne({
+            where: { id: req.user.id, state: 1 },
+            attributes: ['id', 'email']
+        });
+
+        if (!user || !user.email) {
+            return res.status(403).json({
+                status: 403,
+                message: 'No se pudo verificar la cuenta'
+            });
+        }
+
+        req.body = {
+            email: user.email,
+            source: 'home'
+        };
+
+        return await processSubscription(req, res, String(user.id));
+    } catch (error) {
+        console.error('Error en suscripción autenticada:', error);
+
+        return res.status(500).json({
+            status: 500,
+            message: 'No se pudo procesar la suscripción'
+        });
+    }
+};
+
+const processSubscription = async (req, res, userId) => {
+    try {
+        const { email, source = 'home' } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress;
 
         // Rate limiting
@@ -66,7 +117,7 @@ export const subscribe = async (req, res) => {
         }
 
         // Validar source permitido
-        const allowedSources = ['home', 'footer', 'checkout', 'campaign_import', 'admin'];
+        const allowedSources = ['home', 'footer', 'checkout', 'campaign_import', 'admin', 'editorial', 'product'];
         if (!allowedSources.includes(source)) {
             return res.status(400).json({
                 status: 400,
@@ -74,37 +125,72 @@ export const subscribe = async (req, res) => {
             });
         }
 
-        // Buscar suscriptor existente: primero por userId (si existe), luego por email
-        let whereClause = { email: email.toLowerCase() };
-        if (userId) {
-            whereClause = {
-                [Op.or]: [
-                    { userId: userId },
-                    { email: email.toLowerCase() }
-                ]
-            };
-        }
-
         const existingSubscriber = await NewsletterSubscriber.findOne({
-            where: whereClause
+            where: { email: email.toLowerCase().trim() }
         });
 
         if (existingSubscriber) {
+            if (!userId && existingSubscriber.userId) {
+                return res.status(200).json({
+                    status: 200,
+                    message: 'Solicitud de suscripción recibida'
+                });
+            }
+
+            if (
+                userId &&
+                existingSubscriber.userId &&
+                String(existingSubscriber.userId) !== String(userId)
+            ) {
+                return res.status(409).json({
+                    status: 409,
+                    message: 'No se pudo vincular la suscripción'
+                });
+            }
+
+            if (userId) {
+                const linkedSubscriber = await NewsletterSubscriber.findOne({
+                    where: { userId }
+                });
+
+                if (
+                    linkedSubscriber &&
+                    linkedSubscriber.id !== existingSubscriber.id
+                ) {
+                    return res.status(409).json({
+                        status: 409,
+                        message: 'La cuenta ya tiene otra suscripción vinculada'
+                    });
+                }
+            }
+
+
             // Si existe un registro guest (sin userId) y ahora el usuario está autenticado,
             // actualizar el registro con el userId
             if (!existingSubscriber.userId && userId) {
-                await existingSubscriber.update({
-                    userId: userId,
+                const [updated] = await NewsletterSubscriber.update({
+                    userId,
                     status: 'subscribed',
-                    source: source
+                    source
+                }, {
+                    where: {
+                        id: existingSubscriber.id,
+                        userId: null
+                    }
                 });
+
+                if (updated !== 1) {
+                    return res.status(409).json({
+                        status: 409,
+                        message: 'No se pudo vincular la suscripción'
+                    });
+                }
 
                 return res.status(200).json({
                     status: 200,
                     message: 'Tu suscripción ha sido vinculada a tu cuenta',
                     data: {
                         email: existingSubscriber.email,
-                        userId: userId,
                         linked: true
                     }
                 });
@@ -112,18 +198,29 @@ export const subscribe = async (req, res) => {
 
             // Si ya existe pero está unsubscribed, lo reactivamos
             if (existingSubscriber.status === 'unsubscribed') {
-                await existingSubscriber.update({
+                const [updated] = await NewsletterSubscriber.update({
                     status: 'subscribed',
-                    source: source,
-                    userId: userId || existingSubscriber.userId
+                    source
+                }, {
+                    where: {
+                        id: existingSubscriber.id,
+                        userId: userId || null,
+                        status: 'unsubscribed'
+                    }
                 });
+
+                if (updated !== 1) {
+                    return res.status(409).json({
+                        status: 409,
+                        message: 'No se pudo reactivar la suscripción'
+                    });
+                }
 
                 return res.status(200).json({
                     status: 200,
                     message: 'Te has vuelto a suscribir correctamente',
                     data: {
                         email: existingSubscriber.email,
-                        userId: existingSubscriber.userId,
                         resubscribed: true
                     }
                 });
@@ -134,10 +231,22 @@ export const subscribe = async (req, res) => {
                 message: 'Ya estás suscrito a nuestro newsletter',
                 data: {
                     email: existingSubscriber.email,
-                    userId: existingSubscriber.userId,
                     already_subscribed: true
                 }
             });
+        }
+
+        if (userId) {
+            const linkedSubscriber = await NewsletterSubscriber.findOne({
+                where: { userId }
+            });
+
+            if (linkedSubscriber) {
+                return res.status(409).json({
+                    status: 409,
+                    message: 'La cuenta ya tiene otra suscripción vinculada'
+                });
+            }
         }
 
         // Capturar información adicional
@@ -185,6 +294,13 @@ export const subscribe = async (req, res) => {
         console.error('Error al suscribir email:', error);
 
         if (error.name === 'SequelizeUniqueConstraintError') {
+            if (userId) {
+                return res.status(409).json({
+                    status: 409,
+                    message: 'No se pudo vincular la suscripción. Intenta nuevamente.'
+                });
+            }
+
             return res.status(200).json({
                 status: 200,
                 message: 'Ya estás suscrito a nuestro newsletter'

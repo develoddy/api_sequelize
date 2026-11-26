@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
-    subscribe, 
+    subscribe,
+    subscribeAuthenticated,
     confirmEmail,
     unsubscribe,
     getStats, 
@@ -30,6 +31,7 @@ router.get('/unsubscribe', unsubscribe); // GET también para links en emails
 // RUTAS PROTEGIDAS PARA USUARIOS AUTENTICADOS
 // ============================================
 router.get('/subscription', auth.verifyEcommerce, getUserSubscription);
+router.post('/subscription', auth.verifyEcommerce, subscribeAuthenticated);
 router.put('/preferences', auth.verifyEcommerce, updateUserPreferences);
 
 // ============================================

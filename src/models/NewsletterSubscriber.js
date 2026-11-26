@@ -25,7 +25,7 @@ export const NewsletterSubscriber = sequelize.define('newsletter_subscribers', {
         allowNull: true 
     },
     source: { 
-        type: DataTypes.ENUM('home', 'footer', 'checkout', 'campaign_import', 'admin'), 
+        type: DataTypes.ENUM('home', 'footer', 'checkout', 'campaign_import', 'admin', 'editorial', 'product'),
         defaultValue: 'home',
         comment: 'Indica de dónde proviene la suscripción'
     },
