@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { getTrackingStatus } from '../controllers/tracking.controller.js';
+import {
+  getTrackingStatus,
+  getAuthenticatedTrackingStatus
+} from '../controllers/tracking.controller.js';
+
+import auth from '../../../../middlewares/auth.js';
 import {
   createOrderRecoveryController
 } from '../controllers/orderRecovery.controller.js';
@@ -73,6 +78,13 @@ router.post(
   orderRecoveryLimiter,
   orderRecoveryOrderLimiter,
   recoverOrder
+);
+
+router.get(
+  '/account/:orderId',
+  trackingLimiter,
+  auth.verifyEcommerce,
+  getAuthenticatedTrackingStatus
 );
 
 router.get(

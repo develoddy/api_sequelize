@@ -1,3 +1,5 @@
+import { resolveCommerceScope } from '../services/commerceScope.service.js';
+
 import { Op, Sequelize } from 'sequelize';
 import { sequelize } from '../../../../database/database.js';
 // MODELS
@@ -521,8 +523,20 @@ export const profile_client = async (req, res) => {
 
         // Obtener órdenes del usuario ordenadas por fecha de creación descendente (más recientes primero)
         // Sale model ya contiene campos de tracking de Printful: trackingNumber, trackingUrl, carrier, syncStatus, shippedAt
-        let Orders = await Sale.findAll({ 
-            where: { userId: user_id },
+        const commerceScope = resolveCommerceScope();
+
+        if (!commerceScope) {
+            return res.status(503).json({
+                message: "Service temporarily unavailable"
+            });
+        }
+
+        let Orders = await Sale.findAll({
+            attributes: { exclude: ['trackingToken'] },
+            where: {
+                userId: user_id,
+                ...commerceScope
+            },
             order: [['createdAt', 'DESC']]
         });
 
@@ -546,6 +560,7 @@ export const profile_client = async (req, res) => {
                     },
                     {
                         model: Sale,
+                        attributes: { exclude: ['trackingToken'] },
                     }
                 ]
             });

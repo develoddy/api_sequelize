@@ -1,4 +1,8 @@
 import {
+  resolveCommerceScope
+} from '../../storefront/services/commerceScope.service.js';
+
+import {
   isPrintfulV2ScopedSale
 } from '../../integrations/printful/services/printfulV2Scope.service.js';
 
@@ -55,36 +59,80 @@ const printfulApi = axios.create({
  * 3. Combina datos de ambas fuentes
  * 4. Retorna respuesta unificada (sin datos sensibles)
  */
-export const getTrackingStatus = async (req, res) => {
+export const getTrackingStatus = (req, res) =>
+  resolveTrackingStatus(req, res, false);
+
+export const getAuthenticatedTrackingStatus = (req, res) =>
+  resolveTrackingStatus(req, res, true);
+
+async function resolveTrackingStatus(req, res, authenticated) {
   try {
     let { orderId, token } = req.params;
+    let where;
 
-    // 🧹 Limpiar orderId: remover #PF si viene en el formato #PF135327909
-    orderId = orderId.trim().replace(/^#?PF/i, '');
+    if (authenticated) {
+      const userId = Number(req.user?.id);
 
-    if (
-      !/^[0-9]{1,20}$/.test(orderId) ||
-      !/^[a-fA-F0-9]{32}$/.test(token)
-    ) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido no encontrado o token de acceso inválido'
-      });
-    }
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
 
+      const scope = resolveCommerceScope();
 
-    // 1️⃣ Buscar en BD local con validación de token (SEGURIDAD)
-    // Prioridad: printfulOrderId → sale.id (fallback)
-    let sale = await Sale.findOne({
-      where: {
+      if (!scope) {
+        return res.status(503).json({
+          success: false,
+          message: 'Service temporarily unavailable'
+        });
+      }
+
+      if (
+        typeof orderId !== 'string' ||
+        !/^[1-9][0-9]{0,9}$/.test(orderId) ||
+        Number(orderId) > 2147483647
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      where = {
+        id: Number(orderId),
+        userId,
+        ...scope,
+        module_id: null
+      };
+
+    } else {
+      orderId = orderId.trim().replace(/^#?PF/i, '');
+
+      if (
+        !/^[0-9]{1,20}$/.test(orderId) ||
+        !/^[a-fA-F0-9]{32}$/.test(token)
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: 'Pedido no encontrado o token de acceso inválido'
+        });
+      }
+
+      where = {
         [Op.or]: [
-          { printfulOrderId: orderId },  // 🎯 Prioridad 1: ID de Printful
+          { printfulOrderId: orderId },
           ...(Number(orderId) <= 2147483647
             ? [{ id: Number(orderId) }]
-            : [])                 // 🔄 Fallback: ID interno
+            : [])
         ],
-        trackingToken: token  // 🔒 Validación de seguridad
-      },
+        trackingToken: token
+      };
+    }
+
+    let sale = await Sale.findOne({
+      where,
       include: [
         {
           model: SaleDetail,
@@ -102,6 +150,13 @@ export const getTrackingStatus = async (req, res) => {
     });
 
     if (!sale) {
+      if (authenticated) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
       console.warn('[TRACKING] Acceso no válido');
       return res.status(404).json({
         success: false,
