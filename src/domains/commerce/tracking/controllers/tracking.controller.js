@@ -151,7 +151,7 @@ export const getTrackingStatus = async (req, res) => {
     const verifiedShipments = await Shipment.findAll({
       where: {
         saleId: sale.id,
-        evidenceSource: 'printful_v2'
+        evidenceSource: ['printful_v2', 'printful_v2_api']
       },
       attributes: [
         'evidenceSource', 'printfulShipmentId',

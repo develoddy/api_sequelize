@@ -76,7 +76,7 @@ export async function recordShipmentEvent({
       lock: transaction.LOCK.UPDATE
     });
 
-    if (record.evidenceSource !== 'printful_v2') {
+    if (!['printful_v2', 'printful_v2_api'].includes(record.evidenceSource)) {
       throw new Error(
         'Shipment requires evidence reconciliation'
       );

@@ -88,7 +88,7 @@ export async function reconcilePendingOrderNotifications() {
         const evidence = await Shipment.findOne({
           where: {
             saleId: sale.id,
-            evidenceSource: 'printful_v2'
+            evidenceSource: ['printful_v2', 'printful_v2_api']
           },
           attributes: ['id'],
           raw: true
