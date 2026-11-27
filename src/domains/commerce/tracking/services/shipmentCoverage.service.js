@@ -77,7 +77,7 @@ export function resolveShipmentCoverage({
       return reject('invalid_local_shipment_identity');
     }
 
-    if (shipment.evidenceSource !== 'printful_v2') {
+    if (!['printful_v2', 'printful_v2_api'].includes(shipment.evidenceSource)) {
       return reject('unverified_evidence_source');
     }
 
