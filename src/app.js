@@ -62,6 +62,15 @@ app.post('/api/printful-webhook/webhook', express.json({
   }
 }));
 
+// -------------------- Printful V2 signed webhook --------------------
+app.post('/api/printful-webhook/v2/webhook', express.json({
+  limit: '1mb',
+  inflate: false,
+  verify: (req, res, buf) => {
+    req.rawBody = Buffer.from(buf);
+  }
+}));
+
 // -------------------- Middleware global para JSON/urlencoded --------------------
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

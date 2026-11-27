@@ -175,11 +175,11 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Número de Seguimiento: </span>
-                <span class="info-value"><%= shipment.trackingNumber %></span>
+                <span class="info-value"><%= shipment.trackingNumber || 'Consultar seguimiento del pedido' %></span>
             </div>
             <div class="info-row">
                 <span class="info-label">Transportista: </span>
-                <span class="info-value"><%= shipment.carrier %></span>
+                <span class="info-value"><%= shipment.carrier || 'Consultar seguimiento del pedido' %></span>
             </div>
             <div class="info-row">
                 <span class="info-label">Fecha de Envío: </span>
@@ -206,7 +206,7 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="<%= process.env.URL_APP_SAAS %>/tracking/<%= order.printfulOrderId %>/<%= order.trackingToken %>" class="cta-button">Ver seguimiento del envío</a>
+                <a href="<%= orderTrackingUrl %>" class="cta-button">Ver seguimiento del envío</a>
             </div>
         </div>
 

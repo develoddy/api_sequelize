@@ -3,7 +3,19 @@ import {
     handleWebhook
 } from '../controllers/webhookPrintful.controller.js';
 
+import {
+    validatePrintfulV2Webhook,
+    handleWebhookV2
+} from '../controllers/webhookPrintfulV2.controller.js';
+
 const router = Router();
+
+router.post(
+    '/v2/webhook',
+    validatePrintfulV2Webhook,
+    handleWebhookV2
+);
+
 
 // 🚨 No uses auth.verifyEcommerce aquí, Printful necesita acceso directo
 

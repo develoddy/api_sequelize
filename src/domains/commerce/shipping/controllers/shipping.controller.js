@@ -212,16 +212,11 @@ export const getBySale = async (req, res) => {
   }
 };
 
-// 🔹 Actualizar un envío
+// Shipment lifecycle fields are managed by logistics integrations.
 export const update = async (req, res) => {
-  try {
-    const shipment = await Shipment.findByPk(req.params.id);
-    if (!shipment) return res.status(404).json({ success: false, message: 'No results' });
-
-    await shipment.update(req.body);
-    return res.json({ success: true, shipment });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
+  return res.status(403).json({
+    success: false,
+    code: 'SHIPMENT_READ_ONLY',
+    message: 'Shipment records cannot be modified manually'
+  });
 };
