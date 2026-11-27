@@ -1,3 +1,7 @@
+import {
+  resolvePrintfulV2Scope
+} from '../../integrations/printful/services/printfulV2Scope.service.js';
+
 import cron from 'node-cron';
 import { Op } from 'sequelize';
 
@@ -39,14 +43,19 @@ export async function reconcilePendingOrderNotifications() {
     return;
   }
 
+  const scope = resolvePrintfulV2Scope();
+
+  if (!scope) {
+    return;
+  }
+
   running = true;
 
   try {
     const sales = await Sale.findAll({
       where: {
         id: { [Op.gt]: cursor },
-        tenant_id: null,
-        module_id: null,
+        ...scope,
         createdAt: { [Op.gte]: cutover },
         printfulOrderId: { [Op.ne]: null }
       },

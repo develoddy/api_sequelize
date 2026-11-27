@@ -1,3 +1,7 @@
+import {
+  hasVerifiedPayment
+} from '../../tracking/services/paymentEvidence.service.js';
+
 import { Sale } from '../../../../models/Sale.js';
 import { Shipment } from '../../../../models/Shipment.js';
 
@@ -44,6 +48,10 @@ export async function reconcileOrderNotifications(saleId) {
     !sale.printfulOrderId
   ) {
     return { status: 'ineligible_sale' };
+  }
+
+  if (!await hasVerifiedPayment(sale)) {
+    return { status: 'unverified_payment' };
   }
 
   const logistics = await fetchPrintfulLogistics({

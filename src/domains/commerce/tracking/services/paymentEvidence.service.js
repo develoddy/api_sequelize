@@ -1,10 +1,13 @@
+import {
+  isPrintfulV2ScopedSale
+} from '../../integrations/printful/services/printfulV2Scope.service.js';
+
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../../../../database/database.js';
 
 export async function hasVerifiedPayment(sale) {
   if (
-    !sale ||
-    sale.tenant_id != null ||
+    !isPrintfulV2ScopedSale(sale) ||
     sale.method_payment !== 'STRIPE' ||
     typeof sale.stripeSessionId !== 'string' ||
     !sale.stripeSessionId
@@ -29,7 +32,7 @@ export async function hasVerifiedPayment(sale) {
       FROM stripe_webhook_logs
       WHERE event_type = 'checkout.session.completed'
         AND status = 'success'
-        AND tenant_id IS NULL
+        AND tenant_id <=> :tenantId
         AND CASE
           WHEN JSON_VALID(payload) THEN
             JSON_UNQUOTE(JSON_EXTRACT(
@@ -52,6 +55,7 @@ export async function hasVerifiedPayment(sale) {
       LIMIT 1
     `, {
       replacements: {
+        tenantId: sale.tenant_id,
         sessionId: sale.stripeSessionId,
         amount: String(amount),
         currency

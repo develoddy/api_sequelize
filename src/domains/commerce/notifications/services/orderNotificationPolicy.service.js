@@ -1,9 +1,17 @@
+import {
+  hasVerifiedPayment
+} from '../../tracking/services/paymentEvidence.service.js';
+
+import {
+  isPrintfulV2ScopedSale
+} from '../../integrations/printful/services/printfulV2Scope.service.js';
+
 export function usesV2OrderNotifications(sale) {
   if (
     process.env.PRINTFUL_V2_NOTIFICATIONS_ENABLED !== 'true' ||
-    !sale ||
-    sale.tenant_id != null ||
-    sale.module_id != null
+    !isPrintfulV2ScopedSale(sale) ||
+    sale.method_payment !== 'STRIPE' ||
+    !sale.stripeSessionId
   ) {
     return false;
   }
@@ -27,4 +35,12 @@ export function usesV2OrderNotifications(sale) {
     Number.isFinite(createdAt) &&
     createdAt >= cutover
   );
+}
+
+export async function canDelegateV2OrderNotifications(sale) {
+  if (!usesV2OrderNotifications(sale)) {
+    return false;
+  }
+
+  return await hasVerifiedPayment(sale);
 }

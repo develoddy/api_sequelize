@@ -1,5 +1,5 @@
 import {
-  usesV2OrderNotifications
+  canDelegateV2OrderNotifications
 } from '../../../notifications/services/orderNotificationPolicy.service.js';
 
 import crypto from 'crypto';
@@ -592,7 +592,7 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
         };
 
         // 🔒 IDEMPOTENCIA: Solo enviar email si es el primer package_shipped
-        if (!wasAlreadyShipped && !usesV2OrderNotifications(sale)) {
+        if (!wasAlreadyShipped && !(await canDelegateV2OrderNotifications(sale))) {
           // Enviar email
           const emailResult = await sendOrderShippedEmail(emailData);
           
@@ -972,7 +972,7 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
         };
 
         // Enviar email
-        if (usesV2OrderNotifications(sale)) {
+        if (await canDelegateV2OrderNotifications(sale)) {
           console.log('[WEBHOOK] Delivery notification delegated to V2', {
             saleId: sale.id
           });

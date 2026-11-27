@@ -1,3 +1,7 @@
+import {
+  resolvePrintfulV2Scope
+} from '../services/printfulV2Scope.service.js';
+
 import { Sale } from '../../../../../models/Sale.js';
 
 import {
@@ -111,10 +115,19 @@ export async function handleWebhookV2(req, res) {
   }
 
   try {
+    const scope = resolvePrintfulV2Scope();
+
+    if (!scope) {
+      return res.status(503).json({
+        success: false,
+        message: 'Shipment scope unavailable'
+      });
+    }
+
     const sales = await Sale.findAll({
       where: {
         printfulOrderId: String(orderId),
-        tenant_id: null
+        ...scope
       },
       attributes: ['id'],
       limit: 2
