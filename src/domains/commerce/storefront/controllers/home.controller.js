@@ -500,7 +500,24 @@ export const show_landing_product = async (req, res) => {
 export const profile_client = async (req, res) => {
     try {
 
-        let user_id = req.body.user_id;
+        const user_id = Number(req.user?.id);
+
+        if (!Number.isSafeInteger(user_id) || user_id <= 0) {
+            return res.status(401).json({
+                message: "No autorizado"
+            });
+        }
+
+        if (
+            req.body.user_id !== undefined &&
+            String(req.body.user_id) !== String(user_id)
+        ) {
+            return res.status(403).json({
+                message: "Acceso denegado"
+            });
+        }
+
+        res.set('Cache-Control', 'no-store');
 
         // Obtener órdenes del usuario ordenadas por fecha de creación descendente (más recientes primero)
         // Sale model ya contiene campos de tracking de Printful: trackingNumber, trackingUrl, carrier, syncStatus, shippedAt
@@ -610,6 +627,7 @@ export const profile_client = async (req, res) => {
             include: [
                 {
                     model: User,
+                    attributes: { exclude: ['password'] },
                 }
             ],
             order: [['createdAt', 'DESC']]
@@ -623,15 +641,52 @@ export const profile_client = async (req, res) => {
 
         console.error('[profile_client] Error:', error);
         res.status(500).send({
-            message: "Ocurrió un problema",
-            error: error
+            message: "Ocurrió un problema"
         });
     }
 }
 
 export const update_client = async (req, res) => {
     try {
-        let updateData = { ...req.body };
+        const userId = Number(req.user?.id);
+
+        if (!Number.isSafeInteger(userId) || userId <= 0) {
+            return res.status(401).json({
+                message: "No autorizado"
+            });
+        }
+
+        if (
+            req.body._id !== undefined &&
+            String(req.body._id) !== String(userId)
+        ) {
+            return res.status(403).json({
+                message: "Acceso denegado"
+            });
+        }
+
+        const allowedFields = [
+            'name',
+            'surname',
+            'email',
+            'phone',
+            'birthday',
+            'zipcode'
+        ];
+
+        const updateData = {};
+
+        for (const field of allowedFields) {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body, field
+                )
+            ) {
+                updateData[field] = req.body[field];
+            }
+        }
+
+        res.set('Cache-Control', 'no-store');
 
         if (req.files && req.files.length > 0) {
             const avatarFile = req.files.find(file => file.fieldname === 'avatar');
@@ -649,10 +704,23 @@ export const update_client = async (req, res) => {
         }
 
         // Actualizar el usuario
-        await User.update(updateData, { where: { id: req.body._id } });
+        if (Object.keys(updateData).length > 0) {
+            await User.update(updateData, {
+                where: { id: userId }
+            });
+        }
 
         // Obtener el usuario actualizado
-        const updatedUser = await User.findOne({ where: { id: req.body._id } });
+        const updatedUser = await User.findOne({
+            where: { id: userId },
+            attributes: ['id', 'name', 'surname', 'email']
+        });
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                message: "Usuario no encontrado"
+            });
+        }
 
         res.status(200).json({
             status:200,
