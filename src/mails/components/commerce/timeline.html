@@ -1,0 +1,42 @@
+<%
+const stages = language === 'en'
+    ? ['Confirmed', 'Production', 'Shipped', 'Delivered']
+    : ['Confirmado', 'Producción', 'Enviado', 'Entregado'];
+%>
+
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0"
+       style="table-layout:fixed;">
+    <tr>
+        <% stages.forEach(function(stage, index) { %>
+        <td width="25%" align="center" valign="top"
+            style="padding:12px 2px;">
+            <table role="presentation" cellspacing="0"
+                   cellpadding="0" border="0" align="center">
+                <tr>
+                    <td width="28" height="28" align="center"
+                        bgcolor="<%= index <= currentStage ? '#111111' : '#ffffff' %>"
+                        style="border:1px solid <%= index <= currentStage ? '#111111' : '#dddddd' %>;
+                        font-family:Arial,Helvetica,sans-serif;
+                        font-size:12px;
+                        color:<%= index <= currentStage ? '#ffffff' : '#777777' %>;">
+                        <% if (index <= currentStage) { %>
+                            &#10003;
+                        <% } else { %>
+                            <%= index + 1 %>
+                        <% } %>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="email-stage" style="margin:10px 0 0;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:11px;line-height:16px;
+                color:<%= index <= currentStage ? '#111111' : '#777777' %>;
+                font-weight:<%= index === currentStage ? '700' : '400' %>;">
+                <%= stage %>
+            </p>
+        </td>
+        <% }); %>
+    </tr>
+</table>

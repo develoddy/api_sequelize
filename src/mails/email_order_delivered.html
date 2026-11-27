@@ -1,209 +1,211 @@
+<%
+const en = language === 'en';
+const t = (es, english) => en ? english : es;
+
+const formatDate = value => {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isFinite(date.getTime())
+        ? date.toLocaleDateString(en ? 'en-GB' : 'es-ES', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        })
+        : '';
+};
+
+const title = t('Tu pedido ha sido entregado.', 'Your order has been delivered.');
+const description = t('Gracias por confiar en nosotros. Esperamos que disfrutes de tu compra.', 'Thank you for choosing us. We hope you enjoy your purchase.');
+%>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="<%= language %>">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido Entregado</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #1a1a1a;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-        }
-        .header {
-            padding: 40px 40px 30px;
-            border-bottom: 4px solid #32CD32;
-            background: linear-gradient(180deg, #E6FFE6 0%, #ffffff 100%);
-        }
-        .store-name {
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            color: #228B22;
-            margin-bottom: 20px;
-        }
-        .title {
-            font-size: 26px;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .title::before {
-            content: '✅';
-            font-size: 28px;
-        }
-        .subtitle {
-            font-size: 15px;
-            color: #666;
-            font-weight: 400;
-        }
-        .content {
-            padding: 40px;
-        }
-        .status-box {
-            background: linear-gradient(135deg, #E6FFE6 0%, #CCFFCC 100%);
-            border-left: 5px solid #32CD32;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(50, 205, 50, 0.15);
-        }
-        .status-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #228B22;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .status-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: #228B22;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .status-value::before {
-            content: '🎉';
-            font-size: 18px;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            font-size: 14px;
-            color: #666;
-        }
-        .info-value {
-            font-size: 14px;
-            font-weight: 500;
-            color: #1a1a1a;
-            text-align: right;
-        }
-        .cta-section {
-            text-align: center;
-            padding: 30px 0;
-            border-top: 1px solid #e5e5e5;
-            margin-top: 30px;
-        }
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #32CD32 0%, #228B22 100%) !important;
-            color: #ffffff !important;
-            padding: 16px 40px;
-            text-decoration: none;
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            border-radius: 50px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(50, 205, 50, 0.3);
-        }
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(50, 205, 50, 0.4) !important;
-            background: linear-gradient(135deg, #228B22 0%, #1a7a1a 100%) !important;
-        }
-        .footer {
-            padding: 30px 40px;
-            background-color: #fafafa;
-            text-align: center;
-            border-top: 1px solid #e5e5e5;
-        }
-        .footer-text {
-            font-size: 12px;
-            color: #999;
-            line-height: 1.8;
-        }
-        @media only screen and (max-width: 600px) {
-            body { padding: 10px; }
-            .header, .content, .footer { padding: 25px 20px; }
-            .title { font-size: 20px; }
-        }
-    </style>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title><%= title %></title>
+    <%- include('components/commerce/styles.html') %>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="store-name">
-                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    <%= tenant.settings.store_name %>
-                <% } else { %>
-                    <%= process.env.STORE_NAME || 'Store' %>
-                <% } %>
-            </div>
-            <h1 class="title">Pedido Entregado</h1>
-            <p class="subtitle">Tu pedido ha sido entregado exitosamente.</p>
-        </div>
 
-        <!-- Content -->
-        <div class="content">
-            <!-- Status -->
-            <div class="status-box">
-                <div class="status-label">Estado Final</div>
-                <div class="status-value">Entregado</div>
-            </div>
+<body style="margin:0;padding:0;background:#f5f5f5;">
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0" bgcolor="#f5f5f5">
+<tr>
+<td align="center" class="email-outer"
+    style="padding:32px 12px;">
 
-            <!-- Order Info -->
-            <div class="info-row">
-                <span class="info-label">Pedido: </span>
-                <span class="info-value">#PF<%= order.printfulOrderId %></span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Fecha de Entrega: </span>
-                <span class="info-value">
-                    <%= new Date(delivery.deliveredDate).toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                    }) %>
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Total: </span>
-                <span class="info-value"><%= order.total %> <%= order.currency %></span>
-            </div>
+<!--[if mso]>
+<table role="presentation" width="600" align="center"><tr><td>
+<![endif]-->
 
-            <!-- CTA -->
-            <div class="cta-section">
-                <a href="<%= orderTrackingUrl %>" class="cta-button">Ver detalles del pedido</a>
-            </div>
-        </div>
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0" bgcolor="#ffffff"
+       class="email-shell" style="max-width:600px;">
+<tr>
+<td>
+    <%- include('components/commerce/header.html', {
+        brandName
+    }) %>
+</td>
+</tr>
+<tr>
+<td class="email-padding" style="padding:40px;
+    font-family:Arial,Helvetica,sans-serif;color:#111111;">
 
-        <!-- Footer -->
-        <div class="footer">
-            <p class="footer-text">
-                <% if (tenant && tenant.settings && tenant.settings.store_name) { %>
-                    © <%= new Date().getFullYear() %> <%= tenant.settings.store_name %>. Todos los derechos reservados.
-                <% } else { %>
-                    © <%= new Date().getFullYear() %> <%= process.env.STORE_NAME || 'Store' %>. Todos los derechos reservados.
-                <% } %>
-            </p>
-        </div>
-    </div>
+    <p style="margin:0 0 14px;font-size:11px;
+        letter-spacing:1.5px;color:#666666;">
+        <%= t('ACTUALIZACIÓN DE PEDIDO', 'ORDER UPDATE') %>
+    </p>
+
+    <h1 class="email-title" style="margin:0 0 16px;
+        font-size:30px;line-height:38px;font-weight:700;">
+        <%= title %>
+    </h1>
+
+    <p style="margin:0 0 24px;font-size:15px;
+        line-height:24px;color:#666666;">
+        <%= description %>
+    </p>
+
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0"
+           style="border-top:1px solid #dddddd;
+                  border-bottom:1px solid #dddddd;">
+        <tr>
+            <td style="padding:16px 0;font-size:13px;color:#666666;">
+                <%= t('Número de pedido', 'Order number') %>
+            </td>
+            <td align="right" style="padding:16px 0;
+                font-size:15px;font-weight:700;">
+                #PF<%= order.printfulOrderId %>
+            </td>
+        </tr>
+    </table>
+
+    <%- include('components/commerce/timeline.html', {
+        language,
+        currentStage: 3
+    }) %>
+
+    <%- include('components/commerce/tracking-button.html', {
+        language,
+        trackingUrl: orderTrackingUrl
+    }) %>
+
+
+    <h2 style="margin:24px 0 12px;font-size:18px;">
+        <%= t('Información de entrega', 'Delivery information') %>
+    </h2>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0">
+
+        <% if (formatDate(delivery.deliveredDate)) { %>
+        <tr>
+            <td valign="top" style="padding:12px 0;
+                border-bottom:1px solid #eeeeee;
+                font-size:13px;color:#666666;">
+                <%= t('Fecha de entrega', 'Delivery date') %>
+            </td>
+            <td align="right" valign="top"
+                style="padding:12px 0 12px 12px;
+                border-bottom:1px solid #eeeeee;
+                font-size:13px;font-weight:600;
+                word-break:break-word;">
+                <%= formatDate(delivery.deliveredDate) %>
+            </td>
+        </tr>
+        <% } %>
+
+    </table>
+
+    <h2 style="margin:24px 0 12px;font-size:18px;">
+        <%= t('Resumen del pedido', 'Order summary') %>
+    </h2>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0">
+
+        <% if ((order.total != null &&
+            order.total !== '' &&
+            Number.isFinite(Number(order.total)) &&
+            order.currency
+                ? Number(order.total).toLocaleString(
+                    en ? 'en-GB' : 'es-ES',
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                ) + ' ' + order.currency
+                : '')) { %>
+        <tr>
+            <td valign="top" style="padding:12px 0;
+                border-bottom:1px solid #eeeeee;
+                font-size:13px;color:#666666;">
+                <%= t('Total', 'Total') %>
+            </td>
+            <td align="right" valign="top"
+                style="padding:12px 0 12px 12px;
+                border-bottom:1px solid #eeeeee;
+                font-size:13px;font-weight:600;
+                word-break:break-word;">
+                <%= (order.total != null &&
+            order.total !== '' &&
+            Number.isFinite(Number(order.total)) &&
+            order.currency
+                ? Number(order.total).toLocaleString(
+                    en ? 'en-GB' : 'es-ES',
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                ) + ' ' + order.currency
+                : '') %>
+            </td>
+        </tr>
+        <% } %>
+
+    </table>
+
+
+    <% if (supportEmail) { %>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0"
+           style="margin-top:32px;border-top:1px solid #dddddd;">
+        <tr>
+            <td align="center" style="padding:24px 0 0;">
+                <p style="margin:0 0 8px;font-size:14px;
+                    font-weight:700;">
+                    <%= t('¿Necesitas ayuda?', 'Need help?') %>
+                </p>
+                <p style="margin:0;font-size:13px;color:#666666;">
+                    <%= t(
+                        'Estamos aquí para ayudarte.',
+                        'We are here to help.'
+                    ) %>
+                </p>
+            </td>
+        </tr>
+    </table>
+    <% } %>
+
+</td>
+</tr>
+<tr>
+<td>
+    <%- include('components/commerce/footer.html', {
+        brandName,
+        supportEmail
+    }) %>
+</td>
+</tr>
+</table>
+
+<!--[if mso]>
+</td></tr></table>
+<![endif]-->
+
+</td>
+</tr>
+</table>
 </body>
 </html>
