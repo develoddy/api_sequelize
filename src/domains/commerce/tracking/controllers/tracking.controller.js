@@ -1,4 +1,19 @@
 import axios from "axios";
+import {
+  hasVerifiedPayment
+} from '../services/paymentEvidence.service.js';
+import {
+  fetchPrintfulLogistics
+} from '../../integrations/printful/services/printfulLogistics.service.js';
+import {
+  resolveShipmentCoverage
+} from '../services/shipmentCoverage.service.js';
+import { Shipment } from '../../../../models/Shipment.js';
+
+import {
+  resolveOrderLifecycle,
+  normalizeLifecycleDate as normalizeTrackingDate
+} from '../services/orderLifecycle.service.js';
 import { Op } from 'sequelize';
 import { Sale } from "../../../../models/Sale.js";
 import { SaleDetail } from "../../../../models/SaleDetail.js";
@@ -41,7 +56,17 @@ export const getTrackingStatus = async (req, res) => {
     let { orderId, token } = req.params;
 
     // 🧹 Limpiar orderId: remover #PF si viene en el formato #PF135327909
-    orderId = orderId.replace(/^#?PF/i, '').trim();
+    orderId = orderId.trim().replace(/^#?PF/i, '');
+
+    if (
+      !/^[0-9]{1,20}$/.test(orderId) ||
+      !/^[a-fA-F0-9]{32}$/.test(token)
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pedido no encontrado o token de acceso inválido'
+      });
+    }
 
 
     // 1️⃣ Buscar en BD local con validación de token (SEGURIDAD)
@@ -50,7 +75,9 @@ export const getTrackingStatus = async (req, res) => {
       where: {
         [Op.or]: [
           { printfulOrderId: orderId },  // 🎯 Prioridad 1: ID de Printful
-          { id: orderId }                 // 🔄 Fallback: ID interno
+          ...(Number(orderId) <= 2147483647
+            ? [{ id: Number(orderId) }]
+            : [])                 // 🔄 Fallback: ID interno
         ],
         trackingToken: token  // 🔒 Validación de seguridad
       },
@@ -71,7 +98,7 @@ export const getTrackingStatus = async (req, res) => {
     });
 
     if (!sale) {
-      console.log(`❌ [TRACKING] Orden no encontrada o token inválido: ${orderId}`);
+      console.warn('[TRACKING] Acceso no válido');
       return res.status(404).json({
         success: false,
         message: 'Pedido no encontrado o token de acceso inválido'
@@ -108,7 +135,7 @@ export const getTrackingStatus = async (req, res) => {
         }
       } catch (error) {
         printfulError = error.response?.data?.error?.message || error.message;
-        console.error(`⚠️ [TRACKING] Error consultando Printful:`, printfulError);
+        console.warn('[TRACKING] Printful no disponible');
         // No fallar - continuar con datos de BD
       }
     }
@@ -117,6 +144,65 @@ export const getTrackingStatus = async (req, res) => {
     // ⚡ PRIORIDAD: Printful > BD (Printful es la fuente de verdad)
     const finalStatus = printfulOrder?.status || sale.printfulStatus || sale.syncStatus || 'pending';
     
+    const verifiedShipments = await Shipment.findAll({
+      where: {
+        saleId: sale.id,
+        evidenceSource: 'printful_v2'
+      },
+      attributes: [
+        'evidenceSource', 'printfulShipmentId',
+        'status',
+        'shippedAt',
+        'deliveredAt',
+        'returnedAt'
+      ],
+      raw: true
+    });
+
+    let shipmentCoverageVerified = false;
+
+    if (
+      printfulOrder?.status === 'fulfilled' &&
+      sale.printfulOrderId &&
+      sale.tenant_id == null &&
+      verifiedShipments.length > 0
+    ) {
+      try {
+        const logistics = await fetchPrintfulLogistics({
+          orderId: sale.printfulOrderId,
+          storeId: process.env.PRINTFUL_V2_STORE_ID,
+          apiToken: process.env.PRINTFUL_API_TOKEN
+        });
+
+        const coverage = resolveShipmentCoverage({
+          ...logistics,
+          verifiedShipments
+        });
+
+        shipmentCoverageVerified = coverage.coverageVerified;
+
+      } catch (error) {
+        console.warn(
+          '[Tracking] Shipment coverage unavailable',
+          {
+            saleId: sale.id,
+            errorType: error.name,
+            httpStatus: error.response?.status ?? null
+          }
+        );
+      }
+    }
+
+    const commerciallyConfirmed = await hasVerifiedPayment(sale);
+
+    const lifecycle = resolveOrderLifecycle({
+      providerStatus: printfulOrder?.status || null,
+      localStatus: sale.printfulStatus || sale.syncStatus,
+      commerciallyConfirmed,
+      verifiedShipments,
+      shipmentCoverageVerified
+    });
+
     const trackingData = {
       // Identificadores
       orderId: printfulOrder?.id || sale.printfulOrderId || sale.id.toString(),
@@ -124,10 +210,16 @@ export const getTrackingStatus = async (req, res) => {
       
       // Estado (priorizar Printful como fuente de verdad)
       status: finalStatus,
-      progress: calculateProgress(finalStatus),
+      commercialStatus: lifecycle.commercialStatus,
+      exceptions: lifecycle.exceptions,
+      progress: lifecycle.progress,
       
       // Items (desde Printful si existe, sino desde BD)
-      items: printfulOrder?.items || formatLocalItems(sale.sale_details),
+      items: (
+        Array.isArray(printfulOrder?.items) && printfulOrder.items.length
+          ? printfulOrder.items
+          : formatLocalItems(sale.sale_details)
+      ).map(formatPublicTrackingItem),
       
       // Información de envío (combinar ambas fuentes)
       trackingNumber: printfulOrder?.shipments?.[0]?.tracking_number || sale.trackingNumber,
@@ -144,16 +236,15 @@ export const getTrackingStatus = async (req, res) => {
       dates: {
         created: printfulOrder?.created ? new Date(printfulOrder.created * 1000) : sale.createdAt,
         updated: printfulOrder?.updated ? new Date(printfulOrder.updated * 1000) : (sale.printfulUpdatedAt || sale.updatedAt),
-        shipped: printfulOrder?.shipments?.[0]?.shipped_at || sale.shippedAt,
-        delivered: printfulOrder?.shipments?.[0]?.delivered_at || sale.completedAt
+        shipped: lifecycle.shippedAt,
+        delivered: lifecycle.deliveredAt
       },
       
       // Estado de Printful (raw)
       printfulStatus: printfulOrder?.status || sale.printfulStatus,
-      printfulRaw: printfulOrder || null,
       
       // Timeline de eventos
-      timeline: generateTimeline(finalStatus, sale, printfulOrder),
+      timeline: generateTimeline(finalStatus, sale, lifecycle),
       
       // 🏢 Información del Tenant (multi-tenant branding)
       tenant: sale.tenant ? {
@@ -173,11 +264,10 @@ export const getTrackingStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [TRACKING] Error en getTrackingStatus:', error);
+    console.error('[TRACKING] Error interno consultando pedido');
     return res.status(500).json({
       success: false,
-      message: 'Error al consultar el tracking',
-      error: error.message
+      message: 'Error al consultar el tracking'
     });
   }
 };
@@ -191,25 +281,45 @@ export const getTrackingStatus = async (req, res) => {
 /**
  * 📊 Calcular progreso visual (0-100) basado en estado
  */
-function calculateProgress(status) {
-  const progressMap = {
-    'draft': 0,
-    'pending': 10,
-    'failed': 0,
-    'canceled': 0,
-    'onhold': 20,
-    'inprocess': 50,
-    'partial': 75,
-    'fulfilled': 100,
-    'archived': 100
-  };
-  
-  return progressMap[status?.toLowerCase()] || 0;
+function formatPublicTrackingFiles(files) {
+  if (!Array.isArray(files)) return [];
+
+  return files
+    .filter(file => file && (
+      file.preview_url || file.thumbnail_url
+    ))
+    .map(file => ({
+      type: file.type || null,
+      preview_url: file.preview_url || null,
+      thumbnail_url: file.thumbnail_url || null
+    }));
 }
 
-/**
- * 🔄 Formatear items locales cuando Printful no está disponible
- */
+function formatPublicTrackingItem(item) {
+  const product = item.product;
+
+  return {
+    id: item.id,
+    external_id: item.external_id || null,
+    variant_id: item.variant_id || null,
+    sync_variant_id: item.sync_variant_id || null,
+    quantity: item.quantity,
+    name: item.name,
+    retail_price: item.retail_price,
+    sku: item.sku || null,
+    files: formatPublicTrackingFiles(item.files),
+    product: product ? {
+      name: product.name || item.name,
+      image: product.image || null,
+      portada: product.portada || product.image || null,
+      imagen: product.imagen || product.image || null
+    } : null,
+    variedade: item.variedade ? {
+      files: formatPublicTrackingFiles(item.variedade.files)
+    } : null
+  };
+}
+
 function formatLocalItems(saleDetails) {
   if (!saleDetails || saleDetails.length === 0) return [];
   
@@ -244,56 +354,64 @@ function formatLocalItems(saleDetails) {
 /**
  * 📅 Generar timeline de eventos
  */
-function generateTimeline(status, sale, printfulOrder) {
-  const trackingNumber = printfulOrder?.shipments?.[0]?.tracking_number || sale.trackingNumber;
-  const carrier = printfulOrder?.shipments?.[0]?.carrier || sale.carrier;
-  
+function generateTimeline(status, sale, lifecycle) {
+  const productionCompleted = lifecycle.fullyShipped;
+
   return [
     {
       type: 'order_received',
-      status: 'completed',
-      title: 'Pedido Recibido',
-      description: 'Tu pedido ha sido recibido y confirmado',
-      date: printfulOrder?.created ? new Date(printfulOrder.created * 1000) : sale.createdAt,
-      completed: true
+      status: lifecycle.confirmed
+        ? 'completed'
+        : 'processing',
+      title: 'Pedido recibido',
+      description: 'Hemos recibido tu pedido',
+      date: normalizeTrackingDate(sale.createdAt),
+      completed: lifecycle.confirmed
     },
     {
       type: 'processing',
-      status: ['inprocess', 'partial', 'fulfilled'].includes(status) ? 'completed' : 
-              status === 'pending' ? 'processing' : 'pending',
-      title: 'Procesando',
-      description: 'Validando pago y preparando orden',
-      date: printfulOrder?.created ? new Date(printfulOrder.created * 1000) : sale.createdAt,
-      completed: ['inprocess', 'partial', 'fulfilled'].includes(status)
+      status: lifecycle.productionStarted ? 'completed' :
+        status === 'pending' ? 'processing' : 'pending',
+      title: 'Preparando pedido',
+      description: 'Preparación de tu pedido',
+      date: null,
+      completed: lifecycle.productionStarted
     },
     {
       type: 'manufacturing',
-      status: ['partial', 'fulfilled'].includes(status) ? 'completed' : 
-              status === 'inprocess' ? 'processing' : 'pending',
-      title: 'Fabricando',
-      description: 'Tu producto está siendo fabricado',
-      date: printfulOrder?.updated ? new Date(printfulOrder.updated * 1000) : sale.updatedAt,
-      completed: ['partial', 'fulfilled'].includes(status)
+      status: productionCompleted ? 'completed' :
+        lifecycle.productionStarted ? 'processing' : 'pending',
+      title: 'En producción',
+      description: 'Fabricación de tus artículos',
+      date: null,
+      completed: productionCompleted
     },
     {
       type: 'shipped',
-      status: (status === 'fulfilled' || status === 'shipped' || trackingNumber) ? 'completed' : 'pending',
+      status: lifecycle.fullyShipped ? 'completed' :
+        lifecycle.partiallyShipped ? 'processing' : 'pending',
       title: 'Enviado',
-      description: trackingNumber 
-        ? `En tránsito - ${carrier || 'Carrier'}: ${trackingNumber}`
-        : 'Tu pedido está en camino',
-      date: printfulOrder?.shipments?.[0]?.shipped_at || sale.shippedAt,
-      completed: status === 'fulfilled' || status === 'shipped' || !!trackingNumber
+      description: lifecycle.fullyShipped
+        ? 'Tu pedido está en camino'
+        : lifecycle.partiallyShipped
+          ? 'Parte de tu pedido ha sido enviada'
+          : 'Pendiente de envío',
+      date: lifecycle.fullyShipped
+        ? lifecycle.shippedAt
+        : null,
+      completed: lifecycle.fullyShipped
     },
     {
       type: 'delivered',
-      status: (status === 'fulfilled' || printfulOrder?.shipments?.[0]?.delivered_at || sale.completedAt) ? 'completed' : 'pending',
+      status: lifecycle.fullyDelivered
+        ? 'completed'
+        : 'pending',
       title: 'Entregado',
-      description: (status === 'fulfilled' || printfulOrder?.shipments?.[0]?.delivered_at || sale.completedAt)
+      description: lifecycle.fullyDelivered
         ? 'Tu pedido ha sido entregado'
-        : 'Esperando entrega',
-      date: printfulOrder?.shipments?.[0]?.delivered_at || sale.completedAt || sale.maxDeliveryDate,
-      completed: status === 'fulfilled' || !!printfulOrder?.shipments?.[0]?.delivered_at || !!sale.completedAt
+        : 'Pendiente de entrega',
+      date: lifecycle.deliveredAt,
+      completed: lifecycle.fullyDelivered
     }
   ];
 }

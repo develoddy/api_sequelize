@@ -1,7 +1,25 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getTrackingStatus } from '../controllers/tracking.controller.js';
 
 const router = Router();
+
+const trackingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiadas consultas. Inténtalo más tarde.'
+  }
+});
+
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 /**
  * ==================================================================================================
@@ -21,6 +39,10 @@ const router = Router();
  * @param   {string} token - Token de seguridad (trackingToken)
  * @returns {TrackingStatus} - Estado completo del tracking
  */
-router.get('/:orderId/:token', getTrackingStatus);
+router.get(
+  '/:orderId/:token',
+  trackingLimiter,
+  getTrackingStatus
+);
 
 export default router;

@@ -40,6 +40,43 @@ const getCountryLocale = async (saleId) => {
 /**
  * Configurar transporter SMTP
  */
+
+/**
+ * Build localized storefront tracking URL.
+ */
+const buildOrderTrackingUrl = async (orderData) => {
+    const order = orderData.order;
+
+    const sale = await Sale.findOne({
+        where: {
+            printfulOrderId: order.printfulOrderId,
+            trackingToken: order.trackingToken
+        },
+        attributes: ['id']
+    });
+
+    if (!sale) {
+        throw new Error('Tracking sale not found');
+    }
+
+    const { country, locale } = await getCountryLocale(sale.id);
+
+    const baseUrl = process.env.URL_FRONTEND;
+
+    if (!baseUrl) {
+        throw new Error('URL_FRONTEND is not configured');
+    }
+
+    return [
+        baseUrl.replace(/\/+$/, ''),
+        encodeURIComponent(country),
+        encodeURIComponent(locale),
+        'tracking',
+        encodeURIComponent(order.printfulOrderId),
+        encodeURIComponent(order.trackingToken)
+    ].join('/');
+};
+
 const getTransporter = () => {
     if (!process.env.SMTP_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.error('❌ SMTP Configuration Error: Missing required environment variables');
@@ -118,6 +155,7 @@ export async function sendOrderShippedEmail(orderData) {
         
         // Preparar datos para el template
         const templateData = {
+            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
             customer: orderData.customer,
             order: orderData.order,
             shipment: orderData.shipment,
@@ -165,6 +203,7 @@ export async function sendOrderPrintingEmail(orderData) {
         });
         
         const templateData = {
+            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
             customer: orderData.customer,
             order: orderData.order,
             products: orderData.products,
@@ -200,6 +239,7 @@ export async function sendOrderDeliveredEmail(orderData) {
         });
         
         const templateData = {
+            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
             customer: orderData.customer,
             order: orderData.order,
             delivery: orderData.delivery,

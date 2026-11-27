@@ -46,6 +46,11 @@ export const Shipment = sequelize.define('shipments', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  evidenceSource: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    defaultValue: null,
+  },
   carrier: {
     type: DataTypes.STRING,
     allowNull: true,
@@ -82,6 +87,13 @@ export const Shipment = sequelize.define('shipments', {
 }, {
   timestamps: true,
   tableName: 'shipments',
+  indexes: [
+    {
+      name: 'uq_shipments_sale_printful',
+      unique: true,
+      fields: ['saleId', 'printfulShipmentId']
+    }
+  ],
 });
 
 // 🔗 Asociación con Sale

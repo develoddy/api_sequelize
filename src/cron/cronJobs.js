@@ -1,3 +1,7 @@
+import {
+    startOrderNotificationReconciliationCron
+} from '../domains/commerce/notifications/cron/orderNotificationReconciliation.cron.js';
+
 import cron from 'node-cron';
 import { sendDailyReportToAdmin } from '../domains/commerce/integrations/printful/services/dailyReportService.js';
 import { processQueue } from '../domains/commerce/integrations/printful/services/retryQueue.service.js';
@@ -145,6 +149,8 @@ export function initCronJobs() {
     
     // 🔄 Iniciar cron de retry de webhooks (SaaS Management)
     startWebhookRetryCron();
+
+    startOrderNotificationReconciliationCron();
     
     // 📧 MailFlow: habilitado en producción o explícitamente en desarrollo
     const mailflowCronEnabled =

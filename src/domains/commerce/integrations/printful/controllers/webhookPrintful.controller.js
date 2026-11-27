@@ -1,3 +1,7 @@
+import {
+  usesV2OrderNotifications
+} from '../../../notifications/services/orderNotificationPolicy.service.js';
+
 import crypto from 'crypto';
 import { PrintfulWebhookLog } from "../../../../../models/PrintfulWebhookLog.js";
 import { Sale } from "../../../../../models/Sale.js";
@@ -588,7 +592,7 @@ async function handlePackageShipped(data, webhookLog, tenant = null) {
         };
 
         // 🔒 IDEMPOTENCIA: Solo enviar email si es el primer package_shipped
-        if (!wasAlreadyShipped) {
+        if (!wasAlreadyShipped && !usesV2OrderNotifications(sale)) {
           // Enviar email
           const emailResult = await sendOrderShippedEmail(emailData);
           
@@ -968,6 +972,13 @@ async function handlePackageDelivered(data, webhookLog, tenant = null) {
         };
 
         // Enviar email
+        if (usesV2OrderNotifications(sale)) {
+          console.log('[WEBHOOK] Delivery notification delegated to V2', {
+            saleId: sale.id
+          });
+          return true;
+        }
+
         const emailResult = await sendOrderDeliveredEmail(emailData);
         
         if (emailResult.success) {
