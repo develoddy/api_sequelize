@@ -1,3 +1,7 @@
+import {
+  isPrintfulV2ScopedSale
+} from '../../integrations/printful/services/printfulV2Scope.service.js';
+
 import axios from "axios";
 import {
   hasVerifiedPayment
@@ -164,7 +168,7 @@ export const getTrackingStatus = async (req, res) => {
     if (
       printfulOrder?.status === 'fulfilled' &&
       sale.printfulOrderId &&
-      sale.tenant_id == null &&
+      isPrintfulV2ScopedSale(sale) &&
       verifiedShipments.length > 0
     ) {
       try {

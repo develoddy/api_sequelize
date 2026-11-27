@@ -1,3 +1,9 @@
+import { Tenant } from '../../../platform/models/Tenant.js';
+
+import {
+  isPrintfulV2ScopedSale
+} from '../../integrations/printful/services/printfulV2Scope.service.js';
+
 import { SaleAddress } from '../../../../models/SaleAddress.js';
 import { SaleDetail } from '../../../../models/SaleDetail.js';
 import { Product } from '../../../../models/Product.js';
@@ -9,8 +15,7 @@ export async function buildOrderNotificationData({
   verifiedShipments
 }) {
   if (
-    !sale ||
-    sale.tenant_id != null ||
+    !isPrintfulV2ScopedSale(sale) ||
     !sale.printfulOrderId ||
     !sale.trackingToken ||
     !lifecycle ||
@@ -42,6 +47,14 @@ export async function buildOrderNotificationData({
 
   if (addresses.length !== 1) {
     throw new Error('Unresolved sale address');
+  }
+
+  const tenant = sale.tenant_id === null
+    ? null
+    : await Tenant.findByPk(sale.tenant_id);
+
+  if (sale.tenant_id !== null && !tenant) {
+    throw new Error('Unresolved order tenant');
   }
 
   const address = addresses[0];
@@ -110,6 +123,6 @@ export async function buildOrderNotificationData({
       region: address.region || '',
       telefono: address.telefono || ''
     },
-    tenant: null
+    tenant
   };
 }
