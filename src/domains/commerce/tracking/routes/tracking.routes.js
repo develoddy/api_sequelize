@@ -1,6 +1,18 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { getTrackingStatus } from '../controllers/tracking.controller.js';
+import {
+  createOrderRecoveryController
+} from '../controllers/orderRecovery.controller.js';
+
+import {
+  orderRecoveryLimiter,
+  orderRecoveryOrderLimiter
+} from '../middlewares/orderRecoveryLimiter.js';
+
+import {
+  sendOrderRecoveryEmail
+} from '../services/orderRecoveryEmail.service.js';
 
 const router = Router();
 
@@ -39,6 +51,30 @@ router.use((req, res, next) => {
  * @param   {string} token - Token de seguridad (trackingToken)
  * @returns {TrackingStatus} - Estado completo del tracking
  */
+const recoverOrder = createOrderRecoveryController({
+  sendRecoveryEmail: sendOrderRecoveryEmail
+});
+
+router.post(
+  '/recover',
+  (req, res, next) => {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.ORDER_RECOVERY_ENABLED !== 'true'
+    ) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service temporarily unavailable.'
+      });
+    }
+
+    next();
+  },
+  orderRecoveryLimiter,
+  orderRecoveryOrderLimiter,
+  recoverOrder
+);
+
 router.get(
   '/:orderId/:token',
   trackingLimiter,
