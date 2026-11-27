@@ -67,7 +67,7 @@ const buildOrderTrackingUrl = async (orderData) => {
         throw new Error('URL_FRONTEND is not configured');
     }
 
-    return [
+    const trackingUrl = [
         baseUrl.replace(/\/+$/, ''),
         encodeURIComponent(country),
         encodeURIComponent(locale),
@@ -75,6 +75,12 @@ const buildOrderTrackingUrl = async (orderData) => {
         encodeURIComponent(order.printfulOrderId),
         encodeURIComponent(order.trackingToken)
     ].join('/');
+
+    return {
+        trackingUrl,
+        language: String(locale).toLowerCase()
+            .split(/[-_]/)[0] === 'es' ? 'es' : 'en'
+    };
 };
 
 const getTransporter = () => {
@@ -154,8 +160,21 @@ export async function sendOrderShippedEmail(orderData) {
         });
         
         // Preparar datos para el template
+        const { trackingUrl, language } =
+            await buildOrderTrackingUrl(orderData);
+
         const templateData = {
-            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
+            orderTrackingUrl: trackingUrl,
+            language,
+            brandName: orderData.tenant?.settings?.store_name
+                || orderData.tenant?.name
+                || process.env.STORE_NAME
+                || 'LUJANDEV',
+            supportEmail: orderData.tenant?.email
+                || (!orderData.tenant
+                    ? process.env.EMAIL_SUPPORT
+                    : null)
+                || null,
             customer: orderData.customer,
             order: orderData.order,
             shipment: orderData.shipment,
@@ -174,8 +193,18 @@ export async function sendOrderShippedEmail(orderData) {
         const html = await renderTemplate('email_order_shipped.html', templateData);
 
         // Enviar email
-        const subject = `Your order #PF${orderData.order.printfulOrderId} has been shipped`;
-        const result = await sendEmail(orderData.customer.email, subject, html);
+        const subject = language === 'es'
+            ? `Tu pedido #PF${orderData.order.printfulOrderId} ha sido enviado`
+            : `Your order #PF${orderData.order.printfulOrderId} has been shipped`;
+        const result = await sendEmail(
+            orderData.customer.email,
+            subject,
+            html,
+            {
+                name: templateData.brandName,
+                address: process.env.EMAIL_USER
+            }
+        );
 
         if (result.success) {
             console.log('✅ Order Shipped email sent successfully');
@@ -202,8 +231,21 @@ export async function sendOrderPrintingEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
         
+        const { trackingUrl, language } =
+            await buildOrderTrackingUrl(orderData);
+
         const templateData = {
-            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
+            orderTrackingUrl: trackingUrl,
+            language,
+            brandName: orderData.tenant?.settings?.store_name
+                || orderData.tenant?.name
+                || process.env.STORE_NAME
+                || 'LUJANDEV',
+            supportEmail: orderData.tenant?.email
+                || (!orderData.tenant
+                    ? process.env.EMAIL_SUPPORT
+                    : null)
+                || null,
             customer: orderData.customer,
             order: orderData.order,
             products: orderData.products,
@@ -218,9 +260,19 @@ export async function sendOrderPrintingEmail(orderData) {
         };
 
         const html = await renderTemplate('email_order_printing.html', templateData);
-        const subject = `Your order #PF${orderData.order.printfulOrderId} is being prepared`;
+        const subject = language === 'es'
+            ? `Tu pedido #PF${orderData.order.printfulOrderId} está en producción`
+            : `Your order #PF${orderData.order.printfulOrderId} is being prepared`;
         
-        return await sendEmail(orderData.customer.email, subject, html);
+        return await sendEmail(
+            orderData.customer.email,
+            subject,
+            html,
+            {
+                name: templateData.brandName,
+                address: process.env.EMAIL_USER
+            }
+        );
     } catch (error) {
         console.error('❌ Error in sendOrderPrintingEmail:', error);
         return { success: false, error: error.message };
@@ -238,8 +290,21 @@ export async function sendOrderDeliveredEmail(orderData) {
             printfulOrderId: orderData.order.printfulOrderId
         });
         
+        const { trackingUrl, language } =
+            await buildOrderTrackingUrl(orderData);
+
         const templateData = {
-            orderTrackingUrl: await buildOrderTrackingUrl(orderData),
+            orderTrackingUrl: trackingUrl,
+            language,
+            brandName: orderData.tenant?.settings?.store_name
+                || orderData.tenant?.name
+                || process.env.STORE_NAME
+                || 'LUJANDEV',
+            supportEmail: orderData.tenant?.email
+                || (!orderData.tenant
+                    ? process.env.EMAIL_SUPPORT
+                    : null)
+                || null,
             customer: orderData.customer,
             order: orderData.order,
             delivery: orderData.delivery,
@@ -255,9 +320,19 @@ export async function sendOrderDeliveredEmail(orderData) {
         };
 
         const html = await renderTemplate('email_order_delivered.html', templateData);
-        const subject = `Your order #PF${orderData.order.printfulOrderId} has been delivered`;
+        const subject = language === 'es'
+            ? `Tu pedido #PF${orderData.order.printfulOrderId} ha sido entregado`
+            : `Your order #PF${orderData.order.printfulOrderId} has been delivered`;
         
-        return await sendEmail(orderData.customer.email, subject, html);
+        return await sendEmail(
+            orderData.customer.email,
+            subject,
+            html,
+            {
+                name: templateData.brandName,
+                address: process.env.EMAIL_USER
+            }
+        );
     } catch (error) {
         console.error('❌ Error in sendOrderDeliveredEmail:', error);
         return { success: false, error: error.message };

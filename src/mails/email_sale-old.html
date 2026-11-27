@@ -1,387 +1,259 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<%
+const en = language === 'en';
+const t = (es, english) => en ? english : es;
+
+const title = isModulePurchase
+    ? t('Gracias por tu compra.', 'Thank you for your purchase.')
+    : t('Tu pedido está confirmado.', 'Your order is confirmed.');
+
+const currency = order.currency_payment || '';
+
+const money = value => {
+    if (value == null || value === '') return '';
+    const amount = Number(value);
+    return Number.isFinite(amount)
+        ? amount.toLocaleString(en ? 'en-GB' : 'es-ES', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + ' ' + currency
+        : '';
+};
+%>
+<!DOCTYPE html>
+<html lang="<%= language %>">
 <head>
-	<!--[if gte mso 9]>
-	<xml>
-		<o:OfficeDocumentSettings>
-		<o:AllowPNG/>
-		<o:PixelsPerInch>96</o:PixelsPerInch>
-		</o:OfficeDocumentSettings>
-	</xml>
-	<![endif]-->
-	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-	<meta name="format-detection" content="date=no" />
-	<meta name="format-detection" content="address=no" />
-	<meta name="format-detection" content="telephone=no" />
-	<meta name="x-apple-disable-message-reformatting" />
-	<!--[if !mso]><!-->
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-	<!--<![endif]-->
-	<title>Confirmación de pedido - LUJANDEV</title>
-	<!--[if gte mso 9]>
-	<style type="text/css" media="all">
-		sup { font-size: 100% !important; }
-	</style>
-	<![endif]-->
-
-	<style type="text/css" media="screen">
-		body { 
-			padding: 0 !important; 
-			margin: 0 auto !important; 
-			display: block !important; 
-			min-width: 100% !important; 
-			width: 100% !important; 
-			background: #fafafa; 
-			-webkit-text-size-adjust: none;
-		}
-		a { color: #000000; text-decoration: none; }
-		p { padding: 0 !important; margin: 0 !important; }
-		img { margin: 0 !important; -ms-interpolation-mode: bicubic; }
-		a[x-apple-data-detectors] { 
-			color: inherit !important; 
-			text-decoration: inherit !important; 
-			font-size: inherit !important; 
-			font-family: inherit !important; 
-			font-weight: inherit !important; 
-			line-height: inherit !important; 
-		}
-
-		/* Mobile styles */
-		@media only screen and (max-device-width: 480px), only screen and (max-width: 480px) {
-			.m-shell { width: 100% !important; min-width: 100% !important; }
-			.m-padding { padding: 20px !important; }
-			.m-img { width: 100% !important; max-width: 100% !important; height: auto !important; }
-			.m-center { text-align: center !important; }
-			.m-hide { display: none !important; }
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title><%= title %></title>
+    <%- include('components/commerce/styles.html') %>
 </head>
 
+<body style="margin:0;padding:0;background:#f5f5f5;">
 
-<body class="body" style="padding:0 !important; margin:0 auto !important; display:block !important; min-width:100% !important; width:100% !important; background:#fafafa; -webkit-text-size-adjust:none;">
-	<center>
-		<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 0; padding: 0; width: 100%; height: 100%;" bgcolor="#fafafa">
-			<tr>
-				<td style="margin: 0; padding: 40px 0; width: 100%; height: 100%;" align="center" valign="top">
-					<table width="600" border="0" cellspacing="0" cellpadding="0" class="m-shell" bgcolor="#ffffff" style="background: #ffffff;">
-						<tr>
-							<td class="m-padding" style="padding: 60px 80px;">
-								
-								<!-- LOGO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding-bottom: 32px;">
-											<img src="<%= process.env.URL_BACKEND %>/assets/images/logo.png" width="72" height="72" border="0" alt="LUJANDEV" style="display: block;" />
-										</td>
-									</tr>
-								</table>
-								º
-								<!-- TÍTULO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding-bottom: 16px;">
-											<h1 style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 28px; font-weight: 600; color: #000000; letter-spacing: -0.5px;">
-												Tu pedido ya esta en marcha
-											</h1>
-										</td>
-									</tr>
-									<tr>
-										<td align="center" style="padding-bottom: 24px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 24px; color: #6e6e6e;">
-												Gracias por confiar en LUJANDEV. Hemos recibido tu compra correctamente y te avisaremos en cada paso del proceso.
-											</p>
-										</td>
-									</tr>
-								</table>
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0" bgcolor="#f5f5f5">
+<tr>
+<td align="center" class="email-outer" style="padding:32px 12px;">
 
-								<!-- BADGE ESTADO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding-bottom: 28px;">
-											<table border="0" cellspacing="0" cellpadding="0" style="background: #f5f5f5; border: 1px solid #dddddd;">
-												<tr>
-													<td style="padding: 8px 14px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; color: #111111;">
-														&#10003; Pedido recibido
-													</td>
-												</tr>
-											</table>
-										</td>
-									</tr>
-								</table>
+<!--[if mso]>
+<table role="presentation" width="600" align="center"><tr><td>
+<![endif]-->
 
-								<!-- QUE OCURRE AHORA -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #fafafa; border: 1px solid #ececec;">
-									<tr>
-										<td style="padding: 20px;">
-											<table width="100%" border="0" cellspacing="0" cellpadding="0">
-												<tr>
-													<td align="left" style="padding-bottom: 12px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; color: #111111;">
-														Que ocurre ahora?
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="padding-bottom: 8px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #4f4f4f;">
-														1. Hemos recibido correctamente tu compra.
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="padding-bottom: 8px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #4f4f4f;">
-														2. Estamos preparando tu pedido.
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="padding-bottom: 8px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #4f4f4f;">
-														3. Te avisaremos cuando salga de camino.
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #4f4f4f;">
-														4. Podras consultar su evolucion desde nuestra pagina de seguimiento.
-													</td>
-												</tr>
-											</table>
-										</td>
-									</tr>
-								</table>
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0" bgcolor="#ffffff"
+       class="email-shell"
+       style="max-width:600px;background:#ffffff;">
 
-								<!-- TIMELINE -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 20px; border-top: 1px solid #efefef; border-bottom: 1px solid #efefef;">
-									<tr>
-										<td style="padding: 16px 0;">
-											<table width="100%" border="0" cellspacing="0" cellpadding="0">
-												<tr>
-													<td width="18" valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #111111; padding-bottom: 8px;">&#10003;</td>
-													<td valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #222222; padding-bottom: 8px;">Pedido recibido</td>
-												</tr>
-												<tr>
-													<td width="18" valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #111111; padding-bottom: 8px;">&#9679;</td>
-													<td valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #222222; padding-bottom: 8px;">En preparacion</td>
-												</tr>
-												<tr>
-													<td width="18" valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #9a9a9a; padding-bottom: 8px;">&#9675;</td>
-													<td valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #222222; padding-bottom: 8px;">Enviado</td>
-												</tr>
-												<tr>
-													<td width="18" valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #9a9a9a;">&#9675;</td>
-													<td valign="top" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #222222;">Entregado</td>
-												</tr>
-											</table>
-										</td>
-									</tr>
-								</table>
+<tr>
+<td>
+    <%- include('components/commerce/header.html', {
+        brandName
+    }) %>
+</td>
+</tr>
 
-								<!-- NÚMERO DE ORDEN -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding: 20px 0; border-top: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 500; color: #000000; letter-spacing: 0.5px; text-transform: uppercase;">
-												Pedido #<%= order.id %>
-											</p>
-										</td>
-									</tr>
-								</table>
+<tr>
+<td class="email-padding" style="padding:40px;
+    font-family:Arial,Helvetica,sans-serif;color:#111111;">
 
-								<!-- PRODUCTOS -->
-								<% for(var i=0; i < order_detail.length; i++) { %>
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 32px;">
-									<tr>
-										<td align="center" style="padding-bottom: 20px;">
-											<img src="<%= order_detail[i].product.portada %>" width="300" height="auto" border="0" alt="<%= order_detail[i].product.title %>" class="m-img" style="display: block; max-width: 100%; border: 1px solid #efefef;" />
-										</td>
-									</tr>
-									<tr>
-										<td align="center" style="padding-bottom: 8px;">
-											<h2 style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 20px; font-weight: 700; color: #111111; letter-spacing: -0.3px;">
-												<%= order_detail[i].product.title %>
-											</h2>
-										</td>
-									</tr>
-									<% if(order_detail[i].product.resumen) { %>
-									<tr>
-										<td align="center" style="padding-bottom: 12px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #6e6e6e;">
-												<%= order_detail[i].product.resumen %>
-											</p>
-										</td>
-									</tr>
-									<% } %>
-									<tr>
-										<td align="center">
-											<table border="0" cellspacing="0" cellpadding="0">
-												<tr>
-													<% if(order_detail[i].variedad) { %>
-													<td style="padding: 0 12px;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #000000;">
-															<span style="color: #6e6e6e;">Talla:</span> <strong><%= order_detail[i].variedad.valor %></strong>
-														</p>
-													</td>
-													<td style="padding: 0 12px; border-left: 1px solid #e8e8e8;">
-													<% } else { %>
-													<td style="padding: 0 12px;">
-													<% } %>
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #000000;">
-															<span style="color: #6e6e6e;">Cantidad:</span> <strong><%= order_detail[i].cantidad %></strong>
-														</p>
-													</td>
-													<td style="padding: 0 12px; border-left: 1px solid #e8e8e8;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #000000;">
-															<strong><%= Number(order_detail[i].total || 0).toFixed(2) %> <%= order.currency_payment || 'EUR' %></strong>
-														</p>
-													</td>
-												</tr>
-											</table>
-										</td>
-									</tr>
-								</table>
-								<% } %>
+    <p style="margin:0 0 14px;font-size:11px;
+        letter-spacing:1.5px;color:#666666;">
+        <%= t('CONFIRMACIÓN DE COMPRA', 'ORDER CONFIRMATION') %>
+    </p>
 
-								<!-- DIVISOR -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 50px;">
-									<tr>
-										<td style="border-top: 1px solid #e8e8e8;"></td>
-									</tr>
-								</table>
+    <h1 class="email-title" style="margin:0 0 16px;
+        font-size:30px;line-height:38px;font-weight:700;">
+        <%= title %>
+    </h1>
 
-								<!-- RESUMEN DEL PEDIDO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px;">
-									<tr>
-										<td align="left" style="padding-bottom: 20px;">
-											<h3 style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; color: #000000; letter-spacing: -0.2px;">
-												Resumen del pedido
-											</h3>
-										</td>
-									</tr>
-									<tr>
-										<td>
-											<table width="100%" border="0" cellspacing="0" cellpadding="0">
-												<tr>
-													<td align="left" style="padding: 12px 0;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #6e6e6e;">
-															Subtotal
-														</p>
-													</td>
-													<td align="right" style="padding: 12px 0;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500; color: #000000;">
-															<%= order.total %> <%= order.currency_payment %>
-														</p>
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="padding: 12px 0; border-top: 1px solid #f5f5f5;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #6e6e6e;">
-															Envío
-														</p>
-													</td>
-													<td align="right" style="padding: 12px 0; border-top: 1px solid #f5f5f5;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500; color: #000000;">
-															Gratis
-														</p>
-													</td>
-												</tr>
-												<tr>
-													<td align="left" style="padding: 16px 0; border-top: 1px solid #e8e8e8;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; color: #000000;">
-															Total
-														</p>
-													</td>
-													<td align="right" style="padding: 16px 0; border-top: 1px solid #e8e8e8;">
-														<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; color: #000000;">
-															<%= order.total %> <%= order.currency_payment %>
-														</p>
-													</td>
-												</tr>
-											</table>
-										</td>
-									</tr>
-								</table>
+    <p style="margin:0 0 24px;font-size:15px;
+        line-height:24px;color:#666666;">
+        <% if (isModulePurchase) { %>
+            <%= t(
+                'Hemos recibido tu compra correctamente.',
+                'We have successfully received your purchase.'
+            ) %>
+        <% } else { %>
+            <%= t(
+                'Gracias por confiar en nosotros. Te mantendremos informado durante el proceso de tu pedido.',
+                'Thank you for choosing us. We will keep you informed throughout your order journey.'
+            ) %>
+        <% } %>
+    </p>
 
-								<!-- MÉTODO DE PAGO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 32px;">
-									<tr>
-										<td align="left" style="padding-bottom: 8px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500; color: #000000;">
-												Método de pago
-											</p>
-										</td>
-									</tr>
-									<tr>
-										<td align="left">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #6e6e6e;">
-												<%= order.method_payment %>
-											</p>
-										</td>
-									</tr>
-								</table>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0"
+           style="border-top:1px solid #dddddd;
+                  border-bottom:1px solid #dddddd;">
+        <tr>
+            <td style="padding:16px 0;font-size:13px;color:#666666;">
+                <%= t('Número de pedido', 'Order number') %>
+            </td>
+            <td align="right" style="padding:16px 0;
+                font-size:15px;font-weight:700;">
+                #<%= order.id %>
+            </td>
+        </tr>
+    </table>
 
-								<!-- DIRECCIÓN DE ENVÍO -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 32px;">
-									<tr>
-										<td align="left" style="padding-bottom: 8px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500; color: #000000;">
-												Dirección de envío
-											</p>
-										</td>
-									</tr>
-									<tr>
-										<td align="left">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 22px; color: #6e6e6e;">
-												<%= address_sale.name %> <%= address_sale.surname %><br/>
-												<%= address_sale.address %><br/>
-												<%= address_sale.ciudad %>, <%= address_sale.region %><br/>
-												<%= address_sale.pais %><br/>
-												<%= address_sale.telefono %>
-											</p>
-										</td>
-									</tr>
-								</table>
+    <% if (!isModulePurchase) { %>
 
-							</td>
-						</tr>
-					</table>
+        <%- include('components/commerce/timeline.html', {
+            language,
+            currentStage: 0
+        }) %>
 
-					<!-- FOOTER -->
-					<table width="600" border="0" cellspacing="0" cellpadding="0" class="m-shell" style="margin-top: 40px;">
-						<tr>
-							<td class="m-padding" style="padding: 40px 80px;" align="center">
-								
-								<!-- Logo pequeño -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding-bottom: 24px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 18px; font-weight: 600; color: #000000; letter-spacing: 2px;">
-												LUJANDEV
-											</p>
-										</td>
-									</tr>
-								</table>
+        <%- include('components/commerce/tracking-button.html', {
+            language,
+            trackingUrl: orderTrackingUrl
+        }) %>
 
-								<!-- Información de contacto -->
-								<table width="100%" border="0" cellspacing="0" cellpadding="0">
-									<tr>
-										<td align="center" style="padding-bottom: 8px;">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; line-height: 18px; color: #6e6e6e;">
-												Madrid, España<br/>
-											</p>
-										</td>
-									</tr>
-									<tr>
-										<td align="center">
-											<p style="margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; color: #6e6e6e;">
-												<a href="mailto:lujandev@lujandev.com" style="color: #000000; text-decoration: none;">lujandev@lujandev.com</a>
-											</p>
-										</td>
-									</tr>
-								</table>
+    <% } %>
 
-							</td>
-						</tr>
-					</table>
+    <h2 style="margin:28px 0 12px;font-size:18px;">
+        <%= t('Tu pedido', 'Your order') %>
+    </h2>
 
-				</td>
-			</tr>
-		</table>
-	</center>
+    <% order_detail.forEach(function(detail) {
+        const item = detail.product || detail.module || {};
+        const itemName = item.title || item.name
+            || t('Producto', 'Product');
+    %>
+
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0"
+           style="border-bottom:1px solid #eeeeee;">
+        <tr>
+            <% if (detail.product && detail.product.portada) { %>
+            <td width="100" valign="top"
+                style="padding:16px 16px 16px 0;">
+                <img src="<%= detail.product.portada %>"
+                     alt="<%= itemName %>"
+                     width="84" class="email-product-image"
+                     style="display:block;width:84px;
+                            max-width:100%;height:auto;
+                            border:1px solid #eeeeee;">
+            </td>
+            <% } %>
+
+            <td valign="top" style="padding:16px 0;">
+                <p style="margin:0 0 8px;font-size:14px;
+                    line-height:20px;font-weight:700;">
+                    <%= itemName %>
+                </p>
+
+                <% if (detail.variedad && detail.variedad.valor) { %>
+                <p style="margin:0 0 4px;font-size:12px;
+                    color:#666666;">
+                    <%= t('Variante', 'Variant') %>:
+                    <%= detail.variedad.valor %>
+                </p>
+                <% } %>
+
+                <p style="margin:0;font-size:12px;color:#666666;">
+                    <%= t('Cantidad', 'Quantity') %>:
+                    <%= detail.cantidad %>
+                </p>
+            </td>
+
+            <td align="right" valign="top"
+                style="padding:16px 0 16px 8px;
+                       font-size:13px;white-space:nowrap;">
+                <%= money(detail.total) %>
+            </td>
+        </tr>
+    </table>
+
+    <% }); %>
+
+    <% if (money(persistedTotal)) { %>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0">
+        <tr>
+            <td style="padding:24px 0;font-size:17px;
+                font-weight:700;">
+                Total
+            </td>
+            <td align="right" style="padding:24px 0;
+                font-size:17px;font-weight:700;">
+                <%= money(persistedTotal) %>
+            </td>
+        </tr>
+    </table>
+    <% } %>
+
+    <% if (order.method_payment) { %>
+    <p style="margin:12px 0 6px;font-size:14px;font-weight:700;">
+        <%= t('Método de pago', 'Payment method') %>
+    </p>
+    <p style="margin:0;font-size:13px;color:#666666;">
+        <%= order.method_payment %>
+    </p>
+    <% } %>
+
+    <% if (!isModulePurchase && address_sale) { %>
+    <h2 style="margin:28px 0 10px;font-size:15px;">
+        <%= t('Dirección de envío', 'Shipping address') %>
+    </h2>
+
+    <p style="margin:0;font-size:13px;line-height:22px;
+        color:#666666;">
+        <%= [address_sale.name, address_sale.surname]
+            .filter(Boolean).join(' ') %><br>
+        <% if (address_sale.address) { %>
+            <%= address_sale.address %><br>
+        <% } %>
+        <%= [address_sale.ciudad, address_sale.region]
+            .filter(Boolean).join(', ') %><br>
+        <%= address_sale.pais || '' %><br>
+        <%= address_sale.telefono || '' %>
+    </p>
+    <% } %>
+
+    <% if (supportEmail) { %>
+    <table role="presentation" width="100%" cellspacing="0"
+           cellpadding="0" border="0"
+           style="margin-top:32px;border-top:1px solid #dddddd;">
+        <tr>
+            <td align="center" style="padding:24px 0 0;">
+                <p style="margin:0 0 8px;font-size:14px;
+                    font-weight:700;">
+                    <%= t('¿Necesitas ayuda?', 'Need help?') %>
+                </p>
+                <p style="margin:0;font-size:13px;color:#666666;">
+                    <%= t(
+                        'Estamos aquí para ayudarte.',
+                        'We are here to help.'
+                    ) %>
+                </p>
+            </td>
+        </tr>
+    </table>
+    <% } %>
+
+</td>
+</tr>
+
+<tr>
+<td>
+    <%- include('components/commerce/footer.html', {
+        brandName,
+        supportEmail
+    }) %>
+</td>
+</tr>
+
+</table>
+
+<!--[if mso]>
+</td></tr></table>
+<![endif]-->
+
+</td>
+</tr>
+</table>
+
 </body>
 </html>

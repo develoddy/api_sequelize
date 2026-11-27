@@ -297,6 +297,70 @@ export async function sendOrderConfirmationEmail(sale_id) {
             // 🆕 Detectar si es compra de módulo
             const isModulePurchase = !!(enrichedOrder.module_id || (enrichedOrderDetails.length > 0 && enrichedOrderDetails[0].module_id));
             
+            // Presentation context for transactional emails.
+            const language = String(order.locale || 'es')
+                .toLowerCase().split(/[-_]/)[0] === 'es'
+                ? 'es'
+                : 'en';
+
+            const brandName = tenant?.settings?.store_name
+                || tenant?.name
+                || process.env.STORE_NAME
+                || 'LUJANDEV';
+
+            const supportEmail = tenant?.email
+                || (!order.tenant_id
+                    ? process.env.EMAIL_SUPPORT
+                    : null)
+                || null;
+
+            // Preserve the persisted commercial total.
+            const persistedTotal = order.total;
+
+            let orderTrackingUrl = null;
+
+            const token = String(order.trackingToken || '');
+            const orderId = String(order.id || '');
+
+            if (
+                !isModulePurchase &&
+                (
+                    order.tenant_id === 23 ||
+                    (
+                        process.env.NODE_ENV === 'development' &&
+                        order.tenant_id === null
+                    )
+                ) &&
+                /^[a-f0-9]{32}$/i.test(token) &&
+                /^[1-9][0-9]*$/.test(orderId)
+            ) {
+                try {
+                    const base = new URL(process.env.URL_FRONTEND);
+
+                    if (
+                        ['http:', 'https:'].includes(base.protocol) &&
+                        !base.username &&
+                        !base.password &&
+                        !base.search &&
+                        !base.hash
+                    ) {
+                        orderTrackingUrl = [
+                            base.href.replace(/\/+$/, ''),
+                            encodeURIComponent(order.country || 'es'),
+                            language,
+                            'tracking',
+                            encodeURIComponent(orderId),
+                            encodeURIComponent(token)
+                        ].join('/');
+                    }
+                } catch {
+                    console.warn(
+                        '[Email] Tracking URL unavailable',
+                        order.id
+                    );
+                }
+            }
+
             console.log('🎨 [send_email] Preparando render de template...');
             console.log('🎨 [send_email] Tenant disponible:', !!tenant);
             console.log('🎨 [send_email] Tenant name:', tenant?.name);
@@ -306,13 +370,20 @@ export async function sendOrderConfirmationEmail(sale_id) {
             try {
                 rest_html = ejs.render(html, {
                     order: enrichedOrder,
+                    persistedTotal,
+                    language,
+                    brandName,
+                    supportEmail,
+                    orderTrackingUrl,
                     address_sale: addressSale,
                     order_detail: enrichedOrderDetails,
                     country: order.country || 'es',
                     locale: order.locale || 'es',
                     isModulePurchase: isModulePurchase, // 🆕 Flag para template
                     tenant: tenant, // 🏢 Tenant para personalización multi-tenant
-                    process: { env: process.env } // Para acceder a URL_FRONTEND, etc.
+                    process: { env: process.env }
+                }, {
+                    filename: `${process.cwd()}/src/mails/email_sale-old.html`
                 });
                 
                 console.log('✅ [send_email] Template renderizado correctamente, length:', rest_html?.length);
@@ -392,18 +463,24 @@ export async function sendOrderConfirmationEmail(sale_id) {
             if (orderDetails.length === 1) {
               // 🆕 Usar enrichedOrderDetails que ya tiene el módulo cargado
               const itemName = enrichedOrderDetails[0].product?.title || enrichedOrderDetails[0].module?.name || 'producto';
-              subject = `Pedido Nº ${order.id} - ${itemName}`;
+              subject = language === 'es'
+                  ? `Pedido Nº ${order.id} - ${itemName}`
+                  : `Order #${order.id} - ${itemName}`;
             } else if (orderDetails.length > 1) {
               const itemName = enrichedOrderDetails[0].product?.title || enrichedOrderDetails[0].module?.name || 'producto';
-              subject = `Pedido Nº ${order.id} - ${itemName} y ${orderDetails.length - 1} productos más`;
+              subject = language === 'es'
+                  ? `Pedido Nº ${order.id} - ${itemName} y ${orderDetails.length - 1} más`
+                  : `Order #${order.id} - ${itemName} and ${orderDetails.length - 1} more`;
             } else {
-              subject = `Pedido Nº ${order.id} procesado correctamente`;
+              subject = language === 'es'
+                  ? `Pedido Nº ${order.id} procesado correctamente`
+                  : `Order #${order.id} successfully processed`;
             }
             
             console.log('📧 [Email] Subject:', subject);
 
             // 🏢 Usar branding del tenant (consistente con emails de Printful)
-            const storeName = tenant?.settings?.store_name || process.env.STORE_NAME || 'Store';
+            const storeName = brandName;
             
             const mailOptions = {
                 from: `"${storeName}" <${process.env.EMAIL_USER}>`,

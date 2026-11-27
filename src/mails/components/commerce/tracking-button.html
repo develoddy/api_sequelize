@@ -1,0 +1,30 @@
+<% if (typeof trackingUrl === 'string' &&
+       /^https?:\/\//i.test(trackingUrl)) { %>
+
+<table role="presentation" width="100%" cellspacing="0"
+       cellpadding="0" border="0">
+    <tr>
+        <td align="center" style="padding:24px 0;">
+            <table role="presentation" cellspacing="0"
+                   cellpadding="0" border="0">
+                <tr>
+                    <td align="center" bgcolor="#111111"
+                        style="mso-padding-alt:16px 28px;">
+                        <a href="<%= trackingUrl %>"
+                           style="display:inline-block;
+                           padding:16px 28px;
+                           font-family:Arial,Helvetica,sans-serif;
+                           font-size:14px;font-weight:600;
+                           color:#ffffff;text-decoration:none;">
+                            <%= language === 'en'
+                                ? 'View my order'
+                                : 'Consultar mi pedido' %>
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<% } %>
